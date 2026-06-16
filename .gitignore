@@ -1,0 +1,17 @@
+node_modules/
+companion/node_modules/
+.DS_Store
+*.log
+.env
+dist/
+coverage/
+data/show.local.json
+data/projects/*/assets/*
+!data/projects/blank/assets/.gitkeep
+
+# Local reference / vendor trees (not part of ProVerlay source)
+Holographics/
+WerkbestandenVoorbeeldenODIDO/
+
+# Cursor debug logs only (keep .cursor/skills for agents)
+.cursor/*.log

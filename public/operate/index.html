@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" class="operate-root">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>ProVerlay — Operate</title>
+    <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/public/shared/tahoe.css" />
+    <link rel="stylesheet" href="/public/shared/form-controls.css" />
+    <link rel="stylesheet" href="/public/shared/operate-panel.css" />
+    <link rel="stylesheet" href="/public/operator/operator.css" />
+  </head>
+  <body class="operator operate">
+    <header class="pv-nav-bar">
+      <div class="pv-nav-bar__side pv-nav-bar__side--start">
+        <a href="/control?view=control" class="pv-nav-bar__back" aria-label="Back to dashboard">
+          <span class="pv-nav-bar__chevron" aria-hidden="true"></span>
+          <span class="pv-nav-bar__back-label">Dashboard</span>
+        </a>
+      </div>
+      <div class="pv-nav-bar__title pv-nav-bar__title--brand">
+        <img class="app-brand__mark app-brand__mark--sm" src="/public/shared/proverlay-logo.png" alt="" width="28" height="28" />
+        <div class="pv-nav-bar__title-text">
+          <h1 id="operate-title">Operate</h1>
+          <span id="operate-subtitle" class="pv-nav-bar__subtitle pill pill--type" hidden></span>
+        </div>
+      </div>
+      <div class="pv-nav-bar__side pv-nav-bar__side--end">
+        <a href="/render" class="pv-nav-bar__action">Preview</a>
+      </div>
+    </header>
+
+    <div class="pv-sync-bar">
+      <div class="pill pill--sync is-connected" id="connection-status" role="status">
+        <span class="status-dot"></span>
+        <span class="status-label">Live sync</span>
+      </div>
+    </div>
+
+    <main id="operate-root" class="op-main operate-main"></main>
+
+    <script src="/public/shared/app-shell.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/public/operate/operate.js"></script>
+  </body>
+</html>

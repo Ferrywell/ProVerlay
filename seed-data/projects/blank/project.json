@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "client": {
+    "name": "",
+    "notes": ""
+  },
+  "brandId": null,
+  "brand": {
+    "name": "",
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
+    "fontUrl": "",
+    "colors": {
+      "primary": "#007AFF",
+      "secondary": "#5856D6",
+      "text": "#1D1D1F",
+      "background": "rgba(255, 255, 255, 0.78)",
+      "accent": "#34C759"
+    }
+  },
+  "settings": {
+    "canvasWidth": 1920,
+    "canvasHeight": 1080,
+    "fontSize": 2.2,
+    "padding": 2.5,
+    "canvasBackground": "transparent"
+  },
+  "graphics": []
+}

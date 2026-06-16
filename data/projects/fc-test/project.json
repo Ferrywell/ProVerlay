@@ -1,0 +1,113 @@
+{
+  "version": 3,
+  "brandId": null,
+  "brand": {
+    "name": "",
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
+    "fontUrl": "",
+    "colors": {
+      "primary": "#007AFF",
+      "secondary": "#5856D6",
+      "text": "#1D1D1F",
+      "background": "rgba(255, 255, 255, 0.78)",
+      "accent": "#34C759"
+    }
+  },
+  "settings": {
+    "fontSize": 2.2,
+    "padding": 2.5,
+    "canvasBackground": "transparent"
+  },
+  "graphics": [
+    {
+      "id": "score-main",
+      "type": "customScoreboard",
+      "name": "Scorebalk",
+      "visible": false,
+      "position": "top-center",
+      "operator": true,
+      "data": {
+        "homeTeam": "Thuis",
+        "awayTeam": "Uit",
+        "homeScore": 0,
+        "awayScore": 0,
+        "minute": 0,
+        "period": "1e helft",
+        "showClock": true,
+        "layout": {
+          "refWidth": 1920,
+          "refHeight": 1080,
+          "background": ""
+        },
+        "elements": [
+          {
+            "id": "el-home-team",
+            "bind": "homeTeam",
+            "label": "Thuis team",
+            "text": "Thuis",
+            "x": 22,
+            "y": 45,
+            "fontSize": 36,
+            "color": "#ffffff",
+            "fontFamily": ""
+          },
+          {
+            "id": "el-home-score",
+            "bind": "homeScore",
+            "label": "Thuis score",
+            "text": "0",
+            "x": 22,
+            "y": 58,
+            "fontSize": 56,
+            "color": "#007aff",
+            "fontFamily": ""
+          },
+          {
+            "id": "el-away-team",
+            "bind": "awayTeam",
+            "label": "Uit team",
+            "text": "Uit",
+            "x": 78,
+            "y": 45,
+            "fontSize": 36,
+            "color": "#ffffff",
+            "fontFamily": ""
+          },
+          {
+            "id": "el-away-score",
+            "bind": "awayScore",
+            "label": "Uit score",
+            "text": "0",
+            "x": 78,
+            "y": 58,
+            "fontSize": 56,
+            "color": "#007aff",
+            "fontFamily": ""
+          },
+          {
+            "id": "el-period",
+            "bind": "period",
+            "label": "Periode",
+            "text": "1e helft",
+            "x": 50,
+            "y": 42,
+            "fontSize": 24,
+            "color": "#ffffff",
+            "fontFamily": ""
+          },
+          {
+            "id": "el-minute",
+            "bind": "minute",
+            "label": "Minuut",
+            "text": "0'",
+            "x": 50,
+            "y": 55,
+            "fontSize": 28,
+            "color": "#ffffff",
+            "fontFamily": ""
+          }
+        ]
+      }
+    }
+  ]
+}

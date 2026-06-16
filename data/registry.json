@@ -1,0 +1,29 @@
+{
+  "activeProjectId": "odido",
+  "projects": [
+    {
+      "id": "blank",
+      "name": "Blanco klant",
+      "createdAt": "2026-06-09T00:00:00.000Z",
+      "updatedAt": "2026-06-09T14:54:44.082Z"
+    },
+    {
+      "id": "fc-test",
+      "name": "FC Test",
+      "createdAt": "2026-06-09T14:30:38.463Z",
+      "updatedAt": "2026-06-09T14:30:41.623Z"
+    },
+    {
+      "id": "fc-test-1",
+      "name": "FC Test",
+      "createdAt": "2026-06-09T14:31:09.594Z",
+      "updatedAt": "2026-06-09T14:31:09.594Z"
+    },
+    {
+      "id": "odido",
+      "name": "ODIDO",
+      "createdAt": "2026-06-09T15:01:58.601Z",
+      "updatedAt": "2026-06-15T15:57:37.854Z"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "version": 2,
+  "brandId": "voetbal-demo",
+  "brand": {
+    "name": "Voetbal Demo Club",
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
+    "fontUrl": "",
+    "colors": {
+      "primary": "#007AFF",
+      "secondary": "#5856D6",
+      "text": "#1D1D1F",
+      "background": "rgba(255, 255, 255, 0.78)",
+      "accent": "#34C759"
+    }
+  },
+  "settings": {
+    "fontSize": 2.2,
+    "padding": 2.5,
+    "canvasBackground": "transparent"
+  },
+  "graphics": [
+    {
+      "id": "score-main",
+      "type": "footballScore",
+      "name": "Wedstrijdscore",
+      "visible": true,
+      "position": "top-center",
+      "operator": true,
+      "data": {
+        "homeTeam": "Ajax",
+        "awayTeam": "PSV",
+        "homeScore": 2,
+        "awayScore": 1,
+        "minute": 42,
+        "period": "2e helft",
+        "showClock": true,
+        "elements": {
+          "homeScore": {
+            "x": 25,
+            "y": 40,
+            "fontSize": 36
+          }
+        }
+      }
+    },
+    {
+      "id": "lt-host",
+      "type": "lowerThird",
+      "name": "Speler lower third",
+      "visible": false,
+      "position": "bottom-left",
+      "operator": false,
+      "data": {
+        "name": "Jan de Vries",
+        "title": "Aanvaller",
+        "company": "Voetbal Demo Club"
+      }
+    },
+    {
+      "id": "msg-break",
+      "type": "message",
+      "name": "Bericht",
+      "visible": false,
+      "position": "bottom-center",
+      "operator": false,
+      "data": {
+        "text": "Rust"
+      }
+    },
+    {
+      "id": "clock-live",
+      "type": "clock",
+      "name": "Klok",
+      "visible": false,
+      "position": "top-right",
+      "operator": false,
+      "data": {
+        "format": "24H"
+      }
+    }
+  ]
+}

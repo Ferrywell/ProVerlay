@@ -1,0 +1,346 @@
+{
+  "version": 4,
+  "client": {
+    "name": "ODIDO",
+    "notes": ""
+  },
+  "brandId": null,
+  "brand": {
+    "name": "",
+    "fontFamily": "'Otypical Headline', 'Otypical Text', sans-serif",
+    "fontUrl": "/projects/odido/assets/OtypicalHeadline-Bold.ttf",
+    "colors": {
+      "primary": "#007AFF",
+      "secondary": "#5856D6",
+      "text": "#1D1D1F",
+      "background": "rgba(255, 255, 255, 0.78)",
+      "accent": "#34C759"
+    }
+  },
+  "settings": {
+    "canvasWidth": 1920,
+    "canvasHeight": 1080,
+    "fontSize": 2.2,
+    "padding": 2.5,
+    "canvasBackground": "transparent"
+  },
+  "graphics": [
+    {
+      "id": "score-main",
+      "type": "matchScoreboard",
+      "name": "Match score",
+      "visible": true,
+      "position": "top-center",
+      "operator": true,
+      "data": {
+        "sport": "football",
+        "homeCode": "NED",
+        "awayCode": "JAP",
+        "homeName": "",
+        "awayName": "",
+        "homeScore": 1,
+        "awayScore": 0,
+        "showCodes": true,
+        "showNames": false,
+        "widgets": {
+          "homeCode": true,
+          "awayCode": true,
+          "homeScore": true,
+          "awayScore": true,
+          "clock": true,
+          "penalties": false
+        },
+        "clock": {
+          "period": "first_half",
+          "minute": 144,
+          "second": 14,
+          "stoppageTime": false,
+          "running": false,
+          "runningSince": "2026-06-15T13:04:46.412Z",
+          "autoStoppageAt90": false
+        },
+        "penalties": {
+          "active": false,
+          "homeKicks": [],
+          "awayKicks": [],
+          "homeScore": 0,
+          "awayScore": 0
+        },
+        "animation": {
+          "enabled": true,
+          "durationMs": 420
+        },
+        "layout": {
+          "refWidth": 3197,
+          "refHeight": 335,
+          "designFrameWidth": 3840,
+          "placement": {
+            "x": 50,
+            "y": 3.5,
+            "width": 35.2,
+            "anchor": "top-center"
+          },
+          "background": "ODIDO_SCOREBALK_BASIS.png",
+          "referenceImage": "design-ODIDO_SCOREBALK_BASIS_VOORBEELD.png",
+          "referenceOpacity": 0.45,
+          "referenceVisible": true,
+          "clockPlateWidth": 26,
+          "clockPlate": {
+            "enabled": true,
+            "mode": "pill",
+            "heightPx": 120,
+            "minWidthPx": 180,
+            "paddingXPx": 24,
+            "borderRadiusPx": 60,
+            "background": "rgba(0,0,0,0.85)",
+            "gapPx": 12,
+            "anchor": "right"
+          },
+          "backgroundVisible": false
+        },
+        "elements": [
+          {
+            "id": "el-home-code",
+            "bind": "homeCode",
+            "label": "Thuis code",
+            "text": "NED",
+            "x": 13.28,
+            "y": 49.85,
+            "fontSize": 240,
+            "color": "#ffffff",
+            "fontFamily": "'Otypical Headline', 'Otypical Text', sans-serif",
+            "anchor": "center"
+          },
+          {
+            "id": "el-home-score",
+            "bind": "homeScore",
+            "label": "Thuis score",
+            "text": "0",
+            "x": 30.53,
+            "y": 50,
+            "fontSize": 240,
+            "color": "#ffffff",
+            "fontFamily": "'Otypical Headline', 'Otypical Text', sans-serif",
+            "anchor": "center",
+            "minWidthCqw": 1.84
+          },
+          {
+            "id": "el-separator",
+            "bind": "custom",
+            "label": "Scheidingsteken",
+            "text": "-",
+            "x": 36.32,
+            "y": 50.3,
+            "fontSize": 240,
+            "color": "#ffffff",
+            "fontFamily": "'Otypical Headline', 'Otypical Text', sans-serif",
+            "anchor": "center"
+          },
+          {
+            "id": "el-away-score",
+            "bind": "awayScore",
+            "label": "Uit score",
+            "text": "0",
+            "x": 42.26,
+            "y": 50,
+            "fontSize": 240,
+            "color": "#ffffff",
+            "fontFamily": "'Otypical Headline', 'Otypical Text', sans-serif",
+            "anchor": "center",
+            "minWidthCqw": 1.84
+          },
+          {
+            "id": "el-away-code",
+            "bind": "awayCode",
+            "label": "Uit code",
+            "text": "ZWE",
+            "x": 59.59,
+            "y": 49.85,
+            "fontSize": 240,
+            "color": "#ffffff",
+            "fontFamily": "'Otypical Headline', 'Otypical Text', sans-serif",
+            "anchor": "center"
+          },
+          {
+            "id": "el-clock",
+            "bind": "clock",
+            "label": "Speeltijd",
+            "text": "0:00",
+            "x": 95.4986572265625,
+            "y": 49.16504854368932,
+            "fontSize": 219,
+            "color": "#ffffff",
+            "fontFamily": "'Otypical Headline', 'Otypical Text', sans-serif",
+            "anchor": "center-right",
+            "minWidthCqw": 2.9,
+            "letterSpacing": "-0.04em"
+          }
+        ]
+      },
+      "transition": {
+        "in": "auto",
+        "out": "auto",
+        "duration": 450
+      },
+      "soloVisible": false
+    },
+    {
+      "id": "ticker-main",
+      "type": "customTicker",
+      "name": "Ticker",
+      "visible": false,
+      "position": "bottom-full",
+      "operator": true,
+      "data": {
+        "messages": [
+          {
+            "id": "msg-1781457771179-ghyjr2",
+            "text": "Kijk je live? Zet de wedstrijd even op pauze en start hem weer op het tijdstip dat boven in beeld staat. Zo beleven we de wedstrijd samen.",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781465373209-j1z09u",
+            "text": "HYPE IN DE CHATTTTTTT!!!!!!!!!!",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781466712452-dhchnn",
+            "text": "SPAM HUP HUP HUP IN DE CHAT!",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781469750397-kdcbcv",
+            "text": "ODDIIDDDOOOOO!!!!!",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781472082252-vjbycf",
+            "text": "Wie moet erin gewisseld worden?",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781472186344-ym8zbt",
+            "text": "WE WORDEN WERELDKAMPIOEN",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781472198469-jt2i72",
+            "text": "JAPAN BAKT ER NOG STEEDS NIKS VAN",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781472276468-pip1uw",
+            "text": "JA WIJ ZIJN HET ORANJE LEGIOEN!!!!",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781472314165-tfs3kz",
+            "text": "NEDERLANDS ELFTAL NEDERLANDS ELFTAL KAMPIOENNNN",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781472342006-6fm465",
+            "text": "HUP HOLLAND HUP IN DE CHAT!",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781472424501-b5bwmh",
+            "text": "Pak een sapje het is drink pauze",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781473360072-bzgztm",
+            "text": "Wie moet er invallen?",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781473517377-te1jbr",
+            "text": "Wie is de MVP van de wedstrijd?",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781473594336-zanfuk",
+            "text": "Welke sport moet Memphis gaan doen?",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781473669173-rp2w4y",
+            "text": "MAN MAN MAN MAN MAN MAN MAN",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781473781769-qlprb1",
+            "text": "Geen hype in de chat!",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781473825452-0ch917",
+            "text": "Toch weer HYPE IN DE CHATTTT!!!!!",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781473926756-o8vk0w",
+            "text": "DIE BRILLLL!",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781474199571-l2ovl1",
+            "text": "De wedstrijd is afgelopen maar blijf nog even lekker hangen.",
+            "enabled": false
+          },
+          {
+            "id": "msg-1781474215340-gg5ffx",
+            "text": "De wedstrijd is afgelopen maar blijf nog lekker hangen.",
+            "enabled": true
+          }
+        ],
+        "speed": 100,
+        "textInsetLeft": 16.1,
+        "textInsetRight": 0,
+        "fadeWidth": 0,
+        "separator": "   •   ",
+        "fontSize": 130,
+        "color": "#ffffff",
+        "fontFamily": "",
+        "layout": {
+          "refWidth": 3840,
+          "sourceHeight": 2160,
+          "barHeight": 230,
+          "background": "ODIDO_TICKERBALK_BASIS_BALK.png"
+        }
+      },
+      "transition": {
+        "in": "auto",
+        "out": "auto",
+        "duration": 450
+      },
+      "soloVisible": false
+    },
+    {
+      "id": "countdown-main",
+      "type": "streamCountdown",
+      "name": "Stream countdown",
+      "visible": false,
+      "position": "custom",
+      "operator": false,
+      "data": {
+        "targetDateTime": "2026-06-15T16:10:11.472Z",
+        "format": "mm:ss",
+        "fontSize": 200,
+        "color": "#000000",
+        "fontFamily": "'OtypicalHeadline Regular', sans-serif",
+        "hideWhenExpired": false,
+        "layout": {
+          "refWidth": 480,
+          "refHeight": 140,
+          "background": ""
+        },
+        "placementFree": {
+          "x": 50,
+          "y": 50
+        }
+      },
+      "soloVisible": false
+    }
+  ]
+}

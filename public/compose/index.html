@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProVerlay — Import design</title>
+    <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/public/shared/tahoe.css" />
+    <link rel="stylesheet" href="/public/shared/form-controls.css" />
+    <link rel="stylesheet" href="/public/editor/editor.css" />
+    <link rel="stylesheet" href="/public/compose/compose.css" />
+  </head>
+  <body class="compose-app editor-app">
+    <header class="editor-header glass">
+      <div class="editor-header__start">
+        <a class="button button--secondary" href="/control">← Dashboard</a>
+        <a href="/control" class="app-brand app-brand--inline">
+          <img class="app-brand__mark" src="/public/shared/proverlay-logo.png" alt="" width="40" height="40" />
+          <span class="app-brand__copy">
+            <span class="app-brand__name">ProVerlay</span>
+            <span class="app-brand__page">Create from design</span>
+          </span>
+        </a>
+      </div>
+      <div class="editor-header__end">
+        <nav class="compose-phases" aria-label="Progress">
+          <span class="compose-phase is-active" data-phase="upload">Upload</span>
+          <span class="compose-phase" data-phase="review">Review</span>
+          <span class="compose-phase" data-phase="create">Create</span>
+        </nav>
+      </div>
+    </header>
+
+    <main class="compose-main">
+      <section class="compose-panel glass" id="phase-upload">
+        <div class="compose-panel__head">
+          <h2>Upload design</h2>
+          <p>Upload your design as PNG or WebP and choose which type of overlay to create. Then review the fields before the widget is created.</p>
+        </div>
+        <form id="upload-form" class="compose-form">
+          <label class="field">
+            <span>Widget type</span>
+            <select id="compose-type" required>
+              <option value="matchScoreboard">Match score</option>
+              <option value="customTicker">Ticker</option>
+              <option value="streamCountdown">Stream countdown</option>
+              <option value="lowerThird">Lower third</option>
+              <option value="message">Message</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Overlay name</span>
+            <input id="compose-name" type="text" placeholder="E.g. ODIDO score bar" autocomplete="off" />
+          </label>
+          <label class="compose-upload glass" id="compose-dropzone" for="compose-file">
+            <input id="compose-file" type="file" accept="image/png,image/webp" hidden required />
+            <span class="compose-upload__title">Drag a PNG or WebP here or click to choose</span>
+            <span class="compose-upload__hint" id="compose-file-hint">A transparent PNG or WebP works best. Ticker and countdown mainly use the background.</span>
+          </label>
+          <button class="button button--primary" type="submit" id="compose-analyze-btn">Analyze and review</button>
+        </form>
+      </section>
+
+      <section class="compose-review glass" id="phase-review" hidden>
+        <div class="compose-review__workspace">
+          <div class="editor-toolbar compose-toolbar">
+            <p id="compose-dimensions" class="editor-layout-info"></p>
+            <p id="compose-status" class="editor-status" role="status"></p>
+          </div>
+          <div class="editor-canvas-wrap compose-canvas-wrap">
+            <div id="compose-canvas" class="editor-canvas compose-canvas--asset">
+              <div id="compose-frame" class="editor-frame">
+                <div id="compose-strip" class="editor-strip">
+                  <div id="compose-stage" class="editor-canvas__stage">
+                    <div id="compose-regions" class="compose-regions"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="compose-inspector glass">
+          <div class="compose-inspector__head">
+            <h2>Review fields</h2>
+            <p id="compose-ocr-hint" class="inspector-hint">Drag a box on the design to adjust its position. The binding determines which live field appears here.</p>
+          </div>
+          <div id="compose-region-list" class="compose-region-list"></div>
+          <button class="button button--secondary" type="button" id="compose-add-region">+ Add field</button>
+          <div class="compose-inspector__actions">
+            <button class="button button--secondary" type="button" id="compose-back">Back</button>
+            <button class="button button--primary" type="button" id="compose-continue">Continue</button>
+          </div>
+        </aside>
+      </section>
+
+      <section class="compose-panel glass" id="phase-create" hidden>
+        <div class="compose-panel__head">
+          <h2>Create widget</h2>
+          <p id="compose-summary"></p>
+        </div>
+        <dl class="compose-summary" id="compose-summary-list"></dl>
+        <div class="compose-panel__actions">
+          <button class="button button--secondary" type="button" id="compose-back-review">Back to review</button>
+          <button class="button button--primary" type="button" id="compose-create-btn">Create widget and open</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="/public/shared/app-shell.js"></script>
+    <script type="module" src="/public/compose/compose.js"></script>
+  </body>
+</html>

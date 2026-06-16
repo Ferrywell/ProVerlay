@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProVerlay — Scoreboard editor</title>
+    <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/public/shared/tahoe.css" />
+    <link rel="stylesheet" href="/public/shared/form-controls.css" />
+    <link rel="stylesheet" href="/public/editor/editor.css" />
+  </head>
+  <body class="editor-app">
+    <div class="editor-desktop-gate" id="editor-desktop-gate" role="dialog" aria-labelledby="editor-gate-title">
+      <div>
+        <h2 id="editor-gate-title">Desktop or tablet recommended</h2>
+        <p>The scoreboard editor needs a wider screen for precise layout work. Open this page on a Mac or PC, or rotate your tablet to landscape.</p>
+        <a class="button button--primary" href="/control">Back to dashboard</a>
+      </div>
+    </div>
+    <header class="editor-header glass">
+      <div class="editor-header__start">
+        <a class="button button--secondary" href="/control">← Dashboard</a>
+        <a href="/control" class="app-brand app-brand--inline">
+          <img class="app-brand__mark" src="/public/shared/proverlay-logo.png" alt="" width="40" height="40" />
+          <span class="app-brand__copy">
+            <span class="app-brand__name">ProVerlay</span>
+            <span class="app-brand__page">Scoreboard editor</span>
+          </span>
+        </a>
+      </div>
+      <div class="editor-header__end">
+        <label class="field field--inline">
+          <span>Overlay</span>
+          <select id="editor-graphic-select" aria-label="Choose overlay"></select>
+        </label>
+        <button class="button button--primary" id="editor-save" type="button">Save</button>
+        <a class="button button--secondary" href="/render">Preview</a>
+      </div>
+    </header>
+
+    <main class="editor-main">
+      <section class="editor-workspace glass">
+        <div class="editor-toolbar">
+          <div class="toolbar-group">
+            <button class="button button--secondary" id="editor-add-element" type="button">+ Text field</button>
+            <button class="button button--secondary" id="editor-auto-slots" type="button" hidden>Auto-place fields</button>
+            <button class="button button--secondary" id="editor-select-strip" type="button" hidden>Move PNG</button>
+          </div>
+          <div class="toolbar-group" id="align-toolbar">
+            <button class="button button--secondary" id="align-y" type="button" disabled>Align Y</button>
+            <button class="button button--secondary" id="align-x" type="button" disabled>Align X</button>
+            <button class="button button--secondary" id="align-font" type="button" disabled>Match size</button>
+            <button class="button button--secondary" id="align-scores" type="button">Score row</button>
+          </div>
+          <div class="toolbar-group toolbar-group--ref">
+            <label class="field field--check field--toolbar">
+              <input id="ref-visible" type="checkbox" checked />
+              <span>Reference</span>
+            </label>
+            <label class="field field--inline field--toolbar">
+              <span>Opacity <output id="ref-opacity-out" for="ref-opacity">45</output>%</span>
+              <input id="ref-opacity" type="range" min="5" max="90" step="1" value="45" />
+            </label>
+          </div>
+          <div class="toolbar-group toolbar-group--meta">
+            <p id="editor-layout-info" class="editor-layout-info"></p>
+            <p id="editor-status" class="editor-status" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="editor-canvas-wrap">
+          <div id="editor-canvas" class="editor-canvas" aria-label="Scoreboard canvas">
+            <div id="editor-frame" class="editor-frame">
+              <div id="editor-reference" class="editor-reference" aria-hidden="true"></div>
+              <div id="editor-strip" class="editor-strip">
+                <div class="editor-strip__handle" id="editor-strip-handle" title="Drag to move the score bar" hidden></div>
+                <div id="editor-stage" class="editor-canvas__stage">
+                  <div id="editor-elements" class="editor-elements"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-upload glass" id="editor-upload-zone">
+          <input id="editor-bg-upload" type="file" accept="image/png" hidden />
+          <div class="editor-upload__head">
+            <label class="editor-upload__title" for="editor-bg-upload">PNG background</label>
+            <button
+              class="editor-bg-eye"
+              id="bg-visible-toggle"
+              type="button"
+              aria-pressed="true"
+              aria-label="Toggle PNG background visibility"
+              title="Show/hide PNG background in preview and render"
+              hidden
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  fill="currentColor"
+                  d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                />
+              </svg>
+            </button>
+          </div>
+          <span class="editor-upload__hint">Upload your score bar PNG (e.g. 3197×335 strip). Place a reference image over the canvas to match text and scale to the client design.</span>
+        </div>
+      </section>
+
+      <aside class="editor-inspector glass" id="editor-inspector">
+        <div class="editor-inspector__head">
+          <p class="eyebrow">Canvas</p>
+          <h2 id="inspector-title">Overlay &amp; reference</h2>
+        </div>
+
+        <form id="layout-form" class="inspector-form">
+          <fieldset class="inspector-fieldset">
+            <legend>Reference image</legend>
+            <p class="inspector-hint">Transparent overlay over the full 1920×1080 canvas — not visible in OBS.</p>
+            <label class="field">
+              <span>Design reference</span>
+              <select id="layout-reference">
+                <option value="">No reference</option>
+              </select>
+            </label>
+            <label class="field field--check">
+              <input id="layout-ref-upload" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+              <button class="button button--secondary" id="layout-ref-upload-btn" type="button">Upload reference</button>
+            </label>
+          </fieldset>
+
+          <fieldset class="inspector-fieldset" id="placement-fieldset">
+            <legend>Score bar position &amp; scale</legend>
+            <p class="inspector-hint">Position on the project canvas. Width = scale relative to the design frame.</p>
+            <label class="field field-range">
+              <span>Horizontal</span>
+              <input id="placement-x" type="range" min="0" max="100" step="0.1" value="50" aria-label="Horizontal position" />
+              <div class="field-range__value">
+                <input id="placement-x-num" type="number" min="0" max="100" step="0.1" value="50" class="field-range__num" aria-label="Horizontal position percentage" />
+                <span class="field-range__unit">%</span>
+              </div>
+            </label>
+            <label class="field field-range">
+              <span>Vertical</span>
+              <input id="placement-y" type="range" min="0" max="100" step="0.1" value="5.5" aria-label="Vertical position" />
+              <div class="field-range__value">
+                <input id="placement-y-num" type="number" min="0" max="100" step="0.1" value="5.5" class="field-range__num" aria-label="Vertical position percentage" />
+                <span class="field-range__unit">%</span>
+              </div>
+            </label>
+            <label class="field field-range">
+              <span>Width (scale)</span>
+              <input id="placement-w" type="range" min="0" max="100" step="0.1" value="83.3" aria-label="Width scale" />
+              <div class="field-range__value">
+                <input id="placement-w-num" type="number" min="0" max="100" step="0.1" value="83.3" class="field-range__num" aria-label="Width scale percentage" />
+                <span class="field-range__unit">%</span>
+              </div>
+            </label>
+          </fieldset>
+        </form>
+
+        <p class="editor-inspector__empty" id="inspector-empty" hidden>Select a text field on the canvas.</p>
+
+        <form id="inspector-form" class="inspector-form" hidden>
+          <p class="inspector-section-label">Text field</p>
+          <label class="field">
+            <span>Text (preview)</span>
+            <input id="prop-text" type="text" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Font</span>
+            <select id="prop-font">
+              <option value="">Loading…</option>
+            </select>
+          </label>
+          <label class="field field-range">
+            <span>Size</span>
+            <input id="prop-size" type="range" min="12" max="280" step="1" value="36" aria-label="Font size" />
+            <div class="field-range__value">
+              <input id="prop-size-num" type="number" min="12" max="280" step="1" value="36" class="field-range__num field-range__num--px" aria-label="Font size pixels" />
+              <span class="field-range__unit">px</span>
+            </div>
+          </label>
+          <label class="field">
+            <span>Color</span>
+            <input id="prop-color" type="color" value="#ffffff" />
+          </label>
+          <label class="field">
+            <span>Bind field to</span>
+            <select id="prop-bind">
+              <option value="custom">Static text</option>
+            </select>
+          </label>
+          <div class="field-row-2">
+            <label class="field field-range">
+              <span>Position X</span>
+              <div class="field-range__controls">
+                <input id="prop-x" type="number" min="0" max="100" step="0.1" class="field-range__num" aria-label="Position X percentage" />
+                <span class="field-range__unit">%</span>
+              </div>
+            </label>
+            <label class="field field-range">
+              <span>Position Y</span>
+              <div class="field-range__controls">
+                <input id="prop-y" type="number" min="0" max="100" step="0.1" class="field-range__num" aria-label="Position Y percentage" />
+                <span class="field-range__unit">%</span>
+              </div>
+            </label>
+          </div>
+          <p class="inspector-hint inspector-hint--tight">Shift+click: multiple fields · Arrow keys: 1px · Ctrl+Z undo</p>
+          <button class="button button--danger" id="prop-delete" type="button">Delete field</button>
+        </form>
+      </aside>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/public/shared/app-shell.js"></script>
+    <script>
+      (function () {
+        const mq = window.matchMedia('(max-width: 767px)')
+        const apply = () => document.body.classList.toggle('is-narrow', mq.matches)
+        apply()
+        mq.addEventListener('change', apply)
+      })()
+    </script>
+    <script type="module" src="/public/editor/editor.js"></script>
+  </body>
+</html>

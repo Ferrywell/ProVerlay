@@ -1,0 +1,135 @@
+:root {
+  --primary: rgba(220, 38, 38, 1);
+  --secondary: rgba(15, 23, 42, 1);
+  --text: rgba(255, 255, 255, 1);
+  --background: rgba(15, 23, 42, 0.98);
+  --accent: rgba(254, 240, 138, 1);
+  --font-family: "Segoe UI", system-ui, sans-serif;
+  --font-size: 2.4vmin;
+  --padding: 3vmin;
+  --radius: 0.2vmin;
+}
+
+.graphic {
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  color: var(--text);
+  line-height: 1.25;
+}
+
+/* lowerThird */
+.graphic--lowerThird {
+  background: var(--background);
+  border: 0.25vmin solid var(--primary);
+  border-left: 0.85vmin solid var(--primary);
+  padding: calc(var(--padding) * 0.6) var(--padding);
+  border-radius: var(--radius);
+  min-width: min(34vw, 92vw);
+  box-shadow:
+    0 0.5vmin 2vmin rgba(0, 0, 0, 0.5),
+    inset 0 0 0 0.15vmin rgba(255, 255, 255, 0.06);
+}
+
+.graphic--lowerThird .name {
+  font-weight: 800;
+  font-size: 1.2em;
+  margin: 0 0 0.1em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.graphic--lowerThird .meta {
+  color: var(--accent);
+  font-size: 0.88em;
+  font-weight: 600;
+}
+
+/* message */
+.graphic--message {
+  background: var(--background);
+  border: 0.35vmin solid var(--primary);
+  border-top: 0.6vmin solid var(--primary);
+  padding: calc(var(--padding) * 0.5) calc(var(--padding) * 1.1);
+  border-radius: var(--radius);
+  text-align: center;
+  box-shadow: 0 0.4vmin 1.5vmin rgba(0, 0, 0, 0.45);
+}
+
+.graphic--message .text {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ticker */
+.graphic--ticker {
+  width: 100%;
+  background: var(--secondary);
+  border-top: 0.5vmin solid var(--primary);
+  border-bottom: 0.2vmin solid var(--primary);
+  overflow: hidden;
+  white-space: nowrap;
+  box-shadow: 0 -0.3vmin 1vmin rgba(0, 0, 0, 0.4);
+}
+
+.graphic--ticker .track {
+  display: inline-block;
+  padding: 0.85em 0;
+  font-weight: 700;
+}
+
+.graphic--ticker .item {
+  display: inline-block;
+  margin-right: 5vw;
+}
+
+.graphic--ticker .item::after {
+  content: " | ";
+  color: var(--primary);
+  margin-left: 0.6em;
+  font-weight: 800;
+}
+
+/* clock */
+.graphic--clock {
+  background: var(--background);
+  border: 0.3vmin solid var(--primary);
+  padding: 0.5em 1em;
+  border-radius: var(--radius);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  box-shadow: 0 0.3vmin 1vmin rgba(0, 0, 0, 0.4);
+}
+
+.graphic--clock .time {
+  letter-spacing: 0.05em;
+}
+
+/* countdown */
+.graphic--countdown {
+  background: var(--background);
+  border: 0.4vmin solid var(--primary);
+  padding: 0.65em 1.2em;
+  border-radius: var(--radius);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow:
+    0 0 1.5vmin rgba(220, 38, 38, 0.25),
+    0 0.4vmin 1.2vmin rgba(0, 0, 0, 0.45);
+}
+
+.graphic--countdown .time {
+  color: var(--accent);
+}
+
+/* image */
+.graphic--image img {
+  max-height: 14vh;
+  max-width: 22vw;
+  object-fit: contain;
+  border: 0.25vmin solid var(--primary);
+  padding: 0.5vmin;
+  background: var(--background);
+  box-shadow: 0 0.5vmin 1.5vmin rgba(0, 0, 0, 0.5);
+}

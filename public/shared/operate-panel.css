@@ -1,0 +1,403 @@
+/** Shared operate UI — dashboard sidebar, /operate, operator cards */
+
+.op-section {
+  margin: 0;
+}
+
+.op-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--pv-space-md);
+  padding: var(--pv-space-md);
+}
+
+.op-section-head--compact {
+  padding-bottom: var(--pv-space-sm);
+}
+
+.op-section-head__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.op-status {
+  margin: 0;
+  color: var(--pv-text-secondary);
+  font-size: var(--pv-type-subhead);
+  line-height: 1.4;
+}
+
+.op-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--pv-space-sm);
+}
+
+.op-toolbar--primary {
+  grid-template-columns: 1fr;
+}
+
+.op-toolbar--primary .touch-btn,
+.op-toolbar--primary .button {
+  min-height: 48px;
+  width: 100%;
+}
+
+.dashboard-operate-root .pv-group {
+  box-shadow: none;
+  border: 0.5px solid var(--pv-separator);
+}
+
+.dashboard-operate-root .op-section.is-live > .pv-group {
+  box-shadow: inset 0 0 0 1px rgba(59, 109, 17, 0.35);
+}
+
+/* Ticker message rows */
+.ticker-msg-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticker-msg-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pv-space-sm);
+  padding: var(--pv-space-sm) var(--pv-space-md);
+  border-top: 0.5px solid var(--pv-separator);
+}
+
+.ticker-msg-list__item:first-child {
+  border-top: 0;
+}
+
+.ticker-msg-list__item.is-disabled .ticker-msg-row__text {
+  opacity: 0.45;
+}
+
+.ticker-msg-row {
+  display: flex;
+  align-items: center;
+  gap: var(--pv-space-sm);
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.ticker-msg-row__toggle {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--pv-success);
+}
+
+.ticker-msg-row__text {
+  font-size: var(--pv-type-body);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.button--icon {
+  min-height: 36px;
+  min-width: 36px;
+  padding: 0;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.button--icon.button--danger {
+  background: transparent;
+  color: var(--pv-danger);
+}
+
+.button--icon.button--danger:hover {
+  background: var(--pv-danger-tint);
+}
+
+.ticker-compose {
+  display: grid;
+  gap: var(--pv-space-sm);
+}
+
+.ticker-compose__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--pv-space-sm);
+  align-items: end;
+}
+
+.ticker-compose__row .field {
+  margin: 0;
+}
+
+.ticker-compose__add {
+  min-height: 44px;
+  min-width: 4.5rem;
+  align-self: end;
+}
+
+/* Operator — inherit dashboard ticker row layout */
+.operator .ticker-msg-list__item {
+  padding: var(--pv-space-sm) var(--pv-space-md);
+}
+
+.operator .ticker-compose .field input[type='text'] {
+  min-height: 44px;
+  font-size: 16px;
+}
+
+.operate-widget-mount .pv-group__cell {
+  padding: var(--pv-space-md);
+}
+
+.operate-widget-mount .pv-group__cell--flush {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Dashboard embed: keep inset from group border stripe */
+.dashboard-operate-root .operate-widget-mount .pv-group__cell--flush {
+  padding-left: var(--pv-space-md);
+  padding-right: var(--pv-space-md);
+}
+
+.dashboard-operate-root .operate-widget-mount .pv-group__cell--actions {
+  padding-left: var(--pv-space-md);
+  padding-right: var(--pv-space-md);
+}
+
+.operate-link-out {
+  margin: 0;
+  font-size: var(--pv-type-footnote);
+}
+
+.operate-link-out a {
+  font-weight: 500;
+}
+
+/* Match score operate */
+.match-operate {
+  display: grid;
+}
+
+.match-operate__teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--pv-space-sm);
+  align-items: center;
+  padding: var(--pv-space-xs) 0 var(--pv-space-sm);
+}
+
+.match-operate--embedded .match-operate__teams {
+  padding-bottom: var(--pv-space-md);
+}
+
+.match-operate__team {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  min-width: 0;
+}
+
+.match-operate__team-name {
+  font-size: var(--pv-type-subhead);
+  font-weight: 650;
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.match-operate__team-code {
+  width: 4.5ch;
+  max-width: 100%;
+  margin: 0 auto;
+  border: 0.5px solid var(--pv-border-strong);
+  border-radius: var(--pv-radius-sm);
+  box-shadow: none;
+  background: var(--pv-bg-solid);
+  padding: 0.35rem 0.45rem;
+  text-align: center;
+  font-size: var(--pv-type-subhead);
+  font-weight: 650;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-operate__team-name-input {
+  width: min(100%, 8rem);
+  margin: 0 auto;
+  border: 0.5px solid var(--pv-border-strong);
+  border-radius: var(--pv-radius-sm);
+  box-shadow: none;
+  background: var(--pv-bg-solid);
+  padding: 0.3rem 0.5rem;
+  text-align: center;
+  font-size: var(--pv-type-footnote);
+  font-weight: 500;
+}
+
+.match-operate__score {
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.match-operate__mid {
+  text-align: center;
+  padding: 0 var(--pv-space-xs);
+}
+
+.match-operate__clock {
+  font-size: clamp(1.1rem, 4vw, 1.35rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--pv-text);
+  letter-spacing: 0.02em;
+}
+
+.match-operate__score-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--pv-space-sm);
+  width: 100%;
+}
+
+.match-operate__score-btn {
+  min-height: 48px;
+  min-width: 0;
+  font-size: var(--pv-type-headline);
+  font-weight: 600;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.match-operate--embedded .match-operate__score-btn {
+  min-height: 40px;
+  font-size: var(--pv-type-callout);
+}
+
+.match-operate__clock-set {
+  padding-top: 0;
+}
+
+.match-operate__clock-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pv-space-sm);
+}
+
+.match-operate__clock-field {
+  margin: 0;
+}
+
+.match-operate__clock-field span {
+  font-size: var(--pv-type-footnote);
+  color: var(--pv-text-secondary);
+}
+
+.pv-group .match-operate__clock-field input[type='number'] {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  border: 0.5px solid var(--pv-border-strong);
+  border-radius: var(--pv-radius-sm);
+  box-shadow: none;
+  background: var(--pv-bg-solid);
+  padding: 0.5rem 0.65rem;
+}
+
+.match-operate--embedded .match-operate__clock-field input[type='number'] {
+  min-height: 40px;
+}
+
+.match-operate__nudge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--pv-space-sm);
+  padding-bottom: var(--pv-space-2xs);
+}
+
+.match-operate--embedded .match-operate__nudge-grid {
+  padding-top: var(--pv-space-2xs);
+}
+
+.match-operate__nudge-btn {
+  min-height: 44px;
+  padding: 0.35rem 0.5rem;
+  border: 0.5px solid var(--pv-separator);
+  border-radius: var(--pv-radius-control);
+  background: var(--pv-bg-solid);
+  color: var(--pv-text);
+  font-size: var(--pv-type-footnote);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.match-operate__nudge-btn:hover {
+  background: var(--pv-fill-secondary);
+}
+
+.match-operate--embedded .match-operate__nudge-btn {
+  min-height: 36px;
+  font-size: var(--pv-type-caption);
+}
+
+.match-operate__controls {
+  display: grid;
+  gap: var(--pv-space-sm);
+}
+
+.match-operate__clock-btn {
+  min-height: 48px;
+  width: 100%;
+  font-size: var(--pv-type-headline);
+  font-weight: 600;
+  touch-action: manipulation;
+}
+
+.match-operate--embedded .match-operate__clock-btn {
+  min-height: 44px;
+  font-size: var(--pv-type-callout);
+}
+
+.match-operate__period {
+  margin: 0;
+}
+
+.pv-group .match-operate__period select {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  border: 0.5px solid var(--pv-border-strong);
+  border-radius: var(--pv-radius-sm);
+  box-shadow: none;
+  background: var(--pv-bg-solid);
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+}
+
+.match-operate--embedded .match-operate__period select {
+  min-height: 40px;
+}
+
+/* Operator clock minute/second (same pv-group reset override) */
+.operator .clock-controls .field input[type='number'] {
+  border: 0.5px solid var(--pv-border-strong);
+  border-radius: var(--pv-radius-sm);
+  box-shadow: none;
+  background: var(--pv-bg-solid);
+  padding: 0.5rem 0.65rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

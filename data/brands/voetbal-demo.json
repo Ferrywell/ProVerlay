@@ -1,0 +1,13 @@
+{
+  "id": "voetbal-demo",
+  "name": "Voetbal Demo Club",
+  "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
+  "fontUrl": "",
+  "colors": {
+    "primary": "#007AFF",
+    "secondary": "#5856D6",
+    "text": "#1D1D1F",
+    "background": "rgba(255, 255, 255, 0.78)",
+    "accent": "#34C759"
+  }
+}

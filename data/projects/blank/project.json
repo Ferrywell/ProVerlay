@@ -1,0 +1,179 @@
+{
+  "version": 4,
+  "client": {
+    "name": "",
+    "notes": ""
+  },
+  "brandId": null,
+  "brand": {
+    "name": "",
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
+    "fontUrl": "",
+    "colors": {
+      "primary": "#007AFF",
+      "secondary": "#5856D6",
+      "text": "#1D1D1F",
+      "background": "rgba(255, 255, 255, 0.78)",
+      "accent": "#34C759"
+    }
+  },
+  "settings": {
+    "canvasWidth": 1920,
+    "canvasHeight": 1080,
+    "fontSize": 2.2,
+    "padding": 2.5,
+    "canvasBackground": "transparent"
+  },
+  "graphics": [
+    {
+      "id": "score-main",
+      "type": "matchScoreboard",
+      "name": "Wedstrijdscore",
+      "visible": true,
+      "position": "top-center",
+      "operator": true,
+      "data": {
+        "homeCode": "NED",
+        "awayCode": "JAP",
+        "homeName": "Nederland",
+        "awayName": "Japan",
+        "homeScore": 1,
+        "awayScore": 1,
+        "showCodes": true,
+        "showNames": false,
+        "clock": {
+          "period": "first_half",
+          "minute": 0,
+          "second": 0,
+          "stoppageTime": false,
+          "running": true,
+          "runningSince": "2026-06-09T14:54:44.066Z"
+        },
+        "penalties": {
+          "active": false,
+          "homeKicks": [],
+          "awayKicks": [],
+          "homeScore": 0,
+          "awayScore": 0
+        },
+        "animation": {
+          "enabled": true,
+          "durationMs": 420
+        },
+        "layout": {
+          "refWidth": 1920,
+          "refHeight": 1080,
+          "background": ""
+        },
+        "elements": [
+          {
+            "id": "el-home-code",
+            "bind": "homeCode",
+            "label": "Thuis code",
+            "text": "NED",
+            "x": 18,
+            "y": 50,
+            "fontSize": 42,
+            "color": "#ffffff",
+            "fontFamily": ""
+          },
+          {
+            "id": "el-home-score",
+            "bind": "homeScore",
+            "label": "Thuis score",
+            "text": "0",
+            "x": 18,
+            "y": 62,
+            "fontSize": 64,
+            "color": "#ffffff",
+            "fontFamily": ""
+          },
+          {
+            "id": "el-clock",
+            "bind": "clock",
+            "label": "Speeltijd",
+            "text": "0:00",
+            "x": 50,
+            "y": 56,
+            "fontSize": 36,
+            "color": "#ffffff",
+            "fontFamily": ""
+          },
+          {
+            "id": "el-away-code",
+            "bind": "awayCode",
+            "label": "Uit code",
+            "text": "JAP",
+            "x": 82,
+            "y": 50,
+            "fontSize": 42,
+            "color": "#ffffff",
+            "fontFamily": ""
+          },
+          {
+            "id": "el-away-score",
+            "bind": "awayScore",
+            "label": "Uit score",
+            "text": "0",
+            "x": 82,
+            "y": 62,
+            "fontSize": 64,
+            "color": "#ffffff",
+            "fontFamily": ""
+          }
+        ],
+        "widgets": {
+          "homeCode": true,
+          "clock": false
+        }
+      }
+    },
+    {
+      "id": "ticker-main",
+      "type": "customTicker",
+      "name": "Tickertape",
+      "visible": false,
+      "position": "bottom-full",
+      "operator": true,
+      "data": {
+        "messages": [
+          "En de winnaar van de eerste giveaway is.... @Suuzz2001"
+        ],
+        "speed": 90,
+        "textInsetLeft": 16,
+        "textInsetRight": 1,
+        "fadeWidth": 4,
+        "separator": "   •   ",
+        "fontSize": 30,
+        "color": "#ffffff",
+        "fontFamily": "",
+        "layout": {
+          "refWidth": 1920,
+          "refHeight": 108,
+          "background": ""
+        }
+      }
+    },
+    {
+      "id": "countdown-main",
+      "type": "streamCountdown",
+      "name": "Start countdown",
+      "visible": false,
+      "position": "top-center",
+      "operator": false,
+      "data": {
+        "targetDateTime": "2026-06-09T15:17:42.095Z",
+        "format": "mm:ss",
+        "fontSize": 96,
+        "color": "#1d1d1f",
+        "fontFamily": "",
+        "hideWhenExpired": false,
+        "layout": {
+          "refWidth": 480,
+          "refHeight": 140,
+          "background": ""
+        }
+      }
+    }
+  ]
+}

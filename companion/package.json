@@ -1,0 +1,17 @@
+{
+  "name": "companion-module-proverlay",
+  "version": "0.1.0",
+  "description": "Bitfocus Companion module for ProVerlay live graphics",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "setup-dev": "bash scripts/setup-dev.sh",
+    "test:connection": "node scripts/test-connection.js"
+  },
+  "dependencies": {
+    "@companion-module/base": "~2.0.4",
+    "socket.io-client": "^4.8.1"
+  },
+  "manufacturer": "ProVerlay",
+  "products": ["ProVerlay"]
+}

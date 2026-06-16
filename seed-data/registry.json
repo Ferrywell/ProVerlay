@@ -1,0 +1,11 @@
+{
+  "activeProjectId": "blank",
+  "projects": [
+    {
+      "id": "blank",
+      "name": "New client",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z"
+    }
+  ]
+}
