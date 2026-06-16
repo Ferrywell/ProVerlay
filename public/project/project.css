@@ -1,0 +1,211 @@
+.project-page {
+  padding: 0 0 2rem;
+}
+
+.project-page .project-grid {
+  padding: var(--pv-space-lg) var(--pv-screen-margin);
+}
+
+h1, h2 {
+  margin: 0.1rem 0 0;
+  font-weight: 700;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pv-space-lg);
+}
+
+.panel--canvas {
+  grid-column: 1 / -1;
+}
+
+.panel {
+  padding: var(--pv-space-lg) 1.1rem 1.2rem;
+}
+
+.panel-head p {
+  margin: var(--pv-space-xs) 0 0;
+  color: var(--pv-text-secondary);
+  line-height: 1.45;
+}
+
+.canvas-settings {
+  display: grid;
+  gap: var(--pv-space-lg);
+  margin-top: var(--pv-space-md);
+  padding: var(--pv-space-lg);
+  border-radius: var(--pv-radius-sm);
+  border: 1px solid var(--pv-border);
+  background: rgba(255, 255, 255, 0.45);
+  max-width: 36rem;
+}
+
+.canvas-settings__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pv-space-md);
+}
+
+.canvas-settings__fields .field input {
+  width: 100%;
+  border: 1px solid var(--pv-border);
+  border-radius: var(--pv-radius-sm);
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.canvas-presets {
+  display: grid;
+  gap: var(--pv-space-sm);
+}
+
+.canvas-presets__label {
+  font-size: var(--pv-type-footnote);
+  color: var(--pv-text-secondary);
+  font-weight: 600;
+}
+
+.canvas-presets__buttons.pv-segmented {
+  width: 100%;
+}
+
+.canvas-settings__save {
+  justify-self: start;
+  min-width: 10rem;
+}
+
+.canvas-aspect {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--pv-text-secondary);
+}
+
+.canvas-editor-link {
+  margin: 0;
+}
+
+.asset-toolbar {
+  margin-top: 0.85rem;
+}
+
+.project-import-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.asset-list,
+.design-list {
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.asset-list li,
+.design-list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.65rem;
+  align-items: center;
+  padding: var(--pv-space-sm) 0.65rem;
+  border-radius: var(--pv-radius-sm);
+  border: 1px solid var(--pv-border);
+  background: rgba(255, 255, 255, 0.55);
+  transition: border-color 0.15s ease;
+}
+
+.asset-list li:hover,
+.design-list li:hover {
+  border-color: var(--pv-border-strong);
+}
+
+.asset-list .asset-icon {
+  width: 72px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.asset-list img,
+.design-list img {
+  width: 72px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.asset-list .asset-meta,
+.design-list .asset-meta {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.asset-list .asset-meta strong,
+.design-list .asset-meta strong {
+  font-size: 0.92rem;
+}
+
+.asset-list .asset-meta span,
+.design-list .asset-meta span {
+  font-size: 0.78rem;
+  color: var(--pv-text-secondary);
+  word-break: break-all;
+}
+
+.project-status {
+  margin: var(--pv-space-lg) 0 0;
+  min-height: 1.25rem;
+  font-size: 0.82rem;
+  color: var(--pv-text-secondary);
+}
+
+.project-status.is-error {
+  color: var(--pv-danger);
+}
+
+.project-status.is-success {
+  color: #248a3d;
+}
+
+@media (max-width: 900px) {
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-settings__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-settings__save {
+    width: 100%;
+  }
+}
+
+/* ---- Client branding form ---- */
+.form-grid,
+.color-grid {
+  display: grid;
+  gap: var(--pv-space-md);
+}
+
+.form-grid {
+  margin-top: var(--pv-space-lg);
+  max-width: 460px;
+}
+
+.color-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}

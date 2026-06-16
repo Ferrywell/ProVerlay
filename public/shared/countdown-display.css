@@ -1,0 +1,24 @@
+/** Shared countdown typography — render + dashboard preview */
+
+.countdown-time,
+.countdown-preview__time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.cd-seg {
+  letter-spacing: -0.05em;
+}
+
+.cd-colon {
+  display: inline-block;
+  padding: 0 0.12em;
+  letter-spacing: 0;
+  color: inherit;
+  opacity: 1;
+}

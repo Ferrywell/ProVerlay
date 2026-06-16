@@ -1,0 +1,542 @@
+.editor-app {
+  min-height: 100vh;
+  padding: var(--pv-space-lg) var(--pv-screen-margin) 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pv-space-lg);
+}
+
+@media (min-width: 768px) {
+  .editor-app {
+    padding-left: var(--pv-space-xl);
+    padding-right: var(--pv-space-xl);
+  }
+}
+
+.editor-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--pv-space-lg);
+  padding: 0.85rem 1.1rem;
+  position: sticky;
+  top: var(--pv-space-sm);
+  z-index: 20;
+}
+
+.editor-header__start,
+.editor-header__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.editor-header h1 {
+  margin: 0.1rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.field--inline {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 10rem;
+}
+
+.field--inline span {
+  font-size: 0.72rem;
+  color: var(--pv-text-secondary);
+}
+
+.field--inline select {
+  border: 1px solid var(--pv-border);
+  border-radius: var(--pv-radius-sm);
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.85);
+  min-height: 44px;
+}
+
+.editor-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: var(--pv-space-lg);
+  min-height: 0;
+}
+
+.editor-workspace {
+  padding: var(--pv-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pv-space-md);
+  min-height: 0;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pv-space-md);
+  padding-bottom: var(--pv-space-md);
+  border-bottom: 1px solid var(--pv-border);
+}
+
+.toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pv-space-sm);
+}
+
+.toolbar-group--ref {
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--pv-radius-sm);
+  border: 1px solid var(--pv-border);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.field--toolbar {
+  margin: 0;
+}
+
+.field--toolbar span {
+  font-size: 0.72rem;
+}
+
+.field--toolbar input[type='range'] {
+  width: 6.5rem;
+  min-height: auto;
+  accent-color: var(--pv-accent);
+}
+
+.inspector-fieldset {
+  border: 1px solid var(--pv-border);
+  border-radius: var(--pv-radius-sm);
+  padding: 0.75rem;
+  margin: 0;
+}
+
+.inspector-fieldset legend {
+  font-size: 0.78rem;
+  font-weight: 650;
+  padding: 0 0.25rem;
+}
+
+.inspector-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  color: var(--pv-text-secondary);
+  line-height: 1.4;
+}
+
+.inspector-hint--tight {
+  margin: 0.25rem 0 0;
+  font-size: 0.72rem;
+}
+
+.inspector-section-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pv-text-secondary);
+}
+
+#layout-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.editor-status {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--pv-text-secondary);
+}
+
+.editor-status.is-success {
+  color: #248a3d;
+}
+
+.editor-status.is-error {
+  color: var(--pv-danger);
+}
+
+.editor-canvas-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: min(52vh, 420px);
+  padding: var(--pv-space-md);
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: var(--pv-radius-sm);
+  border: 1px dashed var(--pv-border);
+}
+
+.editor-canvas {
+  width: min(100%, 960px);
+  aspect-ratio: var(--frame-aspect, 16 / 9);
+  position: relative;
+  touch-action: none;
+  user-select: none;
+}
+
+.editor-frame {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    #101014;
+  background-size: 24px 24px, 24px 24px, auto;
+}
+
+.editor-reference {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  opacity: var(--ref-opacity, 0.45);
+  transition: opacity 0.15s ease;
+}
+
+.editor-reference.is-hidden {
+  opacity: 0;
+}
+
+.editor-strip {
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.editor-strip.is-strip-active {
+  outline: 2px dashed rgba(0, 122, 255, 0.65);
+  outline-offset: 2px;
+}
+
+.editor-strip__handle {
+  position: absolute;
+  top: -1.35rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.15rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 122, 255, 0.85);
+  border-radius: 6px 6px 0 0;
+  cursor: grab;
+  white-space: nowrap;
+  user-select: none;
+  touch-action: none;
+}
+
+.editor-strip__handle:active {
+  cursor: grabbing;
+}
+
+.editor-strip .editor-canvas__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--strip-aspect, var(--frame-aspect, 16 / 9));
+  height: auto;
+  inset: auto;
+}
+
+.editor-canvas--full .editor-strip {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none;
+}
+
+.editor-canvas--full .editor-strip .editor-canvas__stage {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+  height: 100%;
+}
+
+.editor-canvas--strip .editor-frame {
+  outline: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.editor-canvas--strip .editor-strip {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.editor-canvas--strip {
+  width: min(100%, 960px);
+}
+
+.editor-canvas__stage {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #1a1a1e;
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  container-type: inline-size;
+}
+
+.editor-canvas__stage.has-bg-hint::before {
+  content: 'Geen achtergrond — upload een PNG';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: var(--pv-space-lg);
+  pointer-events: none;
+}
+
+.editor-elements {
+  position: absolute;
+  inset: 0;
+}
+
+.editor-element {
+  position: absolute;
+  padding: 0;
+  /* outline i.p.v. border: telt niet mee in de breedte, dus
+     posities matchen exact met de render output */
+  border: none;
+  outline: 2px solid transparent;
+  border-radius: 6px;
+  cursor: grab;
+  white-space: nowrap;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  touch-action: none;
+  box-sizing: border-box;
+}
+
+.editor-element .score-el-text {
+  display: block;
+  width: 100%;
+  line-height: 1;
+  text-align: center;
+}
+
+.editor-layout-info {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--pv-text-secondary);
+  text-align: right;
+}
+
+.editor-element.is-selected {
+  outline-color: var(--pv-accent);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.25);
+}
+
+.editor-element.is-dragging {
+  cursor: grabbing;
+  opacity: 0.92;
+}
+
+.editor-upload {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.85rem var(--pv-space-lg);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.editor-upload__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.editor-upload__title {
+  font-weight: 650;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.editor-bg-eye {
+  appearance: none;
+  border: 1px solid var(--pv-border);
+  border-radius: var(--pv-radius-sm);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--pv-text);
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex: none;
+}
+
+.editor-bg-eye:hover {
+  border-color: var(--pv-accent);
+  color: var(--pv-accent);
+}
+
+.editor-bg-eye[aria-pressed='false'] {
+  opacity: 0.38;
+}
+
+.editor-upload:hover,
+.editor-upload.is-dragover {
+  border-color: var(--pv-accent);
+  background: rgba(0, 122, 255, 0.04);
+}
+
+.editor-upload__hint {
+  font-size: 0.82rem;
+  color: var(--pv-text-secondary);
+  line-height: 1.4;
+}
+
+.editor-inspector {
+  padding: var(--pv-space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pv-space-md);
+  max-height: calc(100vh - 7rem);
+  overflow: auto;
+}
+
+.editor-inspector__head {
+  padding-bottom: var(--pv-space-md);
+  border-bottom: 1px solid var(--pv-border);
+}
+
+.editor-inspector__head h2 {
+  margin: 0.15rem 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.editor-inspector__empty {
+  margin: 0;
+  color: var(--pv-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  padding: var(--pv-space-lg) var(--pv-space-md);
+  text-align: center;
+  border: 1px dashed var(--pv-border);
+  border-radius: var(--pv-radius-sm);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.inspector-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.inspector-form .field {
+  display: grid;
+  gap: var(--pv-space-xs);
+}
+
+.inspector-form .field span {
+  font-size: 0.82rem;
+  color: var(--pv-text-secondary);
+}
+
+.inspector-form input[type='text'],
+.inspector-form select {
+  width: 100%;
+  border: 1px solid var(--pv-border);
+  border-radius: var(--pv-radius-sm);
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.85);
+  min-height: 44px;
+}
+
+.inspector-form input[type='range'] {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--pv-accent);
+}
+
+.field-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.inspector-form input[type='color'] {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.25rem;
+  border: 1px solid var(--pv-border);
+  border-radius: var(--pv-radius-sm);
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+}
+
+.field--readonly .readonly-value {
+  margin: 0;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+#prop-delete {
+  margin-top: 0.25rem;
+  min-height: 44px;
+}
+
+@media (max-width: 900px) {
+  .editor-main {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-inspector {
+    max-height: none;
+    order: 2;
+  }
+
+  .editor-workspace {
+    order: 1;
+  }
+
+  .editor-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toolbar-group--meta {
+    margin-left: 0;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .editor-layout-info {
+    text-align: left;
+  }
+
+  .editor-canvas-wrap {
+    min-height: 240px;
+  }
+}

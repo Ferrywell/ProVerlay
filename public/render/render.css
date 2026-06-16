@@ -1,0 +1,725 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: var(--canvas-w, 1920px);
+  height: var(--canvas-h, 1080px);
+  overflow: hidden;
+  background: transparent;
+}
+
+#preview-shell {
+  position: relative;
+  width: var(--canvas-w, 1920px);
+  height: var(--canvas-h, 1080px);
+}
+
+#stage {
+  position: relative;
+  width: var(--canvas-w, 1920px);
+  height: var(--canvas-h, 1080px);
+  overflow: hidden;
+}
+
+/* Scaled preview popup (dashboard / operator Preview button) */
+html[data-preview-window],
+html[data-preview-window] body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #2c2c2e;
+}
+
+html[data-preview-window] body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+html[data-preview-window] #preview-shell {
+  flex-shrink: 0;
+  transform: scale(var(--preview-scale, 1));
+  transform-origin: center center;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+html[data-preview-window] #stage:has(.score-canvas--clock-pill) {
+  overflow: visible;
+}
+
+html[data-preview-window] .score-canvas--no-bg {
+  background: rgba(10, 10, 14, 0.72);
+  border-radius: 0.35em;
+}
+
+.graphic-layer {
+  position: absolute;
+  pointer-events: none;
+}
+
+.graphic-layer--stage {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.graphic-layer--bottom {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--canvas-w, 1920px);
+}
+
+.pos-bottom-left { left: var(--padding); bottom: var(--padding); }
+.pos-bottom-center { left: 50%; bottom: var(--padding); transform: translateX(-50%); }
+.pos-bottom-full { left: 0; right: 0; bottom: 0; width: var(--canvas-w, 1920px); }
+.pos-bottom-full .graphic { width: 100%; }
+.pos-top-left { left: var(--padding); top: var(--padding); }
+.pos-top-center { left: 50%; top: var(--padding); transform: translateX(-50%); }
+.pos-top-right { right: var(--padding); top: var(--padding); }
+.pos-center {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+/* Vrije plaatsing vanuit de layout-editor: left/top % inline op de laag */
+.pos-custom {
+  transform: translate(-50%, -50%);
+}
+.pos-top-center.pos-top-center--flush,
+.pos-top-center:has(.match-board--strip) { top: 0; }
+
+.graphic {
+  font-family: var(--brand-font);
+  font-size: var(--font-size);
+  color: var(--text);
+}
+
+.graphic--lowerThird {
+  background: var(--background);
+  border-left: 0.45vmin solid var(--primary);
+  padding: calc(var(--padding) * 0.55) calc(var(--padding) * 0.9);
+  border-radius: 1.1vmin;
+  backdrop-filter: blur(16px);
+}
+
+.graphic--lowerThird .name {
+  font-weight: 700;
+  margin: 0;
+}
+
+.graphic--lowerThird .meta {
+  opacity: 0.82;
+  font-size: 0.86em;
+  margin: 0.15em 0 0;
+}
+
+.graphic--message {
+  background: var(--background);
+  padding: 0.55em 1em;
+  border-radius: 1vmin;
+  backdrop-filter: blur(16px);
+}
+
+.graphic--clock {
+  background: var(--background);
+  padding: 0.45em 0.8em;
+  border-radius: 1vmin;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.graphic--footballScore,
+.graphic--customScoreboard,
+.graphic--composedScore,
+.graphic--matchScoreboard {
+  background: transparent;
+  padding: 0;
+}
+
+.score-canvas {
+  position: relative;
+  width: 100%;
+  container-type: inline-size;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.match-board--strip:has(.clock-pill) {
+  overflow: visible;
+}
+
+.match-board--placed {
+  position: absolute;
+  transform: translate(-50%, 0);
+}
+
+.match-board--strip {
+  width: 100%;
+}
+
+.pos-top-center .graphic--matchScoreboard.match-board--legacy {
+  width: min(var(--canvas-w, 1920px), calc(var(--ref-w, 1920) * 1px));
+}
+
+.score-canvas .score-el {
+  position: absolute;
+  white-space: nowrap;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  text-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.score-el--clock {
+  letter-spacing: -0.04em;
+}
+
+.clock-pill {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: none;
+  text-align: center;
+  transition: opacity 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.clock-pill__text {
+  position: static;
+  inset: auto;
+  left: auto;
+  top: auto;
+  transform: none;
+  display: block;
+  width: auto;
+  max-width: none;
+  flex: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  line-height: 1;
+}
+
+.clock-pill--hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.score-el--homeScore,
+.score-el--awayScore {
+  font-variant-numeric: tabular-nums;
+}
+
+.graphic--footballScore .scoreboard {
+  background: var(--background);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 1.4vmin;
+  padding: 0.7vmin 1.2vmin;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 1.2vmin 3vmin rgba(0, 0, 0, 0.18);
+}
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1.2vmin;
+  align-items: center;
+  min-width: 42vw;
+}
+
+.scoreboard .team {
+  display: grid;
+  justify-items: center;
+  gap: 0.2vmin;
+}
+
+.scoreboard .team-name {
+  font-size: 0.78em;
+  font-weight: 650;
+  opacity: 0.9;
+}
+
+.scoreboard .team-score {
+  font-size: 1.55em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
+}
+
+.scoreboard .meta {
+  text-align: center;
+  font-size: 0.72em;
+  opacity: 0.8;
+  min-width: 8vmin;
+}
+
+.graphic.is-entering {
+  animation: pv-in 0.32s ease forwards;
+}
+
+.match-board.is-entering {
+  animation: overlay-drop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.match-board--placed.is-entering {
+  animation: overlay-drop-in-placed 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.match-board.is-leaving {
+  animation: overlay-drop-out 0.35s ease forwards;
+}
+
+.match-board--placed.is-leaving {
+  animation: overlay-drop-out-placed 0.35s ease forwards;
+}
+
+/* Animeer via `translate` (niet `transform`) zodat de inline
+   centrering transform:translate(-50%,0) intact blijft */
+@keyframes overlay-drop-in {
+  from { opacity: 0; transform: translateY(-12%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes overlay-drop-in-placed {
+  from { opacity: 0; transform: translate(-50%, -12%); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes overlay-drop-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8%); }
+}
+
+@keyframes overlay-drop-out-placed {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to { opacity: 0; transform: translate(-50%, -8%); }
+}
+
+.graphic.is-leaving {
+  animation: pv-out 0.22s ease forwards;
+}
+
+@keyframes pv-in {
+  from { opacity: 0; transform: translateY(1.2vmin); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pv-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.match-board {
+  display: grid;
+  gap: 0.45vmin;
+  container-type: inline-size;
+}
+
+.score-el-text--animated {
+  display: block;
+  width: 100%;
+  line-height: 1;
+  text-align: center;
+  overflow: visible;
+  min-width: 1ch;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-roll {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  height: 1em;
+  line-height: 1;
+}
+
+.score-roll-out,
+.score-roll-in {
+  display: block;
+  line-height: 1.1;
+}
+
+.score-roll-out {
+  animation: score-out var(--score-anim-dur, 420ms) ease forwards;
+}
+
+.score-roll-in {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  animation: score-in var(--score-anim-dur, 420ms) ease forwards;
+}
+
+@keyframes score-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(65%); }
+}
+
+@keyframes score-in {
+  from { opacity: 0; transform: translateY(-65%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Penalty shootout — schaalt mee met de scoreboard-breedte (cqw via .match-board container) */
+.penalty-bars {
+  justify-self: center;
+  display: grid;
+  gap: 0.6cqw;
+  padding: 1cqw 1.8cqw;
+  background: rgba(8, 8, 12, 0.78);
+  border: 0.08cqw solid rgba(255, 255, 255, 0.16);
+  border-radius: 1.4cqw;
+  backdrop-filter: blur(14px);
+}
+
+.penalty-row {
+  display: grid;
+  grid-template-columns: 4.5ch 1fr auto;
+  gap: 1.4cqw;
+  align-items: center;
+  font-size: 2.6cqw;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #fff;
+}
+
+.penalty-code {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.penalty-dots {
+  display: flex;
+  gap: 0.7cqw;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pen-dot {
+  width: 1.7cqw;
+  height: 1.7cqw;
+  border-radius: 50%;
+  border: 0.18cqw solid rgba(255, 255, 255, 0.6);
+  background: transparent;
+}
+
+.pen-dot--goal {
+  background: #34c759;
+  border-color: #34c759;
+  box-shadow: 0 0 0.6cqw rgba(52, 199, 89, 0.65);
+}
+
+.pen-dot--miss {
+  background: #ff3b30;
+  border-color: #ff3b30;
+  box-shadow: 0 0 0.6cqw rgba(255, 59, 48, 0.55);
+}
+
+.penalty-count {
+  font-variant-numeric: tabular-nums;
+  min-width: 1.2ch;
+  text-align: right;
+}
+
+.graphic--customTicker,
+.graphic--streamCountdown,
+.graphic--lowerThirdShow,
+.graphic--image {
+  background: transparent;
+  padding: 0;
+  width: 100%;
+}
+
+.graphic--image .graphic-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lt-board {
+  position: relative;
+  width: 100%;
+}
+
+.lt-canvas {
+  position: relative;
+  width: 100%;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  container-type: inline-size;
+}
+
+.lt-board.is-entering {
+  animation: overlay-drop-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Standaard lower-third (geen achtergrond-PNG geüpload) */
+.lt-board--default {
+  position: absolute;
+  left: 6vw;
+  bottom: 12vh;
+  width: auto;
+}
+
+.lt-board--default.is-entering {
+  animation: lt-slide-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes lt-slide-in {
+  from { opacity: 0; transform: translateX(-2vw); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.lt-plate {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.4vmin;
+  padding: 1.6vmin 2.6vmin;
+  background: rgba(8, 8, 12, 0.82);
+  border-left: 0.5vmin solid var(--primary, #007aff);
+  border-radius: 0.4vmin 1.2vmin 1.2vmin 0.4vmin;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 1vmin 3vmin rgba(0, 0, 0, 0.25);
+}
+
+.lt-plate__name {
+  font-family: var(--brand-font);
+  font-size: 3.4vmin;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.lt-plate__meta {
+  font-family: var(--brand-font);
+  font-size: 2vmin;
+  font-weight: 500;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.78);
+  white-space: nowrap;
+}
+
+/* Per-widget transities (fade / wipe / cut). 'auto' gebruikt de type-eigen animatie. */
+.tr-in-fade {
+  animation: tr-fade-in var(--tr-dur, 450ms) ease both;
+}
+
+.tr-out-fade {
+  animation: tr-fade-out var(--tr-dur, 450ms) ease both;
+}
+
+.tr-in-wipe {
+  animation: tr-wipe-in var(--tr-dur, 450ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tr-out-wipe {
+  animation: tr-wipe-out var(--tr-dur, 450ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes tr-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tr-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes tr-wipe-in {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes tr-wipe-out {
+  from { clip-path: inset(0 0 0 0); }
+  to { clip-path: inset(0 0 0 100%); }
+}
+
+/* Quiz overlay — paneel links, presentatoren blijven rechts in beeld */
+.quiz-board {
+  /* fixed: coördinaten altijd t.o.v. het volledige canvas/viewport */
+  position: fixed;
+  transform: translate(0, -50%);
+  display: grid;
+  gap: 1.2vmin;
+}
+
+.quiz-board.is-entering {
+  animation: lt-slide-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.quiz-question {
+  padding: 2vmin 2.6vmin;
+  background: rgba(8, 8, 12, 0.85);
+  border-left: 0.5vmin solid var(--primary, #007aff);
+  border-radius: 0.4vmin 1.4vmin 1.4vmin 0.4vmin;
+  backdrop-filter: blur(14px);
+  font-family: var(--brand-font);
+  font-size: 3vmin;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+  box-shadow: 0 1vmin 3vmin rgba(0, 0, 0, 0.25);
+}
+
+.quiz-options {
+  display: grid;
+  gap: 0.8vmin;
+}
+
+.quiz-opt {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1.6vmin;
+  padding: 1.2vmin 2vmin;
+  background: rgba(8, 8, 12, 0.78);
+  border-radius: 1vmin;
+  backdrop-filter: blur(12px);
+  font-family: var(--brand-font);
+  font-size: 2.4vmin;
+  font-weight: 600;
+  color: #fff;
+  transition: background 0.3s ease, opacity 0.3s ease;
+}
+
+.quiz-opt__letter {
+  display: grid;
+  place-items: center;
+  width: 3.6vmin;
+  height: 3.6vmin;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 1.9vmin;
+  font-weight: 700;
+}
+
+.quiz-opt.is-correct {
+  background: rgba(40, 145, 70, 0.92);
+  animation: quiz-correct 0.5s ease;
+}
+
+.quiz-opt.is-correct .quiz-opt__letter {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.quiz-opt.is-dimmed {
+  opacity: 0.45;
+}
+
+@keyframes quiz-correct {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* Crop van de klokzone animeert mee; klok-tekst staat in de gecropte zone en
+   verdwijnt dus exact op het moment dat de crop start. */
+.score-canvas {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.score-canvas--clock-plate-hidden {
+  clip-path: inset(0 var(--clock-plate-w, 0%) 0 0);
+}
+
+.score-canvas--clock-pill {
+  clip-path: none;
+  overflow: visible;
+}
+
+.ticker-board {
+  position: relative;
+  width: 100%;
+  background-repeat: no-repeat;
+  background-position: bottom center;
+}
+
+.ticker-board--fullframe {
+  height: calc(var(--canvas-w, 1920px) * var(--bar-h, 230) / var(--src-w, 3840));
+  background-size: 100% auto;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.ticker-board--strip {
+  aspect-ratio: var(--ticker-ar, 3840 / 380);
+  background-size: 100% 100%;
+}
+
+.ticker-window {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  /* Fade aan beide kanten: bij het logo én aan de uitloop-kant */
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 var(--ticker-fade, 4%),
+    #000 calc(100% - var(--ticker-fade, 4%)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 var(--ticker-fade, 4%),
+    #000 calc(100% - var(--ticker-fade, 4%)),
+    transparent 100%
+  );
+}
+
+.ticker-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ticker-content {
+  display: inline-block;
+}
+
+.ticker-sep {
+  display: inline-block;
+  margin: 0 0.85em;
+  opacity: 0.85;
+}
+
+.countdown-board {
+  position: relative;
+  display: grid;
+  place-items: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  container-type: inline-size;
+}
+
+/* Countdown digit kerning: public/shared/countdown-display.css */
+
+.countdown-board--empty {
+  display: none;
+}

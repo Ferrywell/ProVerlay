@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProVerlay — Edit project</title>
+    <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/public/shared/tahoe.css" />
+    <link rel="stylesheet" href="/public/shared/form-controls.css" />
+    <link rel="stylesheet" href="/public/project/project.css" />
+  </head>
+  <body class="project-page">
+    <header class="pv-nav-bar pv-nav-bar--page">
+      <div class="pv-nav-bar__side pv-nav-bar__side--start">
+        <a href="/control" class="pv-nav-bar__back" aria-label="Back to dashboard">
+          <span class="pv-nav-bar__chevron" aria-hidden="true"></span>
+          <span class="pv-nav-bar__back-label">Dashboard</span>
+        </a>
+      </div>
+      <div class="pv-nav-bar__title pv-nav-bar__title--brand">
+        <img class="app-brand__mark app-brand__mark--sm" src="/public/shared/proverlay-logo.png" alt="" width="28" height="28" />
+        <div class="pv-nav-bar__title-text">
+          <h1 id="project-title">Edit project</h1>
+        </div>
+      </div>
+      <div class="pv-nav-bar__side pv-nav-bar__side--end" aria-hidden="true"></div>
+    </header>
+
+    <main class="project-grid">
+      <section class="glass panel panel--canvas">
+        <div class="panel-head">
+          <h2>Render canvas</h2>
+          <p>Default 1920×1080. Adjust for 4K (3840×2160) or vertical streams (e.g. 1080×1920). The OBS browser source must use the same size.</p>
+        </div>
+        <form id="canvas-form" class="canvas-form canvas-settings">
+          <div class="canvas-settings__fields">
+            <label class="field">
+              <span>Width (px)</span>
+              <input id="canvas-width" name="canvasWidth" type="number" min="360" max="7680" step="1" value="1920" />
+            </label>
+            <label class="field">
+              <span>Height (px)</span>
+              <input id="canvas-height" name="canvasHeight" type="number" min="360" max="7680" step="1" value="1080" />
+            </label>
+          </div>
+          <div class="canvas-presets">
+            <span class="canvas-presets__label">Quick pick</span>
+            <div class="canvas-presets__buttons pv-segmented pv-segmented--cols-3" role="group" aria-label="Canvas preset">
+              <button class="pv-segmented__btn" type="button" data-canvas="1920x1080">1080p</button>
+              <button class="pv-segmented__btn" type="button" data-canvas="3840x2160">4K</button>
+              <button class="pv-segmented__btn" type="button" data-canvas="1080x1920">9:16</button>
+            </div>
+          </div>
+          <p id="canvas-aspect" class="canvas-aspect" aria-live="polite">16:9 · 1920×1080</p>
+          <button class="button button--primary canvas-settings__save" type="submit">Save canvas</button>
+          <p id="canvas-editor-link" class="canvas-editor-link" hidden>
+            <a class="button button--secondary" id="canvas-editor-anchor" href="/editor">Open scoreboard editor</a>
+          </p>
+        </form>
+      </section>
+
+      <section class="glass panel">
+        <div class="panel-head">
+          <h2>Client branding</h2>
+          <p>Name, colors, and font for this client. Used by all overlays in this project.</p>
+        </div>
+        <form id="brand-form" class="form-grid">
+          <label class="field">
+            <span>Client preset</span>
+            <select name="brandPreset" id="brand-preset"></select>
+          </label>
+          <label class="field">
+            <span>Client name</span>
+            <input name="brandName" type="text" />
+          </label>
+          <label class="field">
+            <span>Font family</span>
+            <input name="fontFamily" type="text" placeholder="-apple-system, SF Pro Display, sans-serif" />
+          </label>
+          <label class="field">
+            <span>Font URL (optional)</span>
+            <input name="fontUrl" type="url" placeholder="https://..." />
+          </label>
+          <div class="color-grid">
+            <label><span>Primary</span><input name="primary" type="color" /></label>
+            <label><span>Secondary</span><input name="secondary" type="color" /></label>
+            <label><span>Text</span><input name="text" type="color" /></label>
+            <label><span>Background</span><input name="background" type="color" /></label>
+          </div>
+          <label class="field">
+            <span>Overlay size (vmin)</span>
+            <input name="fontSize" type="number" min="1" max="6" step="0.1" />
+          </label>
+          <button class="button button--primary" type="submit">Save branding</button>
+        </form>
+      </section>
+
+      <section class="glass panel">
+        <div class="panel-head">
+          <h2>Assets</h2>
+          <p>PNGs, fonts, and other files for this project. Use the filename in widget settings.</p>
+        </div>
+        <div class="asset-toolbar">
+          <label class="button button--secondary project-import-btn" for="asset-upload">Upload file</label>
+          <input id="asset-upload" type="file" accept="image/*,.ttf,.otf,.woff,.woff2" hidden />
+        </div>
+        <ul id="asset-list" class="asset-list"></ul>
+      </section>
+
+      <section class="glass panel">
+        <div class="panel-head">
+          <h2>Design references</h2>
+          <p>Reference screenshots for the scoreboard editor and matching client designs.</p>
+        </div>
+        <div class="asset-toolbar">
+          <label class="button button--secondary project-import-btn" for="design-upload">Upload design</label>
+          <input id="design-upload" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+        </div>
+        <ul id="design-list" class="design-list"></ul>
+      </section>
+    </main>
+
+    <p id="project-status" class="project-status" role="status" aria-live="polite"></p>
+
+    <script src="/public/shared/app-shell.js"></script>
+    <script type="module" src="/public/project/project.js"></script>
+  </body>
+</html>

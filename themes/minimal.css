@@ -1,0 +1,121 @@
+:root {
+  --primary: rgba(220, 38, 38, 1);
+  --secondary: transparent;
+  --text: rgba(255, 255, 255, 1);
+  --background: transparent;
+  --accent: rgba(203, 213, 225, 0.9);
+  --font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-size: 2.4vmin;
+  --padding: 3vmin;
+  --radius: 0;
+}
+
+.graphic {
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  color: var(--text);
+  line-height: 1.35;
+  text-shadow: 0 0.15vmin 0.8vmin rgba(0, 0, 0, 0.85);
+}
+
+/* lowerThird */
+.graphic--lowerThird {
+  background: var(--background);
+  border-left: 0.35vmin solid var(--primary);
+  padding: calc(var(--padding) * 0.35) 0 calc(var(--padding) * 0.35) calc(var(--padding) * 0.5);
+  border-radius: var(--radius);
+  min-width: min(30vw, 88vw);
+}
+
+.graphic--lowerThird .name {
+  font-weight: 700;
+  font-size: 1.15em;
+  margin: 0 0 0.1em;
+}
+
+.graphic--lowerThird .meta {
+  color: var(--accent);
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+/* message */
+.graphic--message {
+  background: var(--background);
+  border-top: none;
+  border-bottom: 0.2vmin solid var(--primary);
+  padding: calc(var(--padding) * 0.3) 0;
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.graphic--message .text {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ticker */
+.graphic--ticker {
+  width: 100%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+  border-top: 0.15vmin solid rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.graphic--ticker .track {
+  display: inline-block;
+  padding: 0.6em 0;
+  font-weight: 500;
+}
+
+.graphic--ticker .item {
+  display: inline-block;
+  margin-right: 4vw;
+}
+
+.graphic--ticker .item::after {
+  content: " · ";
+  opacity: 0.5;
+}
+
+/* clock */
+.graphic--clock {
+  background: var(--background);
+  padding: 0.2em 0;
+  border-radius: var(--radius);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.graphic--clock .time {
+  letter-spacing: 0.04em;
+}
+
+/* countdown */
+.graphic--countdown {
+  background: var(--background);
+  border: none;
+  border-bottom: 0.25vmin solid var(--primary);
+  padding: 0.3em 0;
+  border-radius: var(--radius);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.graphic--countdown .time {
+  color: var(--text);
+}
+
+/* image */
+.graphic--image img {
+  max-height: 14vh;
+  max-width: 22vw;
+  object-fit: contain;
+  filter: drop-shadow(0 0.2vmin 1vmin rgba(0, 0, 0, 0.6));
+}

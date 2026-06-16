@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProVerlay — Dashboard</title>
+    <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/public/shared/tahoe.css" />
+    <link rel="stylesheet" href="/public/shared/form-controls.css" />
+    <link rel="stylesheet" href="/public/shared/operate-panel.css" />
+    <link rel="stylesheet" href="/public/shared/countdown-display.css" />
+    <link rel="stylesheet" href="/public/control/control.css" />
+  </head>
+  <body class="dashboard">
+    <aside class="mobile-operator-hint" id="mobile-operator-hint" hidden>
+      <p>On a phone? Use <a href="/operator">Operator</a> for touch-friendly live control.</p>
+      <button type="button" class="pv-nav-bar__action" id="mobile-operator-hint-dismiss">OK</button>
+    </aside>
+    <header class="shell-header glass">
+      <a href="/control" class="app-brand">
+        <img class="app-brand__mark" src="/public/shared/proverlay-logo.png" alt="" width="40" height="40" />
+        <span class="app-brand__copy">
+          <span class="app-brand__name">ProVerlay</span>
+          <span class="app-brand__page">Dashboard</span>
+        </span>
+      </a>
+      <div class="header-meta">
+        <div id="connection-status" class="pill pill--sync is-connected" role="status">
+          <span class="status-dot"></span>
+          <span class="status-label">Live sync</span>
+        </div>
+        <div class="header-meta__group">
+          <a class="button button--secondary" href="/operator">Operator</a>
+          <a class="button button--secondary" href="/layout">Overlay layout</a>
+          <button class="button button--secondary" id="copy-render-url" type="button">All overlays (render)</button>
+        </div>
+        <div class="header-meta__group header-meta__group--actions">
+          <a class="button button--primary" href="/render">Preview</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="shell-grid">
+      <section class="glass panel panel--overlays">
+        <div class="panel-head">
+          <h2>Overlays</h2>
+          <p>Activate graphics for your stream. Select an overlay to operate it on the right, or use Edit settings to configure before the show.</p>
+        </div>
+        <div class="overlay-toolbar">
+          <label class="field field--inline">
+            <span>Widget type</span>
+            <select id="widget-type-add">
+              <option value="matchScoreboard">Match score</option>
+              <option value="customTicker">Ticker</option>
+              <option value="streamCountdown">Stream countdown</option>
+              <option value="lowerThird">Lower third (single)</option>
+              <option value="lowerThirdShow">Lower thirds</option>
+              <option value="quizShow">Quiz</option>
+              <option value="message">Message</option>
+            </select>
+          </label>
+          <button class="button button--secondary" id="widget-add" type="button">Add widget</button>
+          <a class="button button--secondary" href="/compose" id="widget-compose">Create from design <span class="pill pill--beta">Beta</span></a>
+          <button class="button button--secondary" id="widget-remove" type="button" disabled>Remove</button>
+        </div>
+        <div id="graphics-list" class="overlay-list"></div>
+      </section>
+
+      <aside class="side-stack" id="side-stack">
+        <section class="glass panel panel--inspector panel--inspector-empty" id="inspector-empty">
+          <div class="panel-head">
+            <p class="pv-section-header">Operate</p>
+            <h2>Live controls</h2>
+          </div>
+          <p id="inspector-empty-text" class="inspector-empty-state">Select an overlay to operate it during the show.</p>
+        </section>
+
+        <section class="glass panel panel--inspector" id="dashboard-operate-panel" hidden>
+          <div class="panel-head panel-head--compact">
+            <p class="pv-section-header">Operate</p>
+            <h2 id="operate-panel-title">Live controls</h2>
+          </div>
+          <div id="dashboard-operate-root" class="dashboard-operate-root"></div>
+        </section>
+
+        <section class="glass panel panel--inspector settings-stack" id="widget-panel" hidden>
+          <div class="panel-head">
+            <h2>Widget controls</h2>
+            <p>Configure which parts are visible, the clock, and the overlay position.</p>
+          </div>
+          <form id="widget-form" class="form-grid">
+            <label class="field">
+              <span>Overlay position</span>
+              <select name="position">
+                <option value="center">Center</option>
+                <option value="top-center">Top center</option>
+                <option value="top-left">Top left</option>
+                <option value="top-right">Top right</option>
+                <option value="bottom-center">Bottom center</option>
+                <option value="bottom-left">Bottom left</option>
+                <option value="bottom-full">Bottom full width</option>
+                <option value="custom">Custom (layout editor)</option>
+              </select>
+            </label>
+            <fieldset class="widget-fieldset">
+              <legend>Visible widgets</legend>
+              <label class="field field--check"><input name="wHomeCode" type="checkbox" /><span>Home code</span></label>
+              <label class="field field--check"><input name="wAwayCode" type="checkbox" /><span>Away code</span></label>
+              <label class="field field--check"><input name="wHomeScore" type="checkbox" /><span>Home score</span></label>
+              <label class="field field--check"><input name="wAwayScore" type="checkbox" /><span>Away score</span></label>
+              <label class="field field--check"><input name="wClock" type="checkbox" /><span>Match clock (time digits)</span></label>
+              <label class="field field--check" data-penalty-widget hidden><input name="wPenalties" type="checkbox" /><span>Penalty bar</span></label>
+            </fieldset>
+            <label class="field">
+              <span>Home code</span>
+              <input name="homeCode" type="text" maxlength="4" />
+            </label>
+            <label class="field">
+              <span>Away code</span>
+              <input name="awayCode" type="text" maxlength="4" />
+            </label>
+            <label class="field">
+              <span>Home name (optional)</span>
+              <input name="homeName" type="text" />
+            </label>
+            <label class="field">
+              <span>Away name (optional)</span>
+              <input name="awayName" type="text" />
+            </label>
+            <label class="field field--check"><input name="showNames" type="checkbox" /><span>Show team names in overlay</span></label>
+            <label class="field">
+              <span>Clock plate crop (% of bar width hidden from the right when clock is off)</span>
+              <input name="clockPlateWidth" type="number" min="0" max="50" step="1" value="0" />
+              <p class="op-status">Set once for your PNG (e.g. 18). Hides the dark clock zone without splitting the asset.</p>
+            </label>
+            <fieldset class="widget-fieldset">
+              <legend>Clock</legend>
+              <div class="clock-grid">
+                <label class="field"><span>Minute</span><input name="clockMinute" type="number" min="0" max="130" /></label>
+                <label class="field"><span>Second</span><input name="clockSecond" type="number" min="0" max="59" /></label>
+                <label class="field"><span>Period</span>
+                  <select name="clockPeriod">
+                    <option value="first_half">1st half</option>
+                    <option value="second_half">2nd half</option>
+                    <option value="extra_first">Extra time 1st</option>
+                    <option value="extra_second">Extra time 2nd</option>
+                    <option value="penalties" hidden>Penalties</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field field--check"><input name="clockStoppage" type="checkbox" /><span>90+ / stoppage time mode</span></label>
+              <div class="widget-actions">
+                <button class="button button--primary" type="button" id="clock-start">Start clock</button>
+                <button class="button button--secondary" type="button" id="clock-pause">Pause</button>
+                <button class="button button--secondary" type="button" id="clock-sync">Sync time</button>
+              </div>
+              <div class="clock-nudge">
+                <p class="clock-nudge__label">Adjust time</p>
+                <button class="button button--secondary" type="button" id="clock-sec-minus">−1s</button>
+                <button class="button button--secondary" type="button" id="clock-sec-plus">+1s</button>
+                <button class="button button--secondary" type="button" id="clock-min-minus">−1 min</button>
+                <button class="button button--secondary" type="button" id="clock-min-plus">+1 min</button>
+              </div>
+            </fieldset>
+            <label class="field field--check"><input name="animEnabled" type="checkbox" /><span>Score animation on</span></label>
+            <label class="field"><span>Animation duration (ms)</span><input name="animDuration" type="number" min="100" max="2000" step="20" /></label>
+            <button class="button button--primary" type="submit">Save widgets</button>
+          </form>
+        </section>
+
+        <section class="glass panel panel--inspector" id="ticker-panel" hidden>
+          <div class="panel-head">
+            <h2>Ticker</h2>
+            <p>PNG bar with logo + scrolling messages. Set the text margin next to the logo.</p>
+          </div>
+          <form id="ticker-form" class="form-grid">
+            <label class="field">
+              <span>Background PNG</span>
+              <div class="field-row">
+                <input name="background" type="text" placeholder="design-ticker.png" />
+                <button class="button button--secondary" type="button" id="ticker-bg-upload-btn">Replace…</button>
+              </div>
+              <input type="file" id="ticker-bg-upload" accept="image/png,image/webp" hidden />
+            </label>
+            <label class="field">
+              <span>Speed <output id="ticker-speed-out" for="ticker-speed">90</output> px/s</span>
+              <input id="ticker-speed" name="speed" type="range" min="30" max="220" step="5" value="90" />
+            </label>
+            <label class="field">
+              <span>Text inset left</span>
+              <div class="ticker-inset-row">
+                <input id="tickerInsetLeft" name="textInsetLeft" type="range" min="0" max="45" step="0.1" value="16" aria-label="Text inset left slider" />
+                <input id="tickerInsetLeftNum" type="number" min="0" max="45" step="0.05" value="16" aria-label="Text inset left percent" />
+                <span class="ticker-inset-suffix">%</span>
+              </div>
+            </label>
+            <label class="field">
+              <span>Text inset right</span>
+              <div class="ticker-inset-row">
+                <input id="tickerInsetRight" name="textInsetRight" type="range" min="0" max="45" step="0.1" value="1" aria-label="Text inset right slider" />
+                <input id="tickerInsetRightNum" type="number" min="0" max="45" step="0.05" value="1" aria-label="Text inset right percent" />
+                <span class="ticker-inset-suffix">%</span>
+              </div>
+            </label>
+            <label class="field">
+              <span>Fade at logo <output id="ticker-fade-out" for="tickerFade">4</output>%</span>
+              <input id="tickerFade" name="fadeWidth" type="range" min="0" max="15" step="0.5" value="4" />
+            </label>
+            <label class="field" id="ticker-bar-height-field" hidden>
+              <span>Bar height (source px)</span>
+              <input name="barHeight" type="number" min="80" max="800" step="1" value="230" />
+              <p class="op-status">For full-frame PNGs (e.g. 3840×2160): visible strip height in the source image.</p>
+            </label>
+            <label class="field">
+              <span>Font size (px)</span>
+              <input name="fontSize" type="number" min="10" max="300" value="30" />
+            </label>
+            <label class="field">
+              <span>Text color</span>
+              <input name="color" type="color" value="#ffffff" />
+            </label>
+            <div class="ticker-preview" id="ticker-preview">
+              <p class="pv-section-header">Preview</p>
+              <p class="op-status">Updates as you change settings — save when you are happy with the result.</p>
+              <div class="ticker-preview__frame" id="ticker-preview-root" aria-live="polite"></div>
+            </div>
+            <label class="field">
+              <span>Messages (one per line)</span>
+              <textarea name="messages" rows="4" placeholder="And the winner is..."></textarea>
+            </label>
+            <button class="button button--primary" type="submit">Save ticker</button>
+          </form>
+        </section>
+
+        <section class="glass panel panel--inspector" id="roster-panel" hidden>
+          <div class="panel-head">
+            <h2>Lower thirds roster</h2>
+            <p>Manage lower thirds and put a person live with one click.</p>
+          </div>
+          <div class="roster-toolbar">
+            <input type="search" id="roster-search" class="roster-search" placeholder="Search people…" />
+            <button class="button button--secondary" type="button" id="roster-add">Add</button>
+          </div>
+          <ul id="roster-list" class="roster-list"></ul>
+          <form id="roster-entry-form" class="form-grid roster-entry-form" hidden>
+            <h3 id="roster-form-title">Person</h3>
+            <input type="hidden" id="roster-entry-id" />
+            <label class="field"><span>Name</span><input id="roster-name" type="text" required /></label>
+            <label class="field"><span>Title</span><input id="roster-title" type="text" /></label>
+            <label class="field"><span>Organization</span><input id="roster-company" type="text" /></label>
+            <div class="roster-form-actions">
+              <button class="button button--primary" type="submit">Save</button>
+              <button class="button button--secondary" type="button" id="roster-cancel">Cancel</button>
+            </div>
+          </form>
+          <label class="field">
+            <span>Background PNG (assets)</span>
+            <input id="roster-background" type="text" placeholder="lower-third.png" />
+          </label>
+          <button class="button button--secondary" type="button" id="roster-save-template">Save template</button>
+        </section>
+
+        <section class="glass panel panel--inspector" id="quiz-panel" hidden>
+          <div class="panel-head">
+            <h2>Quiz</h2>
+            <p>Prepare questions, put one live, then reveal the answer. Panel sits on the left so presenters stay in frame.</p>
+          </div>
+          <div class="roster-toolbar">
+            <button class="button button--secondary" type="button" id="quiz-add">Add question</button>
+            <button class="button button--secondary" type="button" id="quiz-reveal">Reveal answer</button>
+          </div>
+          <ul id="quiz-list" class="roster-list"></ul>
+          <form id="quiz-entry-form" class="form-grid roster-entry-form" hidden>
+            <h3 id="quiz-form-title">Question</h3>
+            <input type="hidden" id="quiz-entry-id" />
+            <label class="field"><span>Question</span><input id="quiz-question" type="text" required /></label>
+            <label class="field"><span>Answer A</span><input id="quiz-opt-0" type="text" required /></label>
+            <label class="field"><span>Answer B</span><input id="quiz-opt-1" type="text" /></label>
+            <label class="field"><span>Answer C</span><input id="quiz-opt-2" type="text" /></label>
+            <label class="field"><span>Answer D</span><input id="quiz-opt-3" type="text" /></label>
+            <label class="field">
+              <span>Correct answer</span>
+              <select id="quiz-correct">
+                <option value="0">A</option>
+                <option value="1">B</option>
+                <option value="2">C</option>
+                <option value="3">D</option>
+              </select>
+            </label>
+            <div class="roster-form-actions">
+              <button class="button button--primary" type="submit">Save</button>
+              <button class="button button--secondary" type="button" id="quiz-cancel">Cancel</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="glass panel panel--inspector" id="countdown-panel" hidden>
+          <div class="panel-head">
+            <h2>Stream countdown</h2>
+            <p>Standalone clock for your vMix start screen. Set the start time and format.</p>
+          </div>
+          <form id="countdown-form" class="form-grid">
+            <label class="field">
+              <span>Overlay position</span>
+              <select name="position">
+                <option value="center">Center</option>
+                <option value="top-center">Top center</option>
+                <option value="top-left">Top left</option>
+                <option value="top-right">Top right</option>
+                <option value="bottom-center">Bottom center</option>
+                <option value="bottom-left">Bottom left</option>
+                <option value="bottom-full">Bottom full width</option>
+                <option value="custom">Custom (layout editor)</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Stream start (date &amp; time)</span>
+              <input name="targetDateTime" type="datetime-local" />
+              <p class="op-status">Counts down to this moment. The clock keeps running even when the widget is hidden.</p>
+            </label>
+            <fieldset class="widget-fieldset countdown-quick-start">
+              <legend>Quick start</legend>
+              <div class="clock-grid countdown-quick-start__grid">
+                <label class="field"><span>Minutes</span><input name="startMinutes" type="number" min="0" max="999" value="15" /></label>
+                <label class="field"><span>Seconds</span><input name="startSeconds" type="number" min="0" max="59" value="0" /></label>
+              </div>
+              <button class="button button--live" type="button" id="countdown-start-duration">Start countdown</button>
+            </fieldset>
+            <label class="field">
+              <span>Format</span>
+              <select name="format">
+                <option value="mm:ss">mm:ss (e.g. 14:08)</option>
+                <option value="h:mm:ss">h:mm:ss (e.g. 0:14:08)</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Font</span>
+              <select name="fontFamily" id="countdown-font-family">
+                <option value="">Client branding (default)</option>
+              </select>
+              <p class="op-status">Uses the active project brand font, or pick a font uploaded under Edit client — branding &amp; assets.</p>
+            </label>
+            <label class="field">
+              <span>Font size (px)</span>
+              <input name="fontSize" type="number" min="24" max="200" value="96" />
+            </label>
+            <label class="field">
+              <span>Text color</span>
+              <input name="color" type="color" value="#1d1d1f" />
+            </label>
+            <label class="field field--check">
+              <input name="hideWhenExpired" type="checkbox" />
+              <span>Hide when expired</span>
+            </label>
+            <p class="countdown-preview" id="countdown-preview" aria-live="polite">
+              <span class="countdown-preview__time" id="countdown-preview-time">--:--</span>
+            </p>
+            <button class="button button--primary" type="submit">Save countdown</button>
+          </form>
+        </section>
+
+        <section class="glass panel panel--inspector" id="transition-panel" hidden>
+          <div class="panel-head">
+            <h2>Transition</h2>
+            <p>How this widget appears and disappears in the stream.</p>
+          </div>
+          <div class="form-grid">
+            <label class="field">
+              <span>Show (in)</span>
+              <select id="transition-in">
+                <option value="auto">Animation (default)</option>
+                <option value="fade">Fade</option>
+                <option value="wipe">Wipe</option>
+                <option value="cut">Cut</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Hide (out)</span>
+              <select id="transition-out">
+                <option value="auto">Animation (default)</option>
+                <option value="fade">Fade</option>
+                <option value="wipe">Wipe</option>
+                <option value="cut">Cut</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Duration (ms)</span>
+              <input id="transition-duration" type="number" min="100" max="3000" step="50" value="450" />
+            </label>
+          </div>
+        </section>
+
+        <details class="pv-details panel--setup glass" id="project-setup-details">
+          <summary class="pv-details__summary panel-head">
+            <h2>Project &amp; network</h2>
+          </summary>
+          <div class="pv-details__body setup-stack">
+            <section class="panel panel--network panel--nested">
+              <div class="panel-head">
+                <h3>Network</h3>
+                <p>On mobile/tablet: use <strong>http://</strong>, not https. If you see <code>ERR_SSL_PROTOCOL_ERROR</code>, the address bar has https.</p>
+              </div>
+              <div id="network-urls" class="network-urls"></div>
+            </section>
+
+            <section class="panel panel--project panel--nested">
+              <div class="panel-head">
+                <h3>Client / project</h3>
+                <p>One project per client — overlays, branding, and assets live together. Share as a .proverlay file.</p>
+              </div>
+              <div class="project-panel">
+                <p class="project-active-line">Active: <strong id="project-active-name">—</strong></p>
+                <label class="field">
+                  <span>Project</span>
+                  <select id="project-switcher" aria-describedby="project-status"></select>
+                </label>
+                <button class="button button--primary" id="project-activate" type="button" hidden>Activate this project</button>
+                <div class="project-actions">
+                  <button class="button button--secondary" id="project-new" type="button">New project</button>
+                  <button class="button button--secondary" id="project-export" type="button">Export</button>
+                  <label class="button button--secondary project-import-btn" for="project-import">Import</label>
+                  <input id="project-import" type="file" accept=".proverlay,.zip,application/zip" hidden />
+                </div>
+                <a class="button button--secondary" id="project-edit" href="/project">Edit client — branding &amp; assets</a>
+                <p id="project-status" class="project-status" role="status" aria-live="polite"></p>
+              </div>
+            </section>
+          </div>
+        </details>
+
+        <section class="glass panel panel--note">
+          <h3>Operator &amp; render</h3>
+          <p>Control match clock and score via <a href="/operator">operator</a> on mobile. Per overlay: click the <strong>link icon</strong> next to the name to copy the standalone render URL (<code>?graphic=…</code>). The header button copies <strong>All overlays (render)</strong> for one combined OBS source.</p>
+        </section>
+      </aside>
+    </main>
+
+    <dialog id="name-prompt-dialog" class="name-prompt-dialog">
+      <form id="name-prompt-form" method="dialog" class="name-prompt-form">
+        <h3 id="name-prompt-title">Name</h3>
+        <label class="field">
+          <span id="name-prompt-label">Name</span>
+          <input id="name-prompt-input" type="text" required autocomplete="off" />
+        </label>
+        <div class="name-prompt-actions">
+          <button type="submit" class="button button--primary">OK</button>
+          <button type="button" class="button button--secondary" id="name-prompt-cancel">Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/public/shared/app-shell.js"></script>
+    <script type="module" src="/public/control/control.js"></script>
+  </body>
+</html>

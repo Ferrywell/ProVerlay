@@ -1,0 +1,32 @@
+appId: nl.productionpro.proverlay
+productName: ProVerlay
+copyright: © 2026 ProductionPro — productionpro.nl
+directories:
+  output: dist
+  buildResources: build
+files:
+  - electron/**
+  - server/**
+  - public/**
+  - templates/**
+  - package.json
+extraResources:
+  # Alleen seed-data/ (scripts/generate-seed-data.mjs) — NIET de repo data/ map
+  - from: seed-data
+    to: seed-data
+asar: false
+npmRebuild: false
+mac:
+  category: public.app-category.video
+  icon: build/icon.icns
+  identity: null
+  target:
+    - target: dir
+      arch:
+        - arm64
+# Windows komt later; configuratie alvast voorbereid maar niet gebouwd
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64

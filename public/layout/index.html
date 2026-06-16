@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProVerlay — Overlay layout</title>
+    <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/public/shared/tahoe.css" />
+    <link rel="stylesheet" href="/public/shared/form-controls.css" />
+    <link rel="stylesheet" href="/public/layout/layout.css" />
+  </head>
+  <body class="layout-app">
+    <header class="layout-header glass">
+      <div class="layout-header__start">
+        <a class="button button--secondary" href="/control">← Dashboard</a>
+        <a href="/control" class="app-brand app-brand--inline">
+          <img class="app-brand__mark" src="/public/shared/proverlay-logo.png" alt="" width="40" height="40" />
+          <span class="app-brand__copy">
+            <span class="app-brand__name">ProVerlay</span>
+            <span class="app-brand__page">Overlay layout</span>
+          </span>
+        </a>
+      </div>
+      <div class="layout-header__end">
+        <p class="layout-status" id="layout-status" role="status" aria-live="polite"></p>
+        <a class="button button--secondary" href="/render">Live preview</a>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <section class="layout-workspace glass">
+        <div class="layout-canvas" id="layout-canvas">
+          <div class="layout-stage" id="layout-stage">
+            <iframe id="layout-frame" class="layout-frame" src="/render?preview=1" title="Overlay preview"></iframe>
+            <div class="layout-hit" id="layout-hit"></div>
+            <div class="layout-selection" id="layout-selection" hidden>
+              <span class="layout-selection__label" id="layout-selection-label"></span>
+            </div>
+          </div>
+        </div>
+        <p class="layout-canvas-hint">Drag a widget to position it. Changes are saved to the widget’s own settings — those stay the source of truth. Arrow keys nudge, Shift = bigger steps.</p>
+      </section>
+
+      <aside class="layout-sidebar glass">
+        <div class="layout-sidebar__head">
+          <p class="pv-section-header">Layers</p>
+          <h2>Widgets in this project</h2>
+          <p class="layout-sidebar__hint">The eye only changes what you see here — it never touches the live output.</p>
+        </div>
+        <ul class="layout-layers" id="layout-layers"></ul>
+
+        <form class="layout-inspector" id="layout-inspector" hidden>
+          <p class="pv-section-header">Position</p>
+          <h3 id="layout-inspector-title">Widget</h3>
+          <label class="field" id="layout-pos-field" hidden>
+            <span>Overlay position</span>
+            <select id="layout-pos-select">
+              <option value="center">Center</option>
+              <option value="top-center">Top center</option>
+              <option value="top-left">Top left</option>
+              <option value="top-right">Top right</option>
+              <option value="bottom-center">Bottom center</option>
+              <option value="bottom-left">Bottom left</option>
+              <option value="bottom-full">Bottom full width</option>
+              <option value="custom">Custom (drag on canvas)</option>
+            </select>
+          </label>
+          <div class="field-row-2" id="layout-xy-fields" hidden>
+            <label class="field">
+              <span>X</span>
+              <div class="layout-num-row">
+                <input id="layout-x" type="number" min="0" max="100" step="0.1" />
+                <span class="layout-num-suffix">%</span>
+              </div>
+            </label>
+            <label class="field">
+              <span>Y</span>
+              <div class="layout-num-row">
+                <input id="layout-y" type="number" min="0" max="100" step="0.1" />
+                <span class="layout-num-suffix">%</span>
+              </div>
+            </label>
+          </div>
+          <label class="field" id="layout-w-field" hidden>
+            <span>Width (scale)</span>
+            <div class="layout-num-row">
+              <input id="layout-w" type="number" min="1" max="100" step="0.1" />
+              <span class="layout-num-suffix">%</span>
+            </div>
+          </label>
+          <p class="layout-inspector__note" id="layout-inspector-note"></p>
+        </form>
+      </aside>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/public/shared/app-shell.js"></script>
+    <script type="module" src="/public/layout/layout.js"></script>
+  </body>
+</html>
