@@ -51,8 +51,12 @@ const SOLO_TOGGLE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2
 
 async function copyToClipboard(text) {
   if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text)
-    return
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      // Permission denied (e.g. non-secure context) — fall back to execCommand.
+    }
   }
   const ta = document.createElement('textarea')
   ta.value = text
@@ -61,8 +65,14 @@ async function copyToClipboard(text) {
   ta.style.left = '-9999px'
   document.body.appendChild(ta)
   ta.select()
-  document.execCommand('copy')
+  let ok = false
+  try {
+    ok = document.execCommand('copy')
+  } catch {
+    ok = false
+  }
   document.body.removeChild(ta)
+  return ok
 }
 
 function wireGraphicsListActions() {
@@ -76,17 +86,20 @@ function wireGraphicsListActions() {
       event.preventDefault()
       const graphicId = standaloneLink.closest('[data-graphic-id]')?.dataset.graphicId
       if (!graphicId) return
-      try {
-        await copyToClipboard(renderUrl(graphicId))
+      const url = renderUrl(graphicId)
+      const copied = await copyToClipboard(url)
+      if (copied) {
         standaloneLink.classList.add('is-copied')
         standaloneLink.title = 'URL copied'
-        setTimeout(() => {
-          standaloneLink.classList.remove('is-copied')
-          standaloneLink.title = 'Copy solo URL (?graphic=…)'
-        }, 1500)
-      } catch (err) {
-        console.error('Copy solo URL failed:', err)
+      } else {
+        // Clipboard geblokkeerd: toon de URL zodat de operator hem zelf kan kopiëren.
+        standaloneLink.title = 'Copy blocked — URL shown in prompt'
+        window.prompt('Copy solo URL:', url)
       }
+      setTimeout(() => {
+        standaloneLink.classList.remove('is-copied')
+        standaloneLink.title = 'Copy solo URL (?graphic=…)'
+      }, 1500)
       return
     }
 
@@ -1578,13 +1591,14 @@ widgetRemove?.addEventListener('click', async () => {
 
 copyBtn?.addEventListener('click', async () => {
   const url = `${window.location.origin}/render`
-  try {
-    await copyToClipboard(url)
+  const copied = await copyToClipboard(url)
+  if (copied) {
     copyBtn.textContent = 'Copied'
-    setTimeout(() => { copyBtn.textContent = COPY_ALL_RENDER_LABEL }, 1500)
-  } catch (err) {
-    console.error('Copy render URL failed:', err)
+  } else {
+    copyBtn.textContent = 'Copy blocked'
+    window.prompt('Copy render URL:', url)
   }
+  setTimeout(() => { copyBtn.textContent = COPY_ALL_RENDER_LABEL }, 1500)
 })
 
 wireGraphicsListActions()

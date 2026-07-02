@@ -7,8 +7,9 @@ export function defaultF1TimingData() {
     focusDriver: 'VER',
     topCount: 5,
     gapMode: 'interval',
-    showHeader: false,
+    showHeader: true,
     session: { lapText: '' },
+    animation: { in: 'slide-left', durationMs: 380, staggerMs: 70 },
     drivers: defaultF1Drivers(),
     multiviewer: {
       host: '127.0.0.1',

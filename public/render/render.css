@@ -828,3 +828,92 @@ html[data-preview-window] .score-canvas--no-bg {
 .f1-row--enter {
   opacity: 0;
 }
+
+/* In-/uitanimaties — Y-positie loopt via --f1-y zodat keyframes de
+   rijpositie behouden. Stagger per rij via inline animation-delay. */
+
+.f1-anim-in-slide-left {
+  animation: f1-in-slide-left 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes f1-in-slide-left {
+  from {
+    opacity: 0;
+    transform: translateY(var(--f1-y, 0px)) translateX(-56px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(var(--f1-y, 0px)) translateX(0);
+  }
+}
+
+.f1-anim-out-slide-left {
+  animation: f1-out-slide-left 380ms cubic-bezier(0.55, 0, 0.55, 0.2) both;
+}
+
+@keyframes f1-out-slide-left {
+  from {
+    opacity: 1;
+    transform: translateY(var(--f1-y, 0px)) translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--f1-y, 0px)) translateX(-56px);
+  }
+}
+
+.f1-anim-in-drop {
+  animation: f1-in-drop 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes f1-in-drop {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--f1-y, 0px) - 26px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(var(--f1-y, 0px));
+  }
+}
+
+.f1-anim-out-drop {
+  animation: f1-out-drop 380ms cubic-bezier(0.55, 0, 0.55, 0.2) both;
+}
+
+@keyframes f1-out-drop {
+  from {
+    opacity: 1;
+    transform: translateY(var(--f1-y, 0px));
+  }
+  to {
+    opacity: 0;
+    transform: translateY(calc(var(--f1-y, 0px) - 26px));
+  }
+}
+
+.f1-anim-in-fade {
+  animation: f1-in-fade 380ms ease both;
+}
+
+@keyframes f1-in-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.f1-anim-out-fade {
+  animation: f1-out-fade 380ms ease both;
+}
+
+@keyframes f1-out-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

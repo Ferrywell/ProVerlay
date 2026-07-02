@@ -283,6 +283,12 @@ export function createApiRouter() {
     res.json(snapshot)
   })
 
+  router.post('/f1/:id/import-drivers', async (req, res) => {
+    const { importDriversOnce } = await import('./f1Timing.js')
+    const result = await importDriversOnce(req.params.id)
+    res.status(result.status).json(result.body)
+  })
+
   router.post('/graphics', async (req, res) => {
     try {
       const { createGraphicFromType } = await import('./graphicDefaults.js')

@@ -223,6 +223,47 @@ function reconcile(state) {
   }
 }
 
+/**
+ * Eenmalige import van de actuele grid uit MultiViewer naar data.drivers,
+ * zodat de handmatige lijst nooit met de hand gevuld hoeft te worden.
+ * Werkt ongeacht de gekozen bron (gebruikt de MultiViewer-instellingen
+ * van de widget).
+ */
+export async function importDriversOnce(graphicId) {
+  const graphic = (getState().graphics || []).find(
+    (g) => g.id === graphicId && g.type === 'f1Timing'
+  )
+  if (!graphic) return { status: 404, body: { error: 'F1 timing graphic not found' } }
+
+  const cfg = f1Config(graphic)
+  try {
+    const [timing, driverList] = await Promise.all([
+      fetchTopic(cfg, 'TimingData'),
+      fetchTopic(cfg, 'DriverList')
+    ])
+    const rows = mapTimingToRows(timing?.Lines || {}, driverList || {})
+    if (!rows.length) {
+      return {
+        status: 409,
+        body: { error: 'No live timing data — is Live Timing running in MultiViewer?' }
+      }
+    }
+    const { patchGraphic } = await import('./state.js')
+    await patchGraphic(graphicId, { data: { drivers: rows } })
+    return { status: 200, body: { imported: rows.length } }
+  } catch (err) {
+    return {
+      status: 502,
+      body: {
+        error:
+          err.name === 'TimeoutError'
+            ? `MultiViewer not reachable on ${cfg.host}:${cfg.port}`
+            : err.message
+      }
+    }
+  }
+}
+
 export function initF1Timing(io) {
   ioRef = io
   onStateChange(reconcile)

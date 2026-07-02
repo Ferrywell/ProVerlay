@@ -19,7 +19,7 @@ import { applyServerTimeFromState } from '/public/shared/server-time.js'
 import { persistAutoStoppageIfNeeded } from '/public/shared/operate-match.js'
 import { canvasAspectRatio, elementBoxStyle, isStripLayout, isFullFrameBackground, layoutBackgroundVisible, placementStyle, fontSizeStyle, resolveContainerWidthPx, projectCanvas, supportsContainerQueries, clockPillBoxStyle, clockPillTextStyle } from '/public/shared/canvas-layout.js'
 import { injectProjectFontFaces, fetchProjectFontAssets, injectBrandFontFace, resolveRenderFontFamily } from '/public/shared/project-fonts.js'
-import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows } from '/public/shared/f1-timing.js'
+import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows, resolveF1Animation } from '/public/shared/f1-timing.js'
 
 const stage = document.getElementById('stage')
 const layers = new Map()
@@ -532,8 +532,23 @@ function updateF1Tower(layer, graphic) {
     header.remove()
   }
 
+  // In-animatie met stagger: alleen bij een lege toren (net live gezet of
+  // volledig herbouwd), niet bij reguliere data-updates.
+  const anim = resolveF1Animation(d)
+  tower.dataset.animIn = anim.in
+  tower.dataset.animDur = String(anim.durationMs)
+  tower.dataset.animStagger = String(anim.staggerMs)
+  const skipEnter = layer.dataset.skipEnter === '1'
+  const isEntrance =
+    !skipEnter && anim.in !== 'cut' && !tower.querySelector('.f1-row')
+
+  const setRowY = (node, y) => {
+    node.style.setProperty('--f1-y', `${y}px`)
+    node.style.transform = 'translateY(var(--f1-y))'
+  }
+
   const seen = new Set()
-  for (const entry of entries) {
+  entries.forEach((entry, index) => {
     seen.add(entry.key)
     let node = tower.querySelector(`.f1-row[data-key="${entry.key}"]`)
     const rowClass = [
@@ -546,14 +561,32 @@ function updateF1Tower(layer, graphic) {
     if (!node) {
       node = document.createElement('div')
       node.dataset.key = entry.key
-      node.className = `${rowClass} f1-row--enter`
-      node.style.transform = `translateY(${entry.y}px)`
+      setRowY(node, entry.y)
       node.innerHTML = f1RowHtml(entry.row, gapMode)
+      if (isEntrance) {
+        node.dataset.entering = '1'
+        node.className = `${rowClass} f1-anim-in-${anim.in}`
+        node.style.animationDelay = `${index * anim.staggerMs}ms`
+        node.style.animationDuration = `${anim.durationMs}ms`
+        node.addEventListener(
+          'animationend',
+          () => {
+            delete node.dataset.entering
+            node.classList.remove(`f1-anim-in-${anim.in}`)
+            node.style.animationDelay = ''
+          },
+          { once: true }
+        )
+      } else {
+        node.className = `${rowClass} f1-row--enter`
+        requestAnimationFrame(() => node.classList.remove('f1-row--enter'))
+      }
       tower.appendChild(node)
-      requestAnimationFrame(() => node.classList.remove('f1-row--enter'))
     } else {
-      node.className = rowClass
-      node.style.transform = `translateY(${entry.y}px)`
+      // Behoud een lopende in-animatie tijdens live data-updates
+      const entering = node.dataset.entering === '1'
+      node.className = entering ? `${rowClass} f1-anim-in-${tower.dataset.animIn}` : rowClass
+      setRowY(node, entry.y)
       const gapNode = node.querySelector('.f1-row__gap')
       const posNode = node.querySelector('.f1-row__pos')
       const teamNode = node.querySelector('.f1-row__team')
@@ -561,6 +594,14 @@ function updateF1Tower(layer, graphic) {
       if (posNode) posNode.textContent = entry.row.pos || ''
       if (teamNode) teamNode.style.setProperty('--team', safeCssColor(entry.row.teamColor))
     }
+  })
+
+  if (header && isEntrance) {
+    header.classList.add('f1-anim-in-fade')
+    header.style.animationDuration = `${anim.durationMs}ms`
+    header.addEventListener('animationend', () => header.classList.remove('f1-anim-in-fade'), {
+      once: true
+    })
   }
 
   for (const node of [...tower.querySelectorAll('.f1-row')]) {
@@ -575,6 +616,31 @@ function updateF1Tower(layer, graphic) {
     headerOffset + (totalRows ? (totalRows - 1) * step + s.rowHeightPx + (focus ? focusGap : 0) : 0)
   tower.style.width = `${s.widthPx}px`
   tower.style.height = `${Math.max(height, s.rowHeightPx)}px`
+}
+
+/** Uit-animatie met omgekeerde stagger (onderste rij eerst). Geeft de wachttijd terug. */
+function animateF1TowerOut(tower) {
+  const animIn = tower.dataset.animIn || 'slide-left'
+  const duration = Number(tower.dataset.animDur) || 380
+  const stagger = Number(tower.dataset.animStagger) || 70
+  if (animIn === 'cut') {
+    return 0
+  }
+  const rows = [...tower.querySelectorAll('.f1-row')]
+  rows.forEach((node, i) => {
+    node.classList.remove(`f1-anim-in-${animIn}`)
+    node.style.animationDelay = `${(rows.length - 1 - i) * stagger}ms`
+    node.style.animationDuration = `${duration}ms`
+    node.classList.add(`f1-anim-out-${animIn}`)
+  })
+  const header = tower.querySelector('.f1-tower__header')
+  if (header) {
+    header.classList.remove('f1-anim-in-fade')
+    header.style.animationDelay = `${rows.length * stagger}ms`
+    header.style.animationDuration = `${duration}ms`
+    header.classList.add('f1-anim-out-fade')
+  }
+  return duration + stagger * Math.max(0, rows.length - 1) + 80
 }
 
 function mountF1Timing(layer, graphic) {
@@ -765,6 +831,7 @@ function renderGraphic(graphic) {
   const tr = rememberTransition(layer, graphic)
   const skipEnter = skipEnterAnimation.has(graphic.id)
   if (skipEnter) skipEnterAnimation.delete(graphic.id)
+  layer.dataset.skipEnter = skipEnter ? '1' : '0'
   if (tr.in === 'auto' && !skipEnter) {
     if (graphic.type === 'matchScoreboard') {
       inner.querySelector('.match-board')?.classList.add('is-entering')
@@ -772,6 +839,8 @@ function renderGraphic(graphic) {
       inner.querySelector('.lt-board')?.classList.add('is-entering')
     } else if (graphic.type === 'quizShow') {
       inner.querySelector('.quiz-board')?.classList.add('is-entering')
+    } else if (graphic.type === 'f1Timing') {
+      // Rijen animeren individueel met stagger (zie updateF1Tower)
     } else {
       inner.classList.add('is-entering')
     }
@@ -839,7 +908,10 @@ function syncGraphics(graphics) {
       const duration = Number(layer.dataset.trDur) || TRANSITION_DEFAULT_MS
       let wait = 0
       skipEnterAnimation.add(id)
-      if (out === 'auto') {
+      const f1Tower = layer.querySelector('.f1-tower')
+      if (out === 'auto' && f1Tower) {
+        wait = animateF1TowerOut(f1Tower)
+      } else if (out === 'auto') {
         const board = layer.querySelector('.match-board')
         if (board) board.classList.add('is-leaving')
         else layer.querySelector('.graphic')?.classList.add('is-leaving')

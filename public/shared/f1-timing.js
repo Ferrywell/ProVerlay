@@ -18,6 +18,24 @@ export const F1_GAP_MODES = [
   { value: 'leader', label: 'Gap to leader' }
 ]
 
+export const F1_ANIMATION_OPTIONS = [
+  { value: 'slide-left', label: 'Slide in (left → right)' },
+  { value: 'drop', label: 'Drop down' },
+  { value: 'fade', label: 'Fade' },
+  { value: 'cut', label: 'Cut (no animation)' }
+]
+
+/** Animatieconfig met defaults: P1 eerst, rest volgt snel (stagger). */
+export function resolveF1Animation(data = {}) {
+  const a = data.animation || {}
+  const value = F1_ANIMATION_OPTIONS.some((o) => o.value === a.in) ? a.in : 'slide-left'
+  return {
+    in: value,
+    durationMs: Math.max(100, Number(a.durationMs) || 380),
+    staggerMs: Math.max(0, Number(a.staggerMs) >= 0 ? Number(a.staggerMs) : 70)
+  }
+}
+
 /**
  * @param {Array} rows sorted rows [{pos, code, name, teamColor, gap, interval, retired, inPit}]
  * @returns {{ top: Array, focus: object|null, focusInTop: boolean }}
@@ -40,7 +58,13 @@ export function buildTowerRows(rows = [], { focusDriver = '', topCount = 5 } = {
 export function f1RowGapText(row = {}, gapMode = 'interval') {
   if (row.retired) return 'OUT'
   if (row.inPit) return 'PIT'
-  if (row.pos === 1) return row.gap && row.gap !== 'LEADER' ? row.gap : 'LEADER'
+  if (row.pos === 1) {
+    // F1-feed stuurt voor de leider soms "LAP n" als GapToLeader; de ronde
+    // staat al in de header, dus de leider toont altijd LEADER.
+    const gap = String(row.gap || '')
+    if (!gap || gap === 'LEADER' || /^LAP\b/i.test(gap)) return 'LEADER'
+    return gap
+  }
   const value = gapMode === 'leader' ? row.gap : row.interval || row.gap
   return value || ''
 }
