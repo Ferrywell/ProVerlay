@@ -21,6 +21,8 @@ import {
 } from '/public/shared/operate-match.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
+import { handleF1FieldChange } from '/public/shared/operate-handlers.js'
+import { F1_SOURCE_OPTIONS } from '/public/shared/f1-timing.js'
 
 const root = document.getElementById('operator-root')
 const title = document.getElementById('op-title')
@@ -404,11 +406,76 @@ function tickerCardTemplate(graphic) {
   `
 }
 
+function f1StatusText(graphic) {
+  const d = graphic.data || {}
+  const source = d.source === 'multiviewer' ? 'MultiViewer live' : 'Manual standings'
+  return `${source} · focus ${d.focusDriver || '—'} · top ${d.topCount || 5}`
+}
+
+function f1CardTemplate(graphic) {
+  const d = graphic.data || {}
+  const mv = d.multiviewer || {}
+  const isLiveSource = d.source === 'multiviewer'
+  return `
+    <section class="op-section${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
+      <div class="pv-group">
+      ${sectionHead(graphic, f1StatusText(graphic), { statusBind: true })}
+      <div class="pv-group__cell f1-card__fields">
+        <label class="field">
+          <span>Source</span>
+          <select data-field="f1-source">
+            ${F1_SOURCE_OPTIONS.map((o) => `<option value="${o.value}"${d.source === o.value ? ' selected' : ''}>${o.label}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field">
+          <span>Focus driver</span>
+          <input type="text" maxlength="3" data-field="f1-focus" value="${escapeHtml(d.focusDriver || '')}" placeholder="VER" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>Top positions</span>
+          <input type="number" min="1" max="20" inputmode="numeric" data-field="f1-topcount" value="${d.topCount || 5}" />
+        </label>
+        <label class="field"${isLiveSource ? '' : ' hidden'}>
+          <span>Delay (s)</span>
+          <input type="number" min="0" max="120" step="0.5" inputmode="decimal" data-field="f1-mv-delay" value="${(Number(mv.delayMs) || 0) / 1000}" />
+        </label>
+      </div>
+      <div class="pv-group__cell pv-group__cell--actions">
+      <div class="op-toolbar op-toolbar--primary">
+        <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
+          ${graphic.visible ? 'Hide' : 'Go live'}
+        </button>
+      </div>
+      </div>
+      </div>
+    </section>
+  `
+}
+
+function updateF1Card(card, graphic) {
+  const d = graphic.data || {}
+  const mv = d.multiviewer || {}
+  const status = card.querySelector('[data-bind="status-line"]')
+  if (status) status.textContent = f1StatusText(graphic)
+  const setIfIdle = (selector, value) => {
+    const input = card.querySelector(selector)
+    if (input && document.activeElement !== input) input.value = value
+  }
+  setIfIdle('[data-field="f1-source"]', d.source || 'manual')
+  setIfIdle('[data-field="f1-focus"]', d.focusDriver || '')
+  setIfIdle('[data-field="f1-topcount"]', d.topCount || 5)
+  setIfIdle('[data-field="f1-mv-delay"]', (Number(mv.delayMs) || 0) / 1000)
+  const delayField = card.querySelector('[data-field="f1-mv-delay"]')?.closest('.field')
+  if (delayField) delayField.hidden = d.source !== 'multiviewer'
+  updateLiveState(card, graphic)
+}
+
 function cardTemplate(graphic) {
   if (graphic.type === 'matchScoreboard') return matchCardTemplate(graphic)
   if (graphic.type === 'customTicker') return tickerCardTemplate(graphic)
   if (graphic.type === 'lowerThirdShow') return lowerThirdShowCardTemplate(graphic)
   if (graphic.type === 'quizShow') return quizShowCardTemplate(graphic)
+  if (graphic.type === 'f1Timing') return f1CardTemplate(graphic)
   return legacyCardTemplate(graphic)
 }
 
@@ -604,6 +671,11 @@ async function handleAction(graphicId, action, event) {
     return
   }
 
+  if (latest.type === 'f1Timing') {
+    if (action === 'toggle-live') await toggleGraphic(graphicId, !latest.visible)
+    return
+  }
+
   const data = { ...latest.data }
   if (action === 'home-plus') data.homeScore += 1
   if (action === 'home-minus') data.homeScore = Math.max(0, data.homeScore - 1)
@@ -629,6 +701,11 @@ async function handleFieldChange(graphicId, field, value) {
 
   if (field === 'ticker-fontsize' && latest.type === 'customTicker') {
     await patchGraphic(graphicId, { data: { fontSize: Math.min(200, Math.max(10, Number(value) || 30)) } })
+    return
+  }
+
+  if (latest.type === 'f1Timing' && field.startsWith('f1-')) {
+    await handleF1FieldChange(latest, field, value)
     return
   }
 
@@ -753,6 +830,7 @@ function render() {
       if (!card) continue
       if (graphic.type === 'matchScoreboard') updateMatchCard(card, graphic)
       else if (graphic.type === 'customTicker') updateTickerCard(card, graphic)
+      else if (graphic.type === 'f1Timing') updateF1Card(card, graphic)
       else if (graphic.type === 'lowerThirdShow' || graphic.type === 'quizShow') {
         // Alleen deze kaart herbouwen zodat invoervelden in andere kaarten blijven staan
         const wrap = document.createElement('div')

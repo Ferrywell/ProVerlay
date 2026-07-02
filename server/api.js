@@ -276,6 +276,13 @@ export function createApiRouter() {
     res.json(getGraphic(req.params.id))
   })
 
+  router.get('/f1/:id/live', async (req, res) => {
+    const { getLiveSnapshot } = await import('./f1Timing.js')
+    const snapshot = getLiveSnapshot(req.params.id)
+    if (!snapshot) return res.status(404).json({ error: 'F1 timing graphic not found' })
+    res.json(snapshot)
+  })
+
   router.post('/graphics', async (req, res) => {
     try {
       const { createGraphicFromType } = await import('./graphicDefaults.js')

@@ -723,3 +723,108 @@ html[data-preview-window] .score-canvas--no-bg {
 .countdown-board--empty {
   display: none;
 }
+
+/* ── F1 timing tower ─────────────────────────────────────────────────────
+   Pill-rijen in Odido-stijl. Rijen zijn absoluut gepositioneerd en
+   verschuiven via transform zodat positiewissels vloeiend animeren.
+   Vaste px-maten: de rendercanvas is zelf al px-gebaseerd (vMix-safe). */
+
+.graphic--f1Timing {
+  background: transparent;
+  padding: 0;
+}
+
+.f1-tower {
+  position: relative;
+  font-family: var(--brand-font);
+  font-weight: 700;
+}
+
+.f1-tower__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  height: calc(var(--f1-row-h) * 0.72);
+  padding: 0 calc(var(--f1-row-h) * 0.4);
+  border-radius: var(--f1-radius);
+  background: var(--f1-bg);
+  color: var(--f1-color);
+  font-size: calc(var(--f1-font) * 0.72);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.f1-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  box-sizing: border-box;
+  width: var(--f1-w);
+  height: var(--f1-row-h);
+  padding: 0 calc(var(--f1-row-h) * 0.34) 0 calc(var(--f1-row-h) * 0.16);
+  border-radius: var(--f1-radius);
+  background: var(--f1-bg);
+  color: var(--f1-color);
+  font-size: var(--f1-font);
+  line-height: 1;
+  transition:
+    transform 650ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 300ms ease,
+    background 300ms ease,
+    color 300ms ease;
+}
+
+.f1-row__pos {
+  display: grid;
+  place-items: center;
+  width: calc(var(--f1-row-h) * 0.66);
+  height: calc(var(--f1-row-h) * 0.66);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: calc(var(--f1-font) * 0.82);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.f1-row__team {
+  width: calc(var(--f1-row-h) * 0.13);
+  height: calc(var(--f1-row-h) * 0.56);
+  border-radius: 999px;
+  background: var(--team, #888888);
+  flex: none;
+}
+
+.f1-row__code {
+  letter-spacing: 0.03em;
+}
+
+.f1-row__gap {
+  margin-left: auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.92;
+  white-space: nowrap;
+}
+
+/* Focusrijder (bv. VER): Odido-gradient pill met donkere tekst */
+.f1-row--focus {
+  background: var(--f1-focus-bg, linear-gradient(100deg, #f2917c 0%, #eec2b3 45%, #74c3bb 100%));
+  color: var(--f1-focus-color, #1d1d1f);
+}
+
+.f1-row--focus .f1-row__pos {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.f1-row--retired {
+  opacity: 0.5;
+}
+
+.f1-row--enter {
+  opacity: 0;
+}

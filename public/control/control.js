@@ -40,6 +40,7 @@ const TYPE_LABELS = {
   lowerThirdShow: 'Lower thirds',
   quizShow: 'Quiz',
   message: 'Message',
+  f1Timing: 'F1 timing',
 }
 
 const COPY_ALL_RENDER_LABEL = 'All overlays (render)'
@@ -1535,7 +1536,8 @@ widgetAdd?.addEventListener('click', async () => {
     lowerThird: 'Lower third',
     lowerThirdShow: 'Lower thirds',
     quizShow: 'Quiz',
-    message: 'Message'
+    message: 'Message',
+    f1Timing: 'F1 timing'
   }
   const defaultName = defaultNames[type] || 'New widget'
   const name = await promptName({

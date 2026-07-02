@@ -19,6 +19,7 @@ import { applyServerTimeFromState } from '/public/shared/server-time.js'
 import { persistAutoStoppageIfNeeded } from '/public/shared/operate-match.js'
 import { canvasAspectRatio, elementBoxStyle, isStripLayout, isFullFrameBackground, layoutBackgroundVisible, placementStyle, fontSizeStyle, resolveContainerWidthPx, projectCanvas, supportsContainerQueries, clockPillBoxStyle, clockPillTextStyle } from '/public/shared/canvas-layout.js'
 import { injectProjectFontFaces, fetchProjectFontAssets, injectBrandFontFace, resolveRenderFontFamily } from '/public/shared/project-fonts.js'
+import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows } from '/public/shared/f1-timing.js'
 
 const stage = document.getElementById('stage')
 const layers = new Map()
@@ -393,8 +394,202 @@ function mountGraphicRuntime(layer, graphic) {
   if (graphic.type === 'streamCountdown') {
     tickCountdownGraphic(layer, graphic)
   }
+  if (graphic.type === 'f1Timing') {
+    mountF1Timing(layer, graphic)
+  }
   if (graphic.type === 'clock') {
     startClock(inner.querySelector('.time'), graphic.data?.format)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// F1 timing tower
+// Live rijen komen via het 'f1TimingUpdate' socket-event (niet via state, om
+// een schrijfactie per poll te vermijden). Rijen zijn keyed op rijderscode en
+// verschuiven via transform, zodat positiewissels vloeiend animeren.
+// ---------------------------------------------------------------------------
+
+const f1Live = new Map() // graphicId -> { rows, session, status }
+
+function safeCssColor(value, fallback = '#888888') {
+  const v = String(value || '').trim()
+  return /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : fallback
+}
+
+function f1Style(data = {}) {
+  const s = data.style || {}
+  return {
+    widthPx: Number(s.widthPx) || 440,
+    rowHeightPx: Number(s.rowHeightPx) || 62,
+    rowGapPx: Number(s.rowGapPx) >= 0 ? Number(s.rowGapPx) : 8,
+    borderRadiusPx: Number(s.borderRadiusPx) || 31,
+    fontSize: Number(s.fontSize) || 30,
+    background: s.background || 'rgba(0, 0, 0, 0.85)',
+    color: s.color || '#ffffff',
+    focusBackground: s.focusBackground || '',
+    focusColor: s.focusColor || ''
+  }
+}
+
+function buildF1Timing(data, graphicId) {
+  const s = f1Style(data)
+  const vars = [
+    `--f1-w:${s.widthPx}px`,
+    `--f1-row-h:${s.rowHeightPx}px`,
+    `--f1-row-gap:${s.rowGapPx}px`,
+    `--f1-radius:${s.borderRadiusPx}px`,
+    `--f1-font:${s.fontSize}px`,
+    `--f1-bg:${s.background}`,
+    `--f1-color:${s.color}`
+  ]
+  if (s.focusBackground) vars.push(`--f1-focus-bg:${s.focusBackground}`)
+  if (s.focusColor) vars.push(`--f1-focus-color:${s.focusColor}`)
+  return `<div class="f1-tower" data-f1-id="${graphicId}" style="${vars.join(';')}"></div>`
+}
+
+function f1CurrentRows(graphic) {
+  const d = graphic.data || {}
+  if (d.source === 'multiviewer') {
+    return f1Live.get(graphic.id)?.rows || []
+  }
+  return d.drivers || []
+}
+
+function f1SessionInfo(graphic) {
+  const d = graphic.data || {}
+  if (d.source === 'multiviewer') {
+    return f1Live.get(graphic.id)?.session || {}
+  }
+  return d.session || {}
+}
+
+function f1RowHtml(row, gapMode) {
+  const gapText = f1RowGapText(row, gapMode)
+  return `
+    <span class="f1-row__pos">${row.pos || ''}</span>
+    <span class="f1-row__team" style="--team:${safeCssColor(row.teamColor)}"></span>
+    <span class="f1-row__code">${escape(row.code || '')}</span>
+    <span class="f1-row__gap">${escape(gapText)}</span>
+  `
+}
+
+function updateF1Tower(layer, graphic) {
+  const tower = layer.querySelector(`[data-f1-id="${graphic.id}"]`)
+  if (!tower) return
+  const d = graphic.data || {}
+  const s = f1Style(d)
+
+  // Stylevars her-toepassen: config kan live wijzigen zonder DOM-rebuild
+  tower.style.setProperty('--f1-w', `${s.widthPx}px`)
+  tower.style.setProperty('--f1-row-h', `${s.rowHeightPx}px`)
+  tower.style.setProperty('--f1-row-gap', `${s.rowGapPx}px`)
+  tower.style.setProperty('--f1-radius', `${s.borderRadiusPx}px`)
+  tower.style.setProperty('--f1-font', `${s.fontSize}px`)
+  tower.style.setProperty('--f1-bg', s.background)
+  tower.style.setProperty('--f1-color', s.color)
+  if (s.focusBackground) tower.style.setProperty('--f1-focus-bg', s.focusBackground)
+  else tower.style.removeProperty('--f1-focus-bg')
+  if (s.focusColor) tower.style.setProperty('--f1-focus-color', s.focusColor)
+  else tower.style.removeProperty('--f1-focus-color')
+  const gapMode = d.gapMode || 'interval'
+  const rows = dedupeRows(f1CurrentRows(graphic))
+  const { top, focus } = buildTowerRows(rows, {
+    focusDriver: d.focusDriver,
+    topCount: d.topCount || 5
+  })
+
+  const step = s.rowHeightPx + s.rowGapPx
+  const focusGap = Math.round(s.rowHeightPx * 0.45)
+  const session = f1SessionInfo(graphic)
+  const headerVisible = Boolean(d.showHeader && session.lapText)
+  const headerOffset = headerVisible ? Math.round(s.rowHeightPx * 0.72) + s.rowGapPx : 0
+
+  const entries = top.map((row, i) => ({
+    key: (row.code || `p${row.pos}`).toUpperCase(),
+    row,
+    y: headerOffset + i * step,
+    focus: isFocusRow(row, d.focusDriver)
+  }))
+  if (focus) {
+    entries.push({
+      key: (focus.code || 'focus').toUpperCase(),
+      row: focus,
+      y: headerOffset + top.length * step + focusGap,
+      focus: true
+    })
+  }
+
+  // Header (lap-teller) als apart pill-element bovenaan
+  let header = tower.querySelector('.f1-tower__header')
+  if (headerVisible) {
+    if (!header) {
+      header = document.createElement('div')
+      header.className = 'f1-tower__header'
+      tower.appendChild(header)
+    }
+    header.textContent = session.lapText
+  } else if (header) {
+    header.remove()
+  }
+
+  const seen = new Set()
+  for (const entry of entries) {
+    seen.add(entry.key)
+    let node = tower.querySelector(`.f1-row[data-key="${entry.key}"]`)
+    const rowClass = [
+      'f1-row',
+      entry.focus ? 'f1-row--focus' : '',
+      entry.row.retired ? 'f1-row--retired' : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+    if (!node) {
+      node = document.createElement('div')
+      node.dataset.key = entry.key
+      node.className = `${rowClass} f1-row--enter`
+      node.style.transform = `translateY(${entry.y}px)`
+      node.innerHTML = f1RowHtml(entry.row, gapMode)
+      tower.appendChild(node)
+      requestAnimationFrame(() => node.classList.remove('f1-row--enter'))
+    } else {
+      node.className = rowClass
+      node.style.transform = `translateY(${entry.y}px)`
+      const gapNode = node.querySelector('.f1-row__gap')
+      const posNode = node.querySelector('.f1-row__pos')
+      const teamNode = node.querySelector('.f1-row__team')
+      if (gapNode) gapNode.textContent = f1RowGapText(entry.row, gapMode)
+      if (posNode) posNode.textContent = entry.row.pos || ''
+      if (teamNode) teamNode.style.setProperty('--team', safeCssColor(entry.row.teamColor))
+    }
+  }
+
+  for (const node of [...tower.querySelectorAll('.f1-row')]) {
+    if (!seen.has(node.dataset.key)) {
+      node.classList.add('f1-row--enter')
+      setTimeout(() => node.remove(), 320)
+    }
+  }
+
+  const totalRows = entries.length
+  const height =
+    headerOffset + (totalRows ? (totalRows - 1) * step + s.rowHeightPx + (focus ? focusGap : 0) : 0)
+  tower.style.width = `${s.widthPx}px`
+  tower.style.height = `${Math.max(height, s.rowHeightPx)}px`
+}
+
+function mountF1Timing(layer, graphic) {
+  updateF1Tower(layer, graphic)
+  const d = graphic.data || {}
+  if (d.source === 'multiviewer' && !f1Live.has(graphic.id)) {
+    fetch(`/api/f1/${encodeURIComponent(graphic.id)}/live`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((snapshot) => {
+        if (!snapshot) return
+        f1Live.set(graphic.id, snapshot)
+        const current = layers.get(graphic.id)
+        if (current) updateF1Tower(current, graphic)
+      })
+      .catch(() => {})
   }
 }
 
@@ -478,6 +673,8 @@ function graphicHtml(graphic) {
       return buildCustomTicker(d, graphic.id)
     case 'streamCountdown':
       return buildStreamCountdown(d, graphic.id)
+    case 'f1Timing':
+      return buildF1Timing(d, graphic.id)
     case 'clock':
       return `<span class="time">--:--</span>`
     default:
@@ -516,6 +713,14 @@ function rememberTransition(layer, graphic) {
 function updateLayerContent(layer, graphic) {
   const inner = layer.querySelector('.graphic')
   if (!inner) return
+  // F1-toren: rijen in-place bijwerken zodat lopende positie-animaties niet
+  // resetten bij elke (ongerelateerde) state-wijziging.
+  if (graphic.type === 'f1Timing' && inner.querySelector(`[data-f1-id="${graphic.id}"]`)) {
+    applyLayerPosition(layer, graphic)
+    rememberTransition(layer, graphic)
+    updateF1Tower(layer, graphic)
+    return
+  }
   stopCustomTicker(graphic.id)
   clearTimers(layer)
   applyLayerPosition(layer, graphic)
@@ -746,6 +951,13 @@ setupPreviewWindow()
 
 const socket = io()
 socket.on('stateChanged', applyState)
+socket.on('f1TimingUpdate', (payload) => {
+  if (!payload?.graphicId) return
+  f1Live.set(payload.graphicId, payload)
+  const graphic = cachedGraphics.find((g) => g.id === payload.graphicId)
+  const layer = layers.get(payload.graphicId)
+  if (graphic && layer) updateF1Tower(layer, graphic)
+})
 fetch('/api/state')
   .then((r) => r.json())
   .then(applyState)

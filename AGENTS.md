@@ -138,6 +138,7 @@ Environment (browser, OS)
 | customScoreboard render | ✅ layout + elements |
 | Control UI | ✅ Project panel (UX agent) |
 | Operator / Companion | ✅ Score bediening |
+| F1 timing tower | ✅ `f1Timing` widget — MultiViewer live + manual (`docs/F1-TIMING.md`) |
 | QA project tests | 🟡 Beta agent — her-test na API |
 
 ## Poorten
