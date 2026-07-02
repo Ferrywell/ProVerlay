@@ -33,7 +33,8 @@ const TYPE_LABELS = {
   quizShow: 'Quiz',
   message: 'Message',
   image: 'Image',
-  clock: 'Clock'
+  clock: 'Clock',
+  f1Timing: 'F1 timing'
 }
 
 let state = { graphics: [], settings: {} }
