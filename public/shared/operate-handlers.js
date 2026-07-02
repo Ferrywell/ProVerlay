@@ -11,6 +11,8 @@ import {
 import {
   F1_SOURCE_OPTIONS,
   F1_GAP_MODES,
+  F1_ANIMATION_OPTIONS,
+  resolveF1Animation,
   normalizeManualDriver,
   renumberDrivers
 } from '/public/shared/f1-timing.js'
@@ -237,6 +239,17 @@ export function f1OperateHtml(graphic) {
             ${F1_GAP_MODES.map((o) => `<option value="${o.value}"${(d.gapMode || 'interval') === o.value ? ' selected' : ''}>${o.label}</option>`).join('')}
           </select>
         </label>
+        <label class="field">
+          <span>Animation</span>
+          <select data-field="f1-anim">
+            ${F1_ANIMATION_OPTIONS.map((o) => `<option value="${o.value}"${resolveF1Animation(d).in === o.value ? ' selected' : ''}>${o.label}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div class="pv-group__cell">
+        <button type="button" class="button ${d.showHeader ? 'button--live' : 'button--gray'} f1-operate__header-toggle" data-action="f1-toggle-header">
+          Lap counter (LAP x/y)
+        </button>
       </div>
       <div class="pv-group__cell f1-operate__mv" data-f1-mv ${isLiveSource ? '' : 'hidden'}>
         <div class="f1-operate__mv-fields">
@@ -253,7 +266,10 @@ export function f1OperateHtml(graphic) {
             <input type="number" min="0" max="120" step="0.5" inputmode="decimal" data-field="f1-mv-delay" value="${(Number(mv.delayMs) || 0) / 1000}" />
           </label>
         </div>
-        <p class="op-status" data-bind="f1-status">Waiting for MultiViewer…</p>
+        <p class="op-status f1-live-line">
+          <span class="f1-status-dot" data-bind="f1-status-dot"></span>
+          <span data-bind="f1-status">Waiting for MultiViewer…</span>
+        </p>
         <p class="op-status" data-bind="f1-preview"></p>
       </div>
       <div class="pv-group__cell pv-group__cell--flush f1-operate__manual" data-f1-manual ${isLiveSource ? 'hidden' : ''}>
@@ -262,7 +278,9 @@ export function f1OperateHtml(graphic) {
         </ul>
         <div class="f1-operate__add">
           <button type="button" class="button button--primary" data-action="f1-drv-add">Add driver</button>
+          <button type="button" class="button button--secondary" data-action="f1-import-drivers">Import from MultiViewer</button>
         </div>
+        <p class="op-status f1-operate__import-status" data-bind="f1-import-status"></p>
       </div>
     </div>`
 }
@@ -280,9 +298,15 @@ export function updateF1OperateMount(mount, graphic) {
   setIfIdle('[data-field="f1-focus"]', d.focusDriver || '')
   setIfIdle('[data-field="f1-topcount"]', d.topCount || 5)
   setIfIdle('[data-field="f1-gapmode"]', d.gapMode || 'interval')
+  setIfIdle('[data-field="f1-anim"]', resolveF1Animation(d).in)
   setIfIdle('[data-field="f1-mv-host"]', mv.host || '127.0.0.1')
   setIfIdle('[data-field="f1-mv-port"]', mv.port || 10101)
   setIfIdle('[data-field="f1-mv-delay"]', (Number(mv.delayMs) || 0) / 1000)
+
+  const headerToggle = mount.querySelector('[data-action="f1-toggle-header"]')
+  if (headerToggle) {
+    headerToggle.className = `button ${d.showHeader ? 'button--live' : 'button--gray'} f1-operate__header-toggle`
+  }
 
   const mvBlock = mount.querySelector('[data-f1-mv]')
   if (mvBlock) mvBlock.hidden = !isLiveSource
@@ -310,6 +334,11 @@ export async function handleF1FieldChange(graphic, field, value) {
     await patchGraphic(graphic.id, { data: { topCount: n } })
   } else if (field === 'f1-gapmode') {
     await patchGraphic(graphic.id, { data: { gapMode: value === 'leader' ? 'leader' : 'interval' } })
+  } else if (field === 'f1-anim') {
+    const valid = F1_ANIMATION_OPTIONS.some((o) => o.value === value)
+    await patchGraphic(graphic.id, {
+      data: { animation: { ...(d.animation || {}), in: valid ? value : 'slide-left' } }
+    })
   } else if (field === 'f1-mv-host') {
     await patchGraphic(graphic.id, { data: { multiviewer: { host: String(value || '').trim() || '127.0.0.1' } } })
   } else if (field === 'f1-mv-port') {
@@ -337,6 +366,33 @@ async function handleF1DriverEdit(graphic, field, index, value) {
 }
 
 async function handleF1Action(graphic, action, event) {
+  if (action === 'f1-toggle-header') {
+    await patchGraphic(graphic.id, { data: { showHeader: !graphic.data?.showHeader } })
+    return
+  }
+
+  if (action === 'f1-import-drivers') {
+    const section = event?.target?.closest('[data-graphic-id]')
+    const statusEl = section?.querySelector('[data-bind="f1-import-status"]')
+    const mv = graphic.data?.multiviewer || {}
+    const target = `${mv.host || '127.0.0.1'}:${mv.port || 10101}`
+    if (statusEl) statusEl.textContent = `Importing from ${target}…`
+    try {
+      const res = await fetch(`/api/f1/${encodeURIComponent(graphic.id)}/import-drivers`, {
+        method: 'POST'
+      })
+      const body = await res.json()
+      if (statusEl) {
+        statusEl.textContent = res.ok
+          ? `Imported ${body.imported} drivers from MultiViewer (${target})`
+          : `${body.error || 'Import failed'} (${target})`
+      }
+    } catch {
+      if (statusEl) statusEl.textContent = 'ProVerlay server unreachable'
+    }
+    return
+  }
+
   const idx = Number(event?.target?.closest('[data-action]')?.dataset.index)
   let drivers = (graphic.data?.drivers || []).map((d, i) => normalizeManualDriver(d, i))
 
@@ -358,39 +414,57 @@ async function handleF1Action(graphic, action, event) {
   await patchGraphic(graphic.id, { data: { drivers: renumberDrivers(drivers) } })
 }
 
-// Statuspoll voor F1-secties met MultiViewer-bron: toont verbinding + top-3
-// preview zodat de operator ziet dat de data klopt vóór hij live gaat.
+// Statuspoll voor F1-secties met MultiViewer-bron: dot + tekst + top-5
+// preview zodat de operator direct ziet of live timing daadwerkelijk
+// binnenkomt vóór hij live gaat.
 let f1StatusTimer = null
+
+function setF1Dot(section, state) {
+  const dot = section.querySelector('[data-bind="f1-status-dot"]')
+  if (dot) dot.className = `f1-status-dot ${state}`
+}
+
+/** Haalt de live-status op en werkt dot/tekst/preview in één sectie bij. */
+export async function refreshF1LiveSection(section, graphic) {
+  const statusEl = section.querySelector('[data-bind="f1-status"]')
+  const previewEl = section.querySelector('[data-bind="f1-preview"]')
+  if (!statusEl && !section.querySelector('[data-bind="f1-status-dot"]')) return
+  try {
+    const res = await fetch(`/api/f1/${encodeURIComponent(graphic.id)}/live`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const snap = await res.json()
+    if (snap.status?.connected) {
+      setF1Dot(section, 'is-live')
+      if (statusEl) {
+        statusEl.textContent = `Live timing OK · ${snap.rows.length} drivers${snap.session?.lapText ? ` · ${snap.session.lapText}` : ''}`
+      }
+      if (previewEl) {
+        previewEl.textContent = snap.rows
+          .slice(0, 5)
+          .map((r) => `${r.pos} ${r.code}`)
+          .join('  ·  ')
+      }
+    } else {
+      setF1Dot(section, 'is-off')
+      if (statusEl) {
+        statusEl.textContent = snap.status?.lastError
+          ? `No data — ${snap.status.lastError}`
+          : 'No data — waiting for MultiViewer live timing…'
+      }
+      if (previewEl) previewEl.textContent = ''
+    }
+  } catch {
+    setF1Dot(section, 'is-off')
+    if (statusEl) statusEl.textContent = 'ProVerlay server unreachable'
+  }
+}
 
 async function pollF1Status() {
   for (const { root, getGraphic } of clockRoots) {
     for (const section of root.querySelectorAll('[data-type="f1Timing"]')) {
       const graphic = getGraphic(section.dataset.graphicId)
       if (!graphic || graphic.data?.source !== 'multiviewer') continue
-      const statusEl = section.querySelector('[data-bind="f1-status"]')
-      const previewEl = section.querySelector('[data-bind="f1-preview"]')
-      if (!statusEl) continue
-      try {
-        const res = await fetch(`/api/f1/${encodeURIComponent(graphic.id)}/live`)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const snap = await res.json()
-        if (snap.status?.connected) {
-          statusEl.textContent = `MultiViewer connected · ${snap.rows.length} drivers${snap.session?.lapText ? ` · ${snap.session.lapText}` : ''}`
-          if (previewEl) {
-            previewEl.textContent = snap.rows
-              .slice(0, 5)
-              .map((r) => `${r.pos} ${r.code}`)
-              .join('  ·  ')
-          }
-        } else {
-          statusEl.textContent = snap.status?.lastError
-            ? `Not connected — ${snap.status.lastError}`
-            : 'Waiting for MultiViewer live timing…'
-          if (previewEl) previewEl.textContent = ''
-        }
-      } catch {
-        statusEl.textContent = 'ProVerlay server unreachable'
-      }
+      await refreshF1LiveSection(section, graphic)
     }
   }
 }

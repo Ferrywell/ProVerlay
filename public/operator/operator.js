@@ -21,7 +21,7 @@ import {
 } from '/public/shared/operate-match.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
-import { handleF1FieldChange } from '/public/shared/operate-handlers.js'
+import { handleF1FieldChange, refreshF1LiveSection } from '/public/shared/operate-handlers.js'
 import { F1_SOURCE_OPTIONS } from '/public/shared/f1-timing.js'
 
 const root = document.getElementById('operator-root')
@@ -420,6 +420,12 @@ function f1CardTemplate(graphic) {
     <section class="op-section${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
       <div class="pv-group">
       ${sectionHead(graphic, f1StatusText(graphic), { statusBind: true })}
+      <div class="pv-group__cell f1-card__live"${isLiveSource ? '' : ' hidden'}>
+        <p class="op-status f1-live-line">
+          <span class="f1-status-dot" data-bind="f1-status-dot"></span>
+          <span data-bind="f1-status">Checking live timing…</span>
+        </p>
+      </div>
       <div class="pv-group__cell f1-card__fields">
         <label class="field">
           <span>Source</span>
@@ -457,6 +463,8 @@ function updateF1Card(card, graphic) {
   const mv = d.multiviewer || {}
   const status = card.querySelector('[data-bind="status-line"]')
   if (status) status.textContent = f1StatusText(graphic)
+  const liveBlock = card.querySelector('.f1-card__live')
+  if (liveBlock) liveBlock.hidden = d.source !== 'multiviewer'
   const setIfIdle = (selector, value) => {
     const input = card.querySelector(selector)
     if (input && document.activeElement !== input) input.value = value
@@ -784,6 +792,30 @@ function tickLiveClocks() {
   }
 }
 
+let f1LiveTimer = null
+
+function tickF1Live() {
+  if (!currentState) return
+  for (const graphic of operatorGraphics()) {
+    if (graphic.type !== 'f1Timing' || graphic.data?.source !== 'multiviewer') continue
+    const card = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
+    if (card) void refreshF1LiveSection(card, graphic)
+  }
+}
+
+function ensureF1LiveTimer() {
+  const needs = operatorGraphics().some(
+    (g) => g.type === 'f1Timing' && g.data?.source === 'multiviewer'
+  )
+  if (needs && !f1LiveTimer) {
+    f1LiveTimer = setInterval(tickF1Live, 3000)
+    tickF1Live()
+  } else if (!needs && f1LiveTimer) {
+    clearInterval(f1LiveTimer)
+    f1LiveTimer = null
+  }
+}
+
 function ensureClockTimer() {
   const needs = operatorGraphics().some((g) => g.type === 'matchScoreboard' && g.data?.clock?.running)
   if (needs && !clockTimer) {
@@ -803,6 +835,7 @@ function render() {
     document.body.classList.remove('operator--single', 'operator--multi')
     updateFocusChip(null, 0)
     ensureClockTimer()
+    ensureF1LiveTimer()
     return
   }
 
@@ -841,6 +874,7 @@ function render() {
   }
 
   ensureClockTimer()
+  ensureF1LiveTimer()
 }
 
 function applyState(state) {

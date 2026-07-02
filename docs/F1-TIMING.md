@@ -15,6 +15,10 @@ Handmatige lijst rijders (code, naam, gap). Bewerken via *Operate* op het
 dashboard of `/operate?graphic=<id>`: volgorde wijzigen met ↑/↓, gaps intypen.
 Bruikbaar zonder externe software, of als fallback wanneer MultiViewer wegvalt.
 
+Met **Import from MultiViewer** vul je de lijst in één klik met de actuele
+grid uit de live timing (`POST /api/f1/:id/import-drivers`) — handmatig
+intypen is dus nooit nodig zolang MultiViewer bereikbaar is.
+
 ### MultiViewer (live)
 Leest live timing van een draaiende [MultiViewer](https://multiviewer.app)
 instantie via de lokale API (`/api/v1/live-timing/...`).
@@ -45,8 +49,17 @@ en verhoog de delay tot een positiewissel in de toren gelijk valt met het beeld.
 | Focus driver | TLA-code (VER). Gemarkeerde rij; onder de top N als hij daarbuiten rijdt |
 | Top positions | Aantal rijen in de toren (1–20) |
 | Gap display | Interval (t.o.v. voorligger) of gap naar de leider |
+| Animation | In-/uitanimatie: Slide in (links → rechts), Drop down, Fade of Cut |
+| Lap counter | Toont de LAP x/y pill boven de toren (standaard aan) |
 | Delay | Vertraging in seconden t.o.v. de live feed |
-| showHeader (`data.showHeader`) | Toont LAP x/y pill boven de toren |
+
+De in-animatie heeft een stagger: P1 verschijnt eerst, de rest volgt kort
+erna (70 ms per rij). De uit-animatie loopt in omgekeerde volgorde. Fijnere
+afstelling kan via `data.animation.durationMs` en `data.animation.staggerMs`.
+
+**Live-indicator:** bij bron MultiViewer tonen dashboard-operate én operator
+een dot: groen = live timing komt binnen, rood = geen data (met foutmelding),
+plus een top-5 preview van de binnenkomende data.
 
 Styling via `data.style` (widthPx, rowHeightPx, rowGapPx, borderRadiusPx,
 fontSize, background, focusBackground, focusColor). De focusrij gebruikt
