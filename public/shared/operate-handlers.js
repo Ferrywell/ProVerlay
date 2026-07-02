@@ -12,7 +12,9 @@ import {
   F1_SOURCE_OPTIONS,
   F1_GAP_MODES,
   F1_ANIMATION_OPTIONS,
+  F1_DECIMAL_OPTIONS,
   resolveF1Animation,
+  resolveF1Decimals,
   normalizeManualDriver,
   renumberDrivers
 } from '/public/shared/f1-timing.js'
@@ -240,15 +242,24 @@ export function f1OperateHtml(graphic) {
           </select>
         </label>
         <label class="field">
+          <span>Gap decimals</span>
+          <select data-field="f1-decimals">
+            ${F1_DECIMAL_OPTIONS.map((o) => `<option value="${o.value}"${String(resolveF1Decimals(d)) === o.value ? ' selected' : ''}>${o.label}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field">
           <span>Animation</span>
           <select data-field="f1-anim">
             ${F1_ANIMATION_OPTIONS.map((o) => `<option value="${o.value}"${resolveF1Animation(d).in === o.value ? ' selected' : ''}>${o.label}</option>`).join('')}
           </select>
         </label>
       </div>
-      <div class="pv-group__cell">
+      <div class="pv-group__cell f1-operate__toggles">
         <button type="button" class="button ${d.showHeader ? 'button--live' : 'button--gray'} f1-operate__header-toggle" data-action="f1-toggle-header">
           Lap counter (LAP x/y)
+        </button>
+        <button type="button" class="button ${d.showTyres ? 'button--live' : 'button--gray'} f1-operate__tyre-toggle" data-action="f1-toggle-tyres">
+          Tyre compound
         </button>
       </div>
       <div class="pv-group__cell f1-operate__mv" data-f1-mv ${isLiveSource ? '' : 'hidden'}>
@@ -298,6 +309,7 @@ export function updateF1OperateMount(mount, graphic) {
   setIfIdle('[data-field="f1-focus"]', d.focusDriver || '')
   setIfIdle('[data-field="f1-topcount"]', d.topCount || 5)
   setIfIdle('[data-field="f1-gapmode"]', d.gapMode || 'interval')
+  setIfIdle('[data-field="f1-decimals"]', String(resolveF1Decimals(d)))
   setIfIdle('[data-field="f1-anim"]', resolveF1Animation(d).in)
   setIfIdle('[data-field="f1-mv-host"]', mv.host || '127.0.0.1')
   setIfIdle('[data-field="f1-mv-port"]', mv.port || 10101)
@@ -306,6 +318,10 @@ export function updateF1OperateMount(mount, graphic) {
   const headerToggle = mount.querySelector('[data-action="f1-toggle-header"]')
   if (headerToggle) {
     headerToggle.className = `button ${d.showHeader ? 'button--live' : 'button--gray'} f1-operate__header-toggle`
+  }
+  const tyreToggle = mount.querySelector('[data-action="f1-toggle-tyres"]')
+  if (tyreToggle) {
+    tyreToggle.className = `button ${d.showTyres ? 'button--live' : 'button--gray'} f1-operate__tyre-toggle`
   }
 
   const mvBlock = mount.querySelector('[data-f1-mv]')
@@ -334,6 +350,9 @@ export async function handleF1FieldChange(graphic, field, value) {
     await patchGraphic(graphic.id, { data: { topCount: n } })
   } else if (field === 'f1-gapmode') {
     await patchGraphic(graphic.id, { data: { gapMode: value === 'leader' ? 'leader' : 'interval' } })
+  } else if (field === 'f1-decimals') {
+    const valid = F1_DECIMAL_OPTIONS.some((o) => o.value === String(value))
+    await patchGraphic(graphic.id, { data: { gapDecimals: valid ? String(value) : '1' } })
   } else if (field === 'f1-anim') {
     const valid = F1_ANIMATION_OPTIONS.some((o) => o.value === value)
     await patchGraphic(graphic.id, {
@@ -368,6 +387,11 @@ async function handleF1DriverEdit(graphic, field, index, value) {
 async function handleF1Action(graphic, action, event) {
   if (action === 'f1-toggle-header') {
     await patchGraphic(graphic.id, { data: { showHeader: !graphic.data?.showHeader } })
+    return
+  }
+
+  if (action === 'f1-toggle-tyres') {
+    await patchGraphic(graphic.id, { data: { showTyres: !graphic.data?.showTyres } })
     return
   }
 

@@ -69,8 +69,17 @@ function gapValue(raw) {
   return String(raw)
 }
 
+/** Huidige compound per auto uit TimingAppData (laatste stint). */
+function currentTyre(appLine) {
+  const stints = appLine?.Stints
+  if (!stints) return ''
+  const list = Array.isArray(stints) ? stints : Object.values(stints)
+  const last = list[list.length - 1]
+  return String(last?.Compound || '').toUpperCase()
+}
+
 /** TimingData.Lines + DriverList → gesorteerde rijen voor de toren. */
-export function mapTimingToRows(timingLines = {}, driverList = {}) {
+export function mapTimingToRows(timingLines = {}, driverList = {}, appLines = {}) {
   const rows = []
   for (const [num, line] of Object.entries(timingLines)) {
     const pos = Number(line.Position)
@@ -84,28 +93,51 @@ export function mapTimingToRows(timingLines = {}, driverList = {}) {
       teamColor: drv.TeamColour ? `#${drv.TeamColour}` : '#888888',
       gap: gapValue(line.GapToLeader),
       interval: gapValue(line.IntervalToPositionAhead),
+      tyre: currentTyre(appLines[num]),
       inPit: Boolean(line.InPit),
       retired: Boolean(line.Retired || line.Stopped),
-      knockedOut: Boolean(line.KnockedOut)
+      knockedOut: Boolean(line.KnockedOut),
+      // Status-bit 1024 = over de finish (chequered flag), empirisch
+      // geverifieerd tegen de MultiViewer feed bij een race-einde.
+      finished: Boolean(Number(line.Status) & 1024)
     })
   }
   rows.sort((a, b) => a.pos - b.pos)
   return rows
 }
 
+/** TrackStatus.Status → 'clear' | 'yellow' | 'red' | 'sc' | 'vsc'. */
+export function mapTrackStatus(trackStatus) {
+  const code = String(trackStatus?.Status || '')
+  if (code === '2' || code === '3') return 'yellow'
+  if (code === '4') return 'sc'
+  if (code === '5') return 'red'
+  if (code === '6' || code === '7') return 'vsc'
+  return 'clear'
+}
+
 async function pollOnce(graphicId, cfg) {
   const entry = pollers.get(graphicId)
   if (!entry) return
   try {
-    const [timing, driverList, lapCount] = await Promise.all([
+    const [timing, driverList, lapCount, trackStatus, appData] = await Promise.all([
       fetchTopic(cfg, 'TimingData'),
       fetchTopic(cfg, 'DriverList'),
-      fetchTopic(cfg, 'LapCount').catch(() => null)
+      fetchTopic(cfg, 'LapCount').catch(() => null),
+      fetchTopic(cfg, 'TrackStatus').catch(() => null),
+      fetchTopic(cfg, 'TimingAppData').catch(() => null)
     ])
-    const rows = mapTimingToRows(timing?.Lines || {}, driverList || {})
-    const session = lapCount?.CurrentLap
-      ? { lapText: `LAP ${lapCount.CurrentLap}/${lapCount.TotalLaps || '?'}` }
-      : {}
+    const rows = mapTimingToRows(timing?.Lines || {}, driverList || {}, appData?.Lines || {})
+    // Bij een gemiste LapCount-fetch de vorige laptekst vasthouden: anders
+    // verdwijnt de header-pill één poll lang en verspringt de hele toren.
+    const prevSession = entry.buffer[entry.buffer.length - 1]?.session || {}
+    const lapText = lapCount?.CurrentLap
+      ? `LAP ${lapCount.CurrentLap}/${lapCount.TotalLaps || '?'}`
+      : prevSession.lapText || ''
+    const session = {
+      ...(lapText ? { lapText } : {}),
+      track: trackStatus ? mapTrackStatus(trackStatus) : prevSession.track || 'clear'
+    }
 
     const now = Date.now()
     entry.buffer.push({ at: now, rows, session })
@@ -237,11 +269,12 @@ export async function importDriversOnce(graphicId) {
 
   const cfg = f1Config(graphic)
   try {
-    const [timing, driverList] = await Promise.all([
+    const [timing, driverList, appData] = await Promise.all([
       fetchTopic(cfg, 'TimingData'),
-      fetchTopic(cfg, 'DriverList')
+      fetchTopic(cfg, 'DriverList'),
+      fetchTopic(cfg, 'TimingAppData').catch(() => null)
     ])
-    const rows = mapTimingToRows(timing?.Lines || {}, driverList || {})
+    const rows = mapTimingToRows(timing?.Lines || {}, driverList || {}, appData?.Lines || {})
     if (!rows.length) {
       return {
         status: 409,

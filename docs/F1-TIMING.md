@@ -49,9 +49,20 @@ en verhoog de delay tot een positiewissel in de toren gelijk valt met het beeld.
 | Focus driver | TLA-code (VER). Gemarkeerde rij; onder de top N als hij daarbuiten rijdt |
 | Top positions | Aantal rijen in de toren (1–20) |
 | Gap display | Interval (t.o.v. voorligger) of gap naar de leider |
+| Gap decimals | Aantal decimalen in de gaptijden: 1 (F1-stijl, standaard), 0, 2, 3 of Feed (onbewerkt) |
 | Animation | In-/uitanimatie: Slide in (links → rechts), Drop down, Fade of Cut |
 | Lap counter | Toont de LAP x/y pill boven de toren (standaard aan) |
+| Tyre compound | Toont per rijder de actuele band als gekleurde ring met letter (S/M/H/I/W) |
 | Delay | Vertraging in seconden t.o.v. de live feed |
+
+**Track status:** de lap-pill kleurt mee met de baanstatus uit de feed
+(`TrackStatus`): geel bij yellow flag, geel met **SC**/**VSC**-label bij een
+(virtual) safety car, rood bij een rode vlag. Geen extra instelling nodig;
+werkt zodra de lap counter aan staat.
+
+**Finish:** zodra een coureur over de finish komt (status-bit 1024 in de
+feed) verschijnt automatisch een blokjesvlag helemaal rechts in zijn rij,
+zoals in de officiële F1-toren.
 
 De in-animatie heeft een stagger: P1 verschijnt eerst, de rest volgt kort
 erna (70 ms per rij). De uit-animatie loopt in omgekeerde volgorde. Fijnere

@@ -19,7 +19,7 @@ import { applyServerTimeFromState } from '/public/shared/server-time.js'
 import { persistAutoStoppageIfNeeded } from '/public/shared/operate-match.js'
 import { canvasAspectRatio, elementBoxStyle, isStripLayout, isFullFrameBackground, layoutBackgroundVisible, placementStyle, fontSizeStyle, resolveContainerWidthPx, projectCanvas, supportsContainerQueries, clockPillBoxStyle, clockPillTextStyle } from '/public/shared/canvas-layout.js'
 import { injectProjectFontFaces, fetchProjectFontAssets, injectBrandFontFace, resolveRenderFontFamily } from '/public/shared/project-fonts.js'
-import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows, resolveF1Animation } from '/public/shared/f1-timing.js'
+import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows, resolveF1Animation, resolveF1Decimals, f1TyreInfo, f1TrackFlag } from '/public/shared/f1-timing.js'
 
 const stage = document.getElementById('stage')
 const layers = new Map()
@@ -463,19 +463,82 @@ function f1SessionInfo(graphic) {
   return d.session || {}
 }
 
-function f1RowHtml(row, gapMode) {
-  const gapText = f1RowGapText(row, gapMode)
+// Blokjesvlag als inline SVG (currentColor volgt de tekstkleur van de rij)
+const F1_FLAG_SVG =
+  '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 0h4v4H0zM8 0h4v4H8zM4 4h4v4H4zM12 4h4v4h-4zM0 8h4v4H0zM8 8h4v4H8zM4 12h4v4H4zM12 12h4v4h-4z"/></svg>'
+
+// Rijvolgorde als in de officiële F1-toren: pos, team, code, gap, band, vlag
+function f1RowHtml(row, gapMode, decimals, showTyres) {
+  const gapText = f1RowGapText(row, gapMode, decimals)
+  const tyre = showTyres ? f1TyreInfo(row) : null
   return `
     <span class="f1-row__pos">${row.pos || ''}</span>
     <span class="f1-row__team" style="--team:${safeCssColor(row.teamColor)}"></span>
     <span class="f1-row__code">${escape(row.code || '')}</span>
     <span class="f1-row__gap">${escape(gapText)}</span>
+    ${tyre ? `<span class="f1-row__tyre" style="--tyre:${safeCssColor(tyre.color)}">${escape(tyre.letter)}</span>` : ''}
+    ${row.finished ? `<span class="f1-row__flag">${F1_FLAG_SVG}</span>` : ''}
   `
+}
+
+/** Band-indicator in een bestaande rij bijwerken (compound kan live wisselen). */
+function syncF1TyreNode(node, row, showTyres) {
+  let tyreNode = node.querySelector('.f1-row__tyre')
+  const tyre = showTyres ? f1TyreInfo(row) : null
+  if (!tyre) {
+    if (tyreNode) tyreNode.remove()
+    return
+  }
+  if (!tyreNode) {
+    tyreNode = document.createElement('span')
+    tyreNode.className = 'f1-row__tyre'
+    node.insertBefore(tyreNode, node.querySelector('.f1-row__flag'))
+    popInIndicator(tyreNode)
+  }
+  tyreNode.textContent = tyre.letter
+  tyreNode.style.setProperty('--tyre', safeCssColor(tyre.color))
+}
+
+/** Indicator die live verschijnt: pop-in, rest van de rij schuift vloeiend mee. */
+function popInIndicator(node) {
+  node.classList.add('f1-anim-pop-in')
+  node.addEventListener('animationend', () => node.classList.remove('f1-anim-pop-in'), {
+    once: true
+  })
+}
+
+/** Chequered flag tonen zodra de coureur over de finish is. */
+function syncF1FlagNode(node, row) {
+  let flagNode = node.querySelector('.f1-row__flag')
+  if (!row.finished) {
+    if (flagNode) flagNode.remove()
+    return
+  }
+  if (!flagNode) {
+    flagNode = document.createElement('span')
+    flagNode.className = 'f1-row__flag'
+    flagNode.innerHTML = F1_FLAG_SVG
+    node.appendChild(flagNode)
+    popInIndicator(flagNode)
+  }
+}
+
+/** Header-pill (lap + track status) vullen; kleur via data-track in CSS. */
+function syncF1Header(header, session) {
+  const flag = f1TrackFlag(session)
+  header.dataset.track = flag.track
+  header.innerHTML = `<span class="f1-tower__lap">${escape(session.lapText || '')}</span>${
+    flag.label ? `<span class="f1-tower__flag">${escape(flag.label)}</span>` : ''
+  }`
 }
 
 function updateF1Tower(layer, graphic) {
   const tower = layer.querySelector(`[data-f1-id="${graphic.id}"]`)
   if (!tower) return
+  // Tijdens de uit-animatie geen updates meer toepassen: een live data-update
+  // zou anders de out-classes strippen en de rijen zichtbaar terug laten
+  // ploppen ("janky" exit).
+  if (tower.dataset.leaving === '1') return
   const d = graphic.data || {}
   const s = f1Style(d)
 
@@ -492,6 +555,8 @@ function updateF1Tower(layer, graphic) {
   if (s.focusColor) tower.style.setProperty('--f1-focus-color', s.focusColor)
   else tower.style.removeProperty('--f1-focus-color')
   const gapMode = d.gapMode || 'interval'
+  const decimals = resolveF1Decimals(d)
+  const showTyres = Boolean(d.showTyres)
   const rows = dedupeRows(f1CurrentRows(graphic))
   const { top, focus } = buildTowerRows(rows, {
     focusDriver: d.focusDriver,
@@ -519,7 +584,7 @@ function updateF1Tower(layer, graphic) {
     })
   }
 
-  // Header (lap-teller) als apart pill-element bovenaan
+  // Header (lap-teller + track status) als apart pill-element bovenaan
   let header = tower.querySelector('.f1-tower__header')
   if (headerVisible) {
     if (!header) {
@@ -527,7 +592,7 @@ function updateF1Tower(layer, graphic) {
       header.className = 'f1-tower__header'
       tower.appendChild(header)
     }
-    header.textContent = session.lapText
+    syncF1Header(header, session)
   } else if (header) {
     header.remove()
   }
@@ -562,7 +627,7 @@ function updateF1Tower(layer, graphic) {
       node = document.createElement('div')
       node.dataset.key = entry.key
       setRowY(node, entry.y)
-      node.innerHTML = f1RowHtml(entry.row, gapMode)
+      node.innerHTML = f1RowHtml(entry.row, gapMode, decimals, showTyres)
       if (isEntrance) {
         node.dataset.entering = '1'
         node.className = `${rowClass} f1-anim-in-${anim.in}`
@@ -590,9 +655,11 @@ function updateF1Tower(layer, graphic) {
       const gapNode = node.querySelector('.f1-row__gap')
       const posNode = node.querySelector('.f1-row__pos')
       const teamNode = node.querySelector('.f1-row__team')
-      if (gapNode) gapNode.textContent = f1RowGapText(entry.row, gapMode)
+      if (gapNode) gapNode.textContent = f1RowGapText(entry.row, gapMode, decimals)
       if (posNode) posNode.textContent = entry.row.pos || ''
       if (teamNode) teamNode.style.setProperty('--team', safeCssColor(entry.row.teamColor))
+      syncF1FlagNode(node, entry.row)
+      syncF1TyreNode(node, entry.row, showTyres)
     }
   })
 
@@ -623,11 +690,14 @@ function animateF1TowerOut(tower) {
   const animIn = tower.dataset.animIn || 'slide-left'
   const duration = Number(tower.dataset.animDur) || 380
   const stagger = Number(tower.dataset.animStagger) || 70
+  // Vanaf hier geen data-updates meer op deze toren (zie updateF1Tower)
+  tower.dataset.leaving = '1'
   if (animIn === 'cut') {
     return 0
   }
   const rows = [...tower.querySelectorAll('.f1-row')]
   rows.forEach((node, i) => {
+    delete node.dataset.entering
     node.classList.remove(`f1-anim-in-${animIn}`)
     node.style.animationDelay = `${(rows.length - 1 - i) * stagger}ms`
     node.style.animationDuration = `${duration}ms`
@@ -903,6 +973,9 @@ function syncGraphics(graphics) {
 
   for (const [id, layer] of layers) {
     if (!nextIds.has(id)) {
+      // Uit-animatie loopt al: niet opnieuw triggeren (zou de animatie
+      // herstarten en zichtbaar haperen) en de bestaande timer laten staan.
+      if (removalTimers.has(id)) continue
       stopCustomTicker(id)
       const out = layer.dataset.trOut || 'auto'
       const duration = Number(layer.dataset.trDur) || TRANSITION_DEFAULT_MS
