@@ -484,7 +484,14 @@
   padding: 0 var(--pv-space-md) var(--pv-space-sm);
 }
 
-.f1-operate__header-toggle {
+.f1-operate__toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--pv-space-sm);
+}
+
+.f1-operate__header-toggle,
+.f1-operate__tyre-toggle {
   width: 100%;
   min-height: 44px;
 }

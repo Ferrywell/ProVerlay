@@ -38,7 +38,7 @@
         "awayCode": "JAP",
         "homeName": "",
         "awayName": "",
-        "homeScore": 1,
+        "homeScore": 0,
         "awayScore": 0,
         "showCodes": true,
         "showNames": false,
@@ -52,11 +52,11 @@
         },
         "clock": {
           "period": "first_half",
-          "minute": 144,
-          "second": 14,
+          "minute": 0,
+          "second": 0,
           "stoppageTime": false,
           "running": false,
-          "runningSince": "2026-06-15T13:04:46.412Z",
+          "runningSince": null,
           "autoStoppageAt90": false
         },
         "penalties": {
@@ -358,7 +358,7 @@
       "data": {
         "source": "multiviewer",
         "focusDriver": "VER",
-        "topCount": 5,
+        "topCount": 10,
         "gapMode": "interval",
         "showHeader": true,
         "session": {
@@ -650,7 +650,9 @@
         "placementFree": {
           "x": 12,
           "y": 42
-        }
+        },
+        "showTyres": false,
+        "gapDecimals": "1"
       }
     }
   ]

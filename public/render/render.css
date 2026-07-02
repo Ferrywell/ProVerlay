@@ -746,6 +746,7 @@ html[data-preview-window] .score-canvas--no-bg {
   left: 0;
   display: inline-flex;
   align-items: center;
+  gap: 0.55em;
   height: calc(var(--f1-row-h) * 0.72);
   padding: 0 calc(var(--f1-row-h) * 0.4);
   border-radius: var(--f1-radius);
@@ -754,6 +755,28 @@ html[data-preview-window] .score-canvas--no-bg {
   font-size: calc(var(--f1-font) * 0.72);
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
+  transition:
+    background 300ms ease,
+    color 300ms ease;
+  will-change: opacity;
+}
+
+/* Track status: geel/SC/VSC → gele pill, rood → rode pill */
+.f1-tower__header[data-track='yellow'],
+.f1-tower__header[data-track='sc'],
+.f1-tower__header[data-track='vsc'] {
+  background: #ffd12e;
+  color: #111111;
+}
+
+.f1-tower__header[data-track='red'] {
+  background: #e10600;
+  color: #ffffff;
+}
+
+.f1-tower__flag {
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .f1-row {
@@ -777,6 +800,7 @@ html[data-preview-window] .score-canvas--no-bg {
     opacity 300ms ease,
     background 300ms ease,
     color 300ms ease;
+  will-change: transform, opacity;
 }
 
 .f1-row__pos {
@@ -809,6 +833,56 @@ html[data-preview-window] .score-canvas--no-bg {
   font-variant-numeric: tabular-nums;
   opacity: 0.92;
   white-space: nowrap;
+}
+
+/* Bandencompound: gekleurde ring met letter (S/M/H/I/W), rechts van de tijd */
+.f1-row__tyre {
+  display: grid;
+  place-items: center;
+  width: calc(var(--f1-row-h) * 0.52);
+  height: calc(var(--f1-row-h) * 0.52);
+  border-radius: 50%;
+  border: calc(var(--f1-row-h) * 0.055) solid var(--tyre, #b0b0b0);
+  color: var(--tyre, #b0b0b0);
+  font-size: calc(var(--f1-font) * 0.56);
+  font-weight: 800;
+  flex: none;
+  margin-left: 0.4em;
+}
+
+/* Chequered flag zodra de coureur gefinisht is (helemaal rechts) */
+.f1-row__flag {
+  display: grid;
+  place-items: center;
+  flex: none;
+  margin-left: 0.4em;
+}
+
+.f1-row__flag svg {
+  width: calc(var(--f1-row-h) * 0.4);
+  height: calc(var(--f1-row-h) * 0.4);
+  display: block;
+}
+
+/* Pop-in voor indicatoren die live verschijnen (vlag, band): max-width groeit
+   mee zodat de rest van de pill-inhoud vloeiend opschuift i.p.v. verspringt. */
+.f1-anim-pop-in {
+  animation: f1-pop-in 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes f1-pop-in {
+  from {
+    max-width: 0;
+    margin-left: 0;
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  to {
+    max-width: calc(var(--f1-row-h) * 0.6);
+    margin-left: 0.4em;
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Focusrijder (bv. VER): Odido-gradient pill met donkere tekst */
