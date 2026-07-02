@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url'
 import { Server } from 'socket.io'
 import { createApiRouter } from './api.js'
 import { loadState, getState, onStateChange, reloadState } from './state.js'
+import { initF1Timing } from './f1Timing.js'
 import { detectDevice, preferredDashboard } from './device.js'
 import { assetsDir } from './projects.js'
 import { buildNetworkUrls } from './network.js'
@@ -126,6 +127,7 @@ onStateChange((state) => {
 })
 
 await loadState()
+initF1Timing(io)
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {

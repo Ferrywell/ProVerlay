@@ -1,4 +1,35 @@
 import { defaultMatchData } from './matchClock.js'
+import { defaultF1Drivers } from './f1Timing.js'
+
+export function defaultF1TimingData() {
+  return {
+    source: 'manual',
+    focusDriver: 'VER',
+    topCount: 5,
+    gapMode: 'interval',
+    showHeader: false,
+    session: { lapText: '' },
+    drivers: defaultF1Drivers(),
+    multiviewer: {
+      host: '127.0.0.1',
+      port: 10101,
+      pollMs: 1000,
+      delayMs: 0
+    },
+    style: {
+      widthPx: 440,
+      rowHeightPx: 62,
+      rowGapPx: 8,
+      borderRadiusPx: 31,
+      fontSize: 30,
+      background: 'rgba(0, 0, 0, 0.85)',
+      color: '#ffffff',
+      focusBackground: '',
+      focusColor: ''
+    },
+    placementFree: { x: 12, y: 42 }
+  }
+}
 
 export function defaultCustomTickerData() {
   return {
@@ -140,6 +171,15 @@ const GRAPHIC_TEMPLATES = {
     position: 'bottom-left',
     operator: true,
     data: defaultQuizShowData()
+  }),
+  f1Timing: (name) => ({
+    type: 'f1Timing',
+    name,
+    visible: false,
+    soloVisible: false,
+    position: 'custom',
+    operator: true,
+    data: defaultF1TimingData()
   })
 }
 

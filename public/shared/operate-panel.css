@@ -401,3 +401,78 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── F1 timing operate ─────────────────────────────────────────────── */
+
+.f1-operate__config,
+.f1-card__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--pv-space-sm);
+}
+
+.f1-operate__mv-fields {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--pv-space-sm);
+}
+
+.f1-operate__mv .op-status {
+  margin-top: var(--pv-space-sm);
+}
+
+.f1-drv-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.f1-drv-row {
+  display: grid;
+  grid-template-columns: 28px 64px 1fr 92px auto;
+  align-items: center;
+  gap: var(--pv-space-sm);
+  padding: 6px var(--pv-space-md);
+  border-bottom: 0.5px solid var(--pv-border);
+}
+
+.f1-drv-row:last-child {
+  border-bottom: none;
+}
+
+.f1-drv-row__pos {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--pv-label-secondary);
+  text-align: center;
+}
+
+.f1-drv-row input {
+  min-height: 36px;
+  border: 0.5px solid var(--pv-border-strong);
+  border-radius: var(--pv-radius-sm);
+  background: var(--pv-bg-solid);
+  padding: 0.35rem 0.5rem;
+  font-size: 14px;
+}
+
+.f1-drv-row__code {
+  text-transform: uppercase;
+  text-align: center;
+  font-weight: 600;
+}
+
+.f1-drv-row__gap {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.f1-drv-row__actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.f1-operate__add {
+  padding: var(--pv-space-sm) var(--pv-space-md);
+}
