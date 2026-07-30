@@ -34,7 +34,8 @@ const TYPE_LABELS = {
   message: 'Message',
   image: 'Image',
   clock: 'Clock',
-  f1Timing: 'F1 timing'
+  f1Timing: 'F1 timing',
+  hockeyScorebug: 'Hockey scorebug'
 }
 
 let state = { graphics: [], settings: {} }

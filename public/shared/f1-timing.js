@@ -14,23 +14,23 @@ export const F1_SOURCE_OPTIONS = [
 ]
 
 export const F1_GAP_MODES = [
-  { value: 'interval', label: 'Interval (gap to car ahead)' },
+  { value: 'interval', label: 'Interval' },
   { value: 'leader', label: 'Gap to leader' }
 ]
 
 export const F1_ANIMATION_OPTIONS = [
-  { value: 'slide-left', label: 'Slide in (left → right)' },
+  { value: 'slide-left', label: 'Slide in' },
   { value: 'drop', label: 'Drop down' },
   { value: 'fade', label: 'Fade' },
-  { value: 'cut', label: 'Cut (no animation)' }
+  { value: 'cut', label: 'Cut' }
 ]
 
 export const F1_DECIMAL_OPTIONS = [
-  { value: '1', label: '1 decimal (F1 style)' },
+  { value: '1', label: '1 decimal' },
   { value: '0', label: '0 decimals' },
   { value: '2', label: '2 decimals' },
   { value: '3', label: '3 decimals' },
-  { value: 'auto', label: 'Feed (as-is)' }
+  { value: 'auto', label: 'Feed as-is' }
 ]
 
 /** Aantal decimalen voor gaps; 'auto' = feedwaarde onbewerkt tonen. */
@@ -94,11 +94,12 @@ export function f1RowGapText(row = {}, gapMode = 'interval', decimals = 'auto') 
   if (row.retired) return 'OUT'
   if (row.inPit) return 'PIT'
   if (row.pos === 1) {
-    // F1-feed stuurt voor de leider soms "LAP n" als GapToLeader; de ronde
-    // staat al in de header, dus de leider toont altijd LEADER.
+    // Kolomkop voor P1 volgt de gekozen gap-modus (zoals de officiële F1-toren).
+    // Feed stuurt soms "LAP n" / "LEADER" — dat is geen bruikbare gap-waarde.
     const gap = String(row.gap || '')
-    if (!gap || gap === 'LEADER' || /^LAP\b/i.test(gap)) return 'LEADER'
-    return formatF1Gap(gap, decimals)
+    const placeholder = !gap || gap === 'LEADER' || /^LAP\b/i.test(gap)
+    if (gapMode === 'leader') return placeholder ? 'GAP TO LEADER' : formatF1Gap(gap, decimals)
+    return placeholder ? 'INTERVAL' : formatF1Gap(gap, decimals)
   }
   const value = gapMode === 'leader' ? row.gap : row.interval || row.gap
   return formatF1Gap(value || '', decimals)

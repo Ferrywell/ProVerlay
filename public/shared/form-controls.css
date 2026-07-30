@@ -66,6 +66,8 @@
   appearance: none;
   -webkit-appearance: none;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 44px;
   padding: 0.6rem 2rem 0.6rem 0.75rem;
   font: inherit;
@@ -79,6 +81,9 @@
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pv-group .field select {

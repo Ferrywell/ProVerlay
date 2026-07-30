@@ -31,8 +31,9 @@
         </div>
         <div class="header-meta__group">
           <a class="button button--secondary" href="/operator">Operator</a>
+          <a class="button button--secondary" href="/design">Design</a>
           <a class="button button--secondary" href="/layout">Overlay layout</a>
-          <button class="button button--secondary" id="copy-render-url" type="button">All overlays (render)</button>
+          <button class="button button--secondary" id="copy-render-url" type="button" title="Copy combined Browser Source URL">Combined render URL</button>
         </div>
         <div class="header-meta__group header-meta__group--actions">
           <a class="button button--primary" href="/render">Preview</a>
@@ -44,7 +45,7 @@
       <section class="glass panel panel--overlays">
         <div class="panel-head">
           <h2>Overlays</h2>
-          <p>Activate graphics for your stream. Select an overlay to operate it on the right, or use Edit settings to configure before the show.</p>
+          <p>Activate graphics for your stream. <strong>Go live</strong> shows on the combined Browser Source (<code>/render</code>). Use <strong>Solo source</strong> for a separate OBS/vMix layer (e.g. countdown) so you can position it in that program.</p>
         </div>
         <div class="overlay-toolbar">
           <label class="field field--inline">
@@ -52,6 +53,7 @@
             <select id="widget-type-add">
               <option value="matchScoreboard">Match score</option>
               <option value="f1Timing">F1 timing</option>
+              <option value="hockeyScorebug">Hockey scorebug</option>
               <option value="customTicker">Ticker</option>
               <option value="streamCountdown">Stream countdown</option>
               <option value="lowerThird">Lower third (single)</option>

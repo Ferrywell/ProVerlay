@@ -51,7 +51,10 @@ function f1Config(graphic) {
 }
 
 function baseUrl(cfg) {
-  return `http://${cfg.host}:${cfg.port}/api/v1/live-timing`
+  const host = String(cfg.host || '127.0.0.1')
+  // IPv6-literals moeten in brackets: http://[::1]:10101/...
+  const hostPart = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host
+  return `http://${hostPart}:${cfg.port}/api/v1/live-timing`
 }
 
 async function fetchTopic(cfg, topic) {
@@ -119,6 +122,10 @@ export function mapTrackStatus(trackStatus) {
 async function pollOnce(graphicId, cfg) {
   const entry = pollers.get(graphicId)
   if (!entry) return
+  // Geen overlappende polls: bij trage MultiViewer / pollMs 250ms
+  // zou setInterval anders N × 5 HTTP-requests tegelijk starten.
+  if (entry.inFlight) return
+  entry.inFlight = true
   try {
     const [timing, driverList, lapCount, trackStatus, appData] = await Promise.all([
       fetchTopic(cfg, 'TimingData'),
@@ -127,6 +134,8 @@ async function pollOnce(graphicId, cfg) {
       fetchTopic(cfg, 'TrackStatus').catch(() => null),
       fetchTopic(cfg, 'TimingAppData').catch(() => null)
     ])
+    // Poller kan intussen gestopt zijn
+    if (!pollers.has(graphicId)) return
     const rows = mapTimingToRows(timing?.Lines || {}, driverList || {}, appData?.Lines || {})
     // Bij een gemiste LapCount-fetch de vorige laptekst vasthouden: anders
     // verdwijnt de header-pill één poll lang en verspringt de hele toren.
@@ -146,13 +155,16 @@ async function pollOnce(graphicId, cfg) {
     }
     entry.status = { connected: rows.length > 0, lastError: null, lastUpdateAt: now }
   } catch (err) {
+    if (!pollers.has(graphicId)) return
     entry.status = {
       connected: false,
       lastError: err.name === 'TimeoutError' ? 'MultiViewer not reachable (timeout)' : err.message,
       lastUpdateAt: entry.status?.lastUpdateAt || null
     }
+  } finally {
+    entry.inFlight = false
   }
-  broadcast(graphicId, cfg)
+  if (pollers.has(graphicId)) broadcast(graphicId, cfg)
 }
 
 /** Snapshot op (nu − delay); nieuwste als de buffer korter is dan de delay. */
@@ -223,6 +235,7 @@ function startPoller(graphicId, cfg) {
   const entry = {
     timer: null,
     buffer: [],
+    inFlight: false,
     status: { connected: false, lastError: null, lastUpdateAt: null },
     cfgKey: pollerKey(cfg)
   }

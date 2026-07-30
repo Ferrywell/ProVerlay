@@ -351,14 +351,14 @@
       },
       "type": "f1Timing",
       "name": "F1 Live Timing",
-      "visible": true,
+      "visible": false,
       "soloVisible": false,
       "position": "custom",
       "operator": true,
       "data": {
         "source": "multiviewer",
         "focusDriver": "VER",
-        "topCount": 10,
+        "topCount": 5,
         "gapMode": "interval",
         "showHeader": true,
         "session": {
@@ -653,6 +653,42 @@
         },
         "showTyres": false,
         "gapDecimals": "1"
+      }
+    },
+    {
+      "id": "hockey-scorebug-main",
+      "type": "hockeyScorebug",
+      "name": "Hockey scorebug",
+      "visible": true,
+      "soloVisible": true,
+      "position": "top-center",
+      "operator": true,
+      "transition": {
+        "in": "auto",
+        "out": "auto",
+        "duration": 450
+      },
+      "data": {
+        "homeCode": "NED",
+        "awayCode": "DUI",
+        "homeScore": 0,
+        "awayScore": 0,
+        "homeColor": "#FF7621",
+        "awayColor": "#303030",
+        "clock": {
+          "period": "q2",
+          "remainingMs": 161319,
+          "quarterMs": 900000,
+          "running": true,
+          "runningSince": "2026-07-30T20:12:55.599Z"
+        },
+        "animation": {
+          "enabled": true,
+          "durationMs": 420
+        },
+        "style": {
+          "scale": 1
+        }
       }
     }
   ]

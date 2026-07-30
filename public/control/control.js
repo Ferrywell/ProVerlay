@@ -1,4 +1,5 @@
 import { toggleGraphic, toggleGraphicSolo, patchGraphic } from '/public/shared/client.js'
+import { detectClientDevice } from '/public/shared/device.js'
 import { createTickerMessage, migrateTickerMessages, enabledTickerTexts } from '/public/shared/ticker-messages.js'
 import { buildTickerBoardHtml } from '/public/shared/ticker-board.js'
 import { mountCustomTicker, stopCustomTicker } from '/public/shared/ticker-engine.js'
@@ -41,13 +42,19 @@ const TYPE_LABELS = {
   quizShow: 'Quiz',
   message: 'Message',
   f1Timing: 'F1 timing',
+  hockeyScorebug: 'Hockey scorebug',
 }
 
-const COPY_ALL_RENDER_LABEL = 'All overlays (render)'
+const COPY_ALL_RENDER_LABEL = 'Combined render URL'
 
 const STANDALONE_LINK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`
 
 const SOLO_TOGGLE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="7"/></svg>`
+
+// Decision A: iPadOS often reports as desktop UA — also gate by touch + width.
+if (detectClientDevice() !== 'desktop') {
+  window.location.replace('/operator')
+}
 
 async function copyToClipboard(text) {
   if (navigator.clipboard?.writeText) {
@@ -675,16 +682,16 @@ function renderGraphics() {
         <div class="overlay-card__title-row">
           <div class="overlay-name">${graphic.name}</div>
           <div class="overlay-card__url-actions">
-            <button type="button" class="overlay-standalone-link" title="Copy solo URL (?graphic=…)" aria-label="Copy solo URL for ${graphic.name}">
+            <button type="button" class="overlay-standalone-link" title="Copy solo Browser Source URL (separate OBS/vMix layer)" aria-label="Copy solo URL for ${graphic.name}">
               ${STANDALONE_LINK_ICON}
             </button>
-            <button type="button" class="overlay-solo-toggle${graphic.soloVisible ? ' is-live' : ''}" title="${graphic.soloVisible ? 'Solo off' : 'Solo on air'}" aria-label="${graphic.soloVisible ? 'Hide solo output' : 'Go live solo'}" aria-pressed="${graphic.soloVisible}">
+            <button type="button" class="overlay-solo-toggle${graphic.soloVisible ? ' is-live' : ''}" title="${graphic.soloVisible ? 'Turn off solo Browser Source' : 'Solo on — separate Browser Source'}" aria-label="${graphic.soloVisible ? 'Hide solo output' : 'Show on solo Browser Source'}" aria-pressed="${graphic.soloVisible}">
               ${SOLO_TOGGLE_ICON}
             </button>
           </div>
         </div>
-        ${graphic.visible ? '<span class="pill pill--live">Main</span>' : ''}
-        ${graphic.soloVisible ? '<span class="pill pill--solo">Solo</span>' : ''}
+        ${graphic.visible ? '<span class="pill pill--live" title="Visible on combined /render">Combined</span>' : ''}
+        ${graphic.soloVisible ? '<span class="pill pill--solo" title="Visible on solo ?graphic= URL">Solo source</span>' : ''}
       </div>
     `
     body.addEventListener('click', (event) => {
@@ -722,8 +729,11 @@ function renderGraphics() {
     const button = document.createElement('button')
     button.className = graphic.visible ? 'button button--gray' : 'button button--live'
     button.type = 'button'
-    button.textContent = graphic.visible ? 'Hide' : 'Go live'
+    button.textContent = graphic.visible ? 'Hide combined' : 'Go live'
     button.setAttribute('aria-pressed', String(graphic.visible))
+    button.title = graphic.visible
+      ? 'Hide from combined /render (all overlays)'
+      : 'Show on combined /render (all overlays)'
     button.addEventListener('click', (event) => {
       event.stopPropagation()
       toggleGraphic(graphic.id, !graphic.visible)
@@ -1550,7 +1560,8 @@ widgetAdd?.addEventListener('click', async () => {
     lowerThirdShow: 'Lower thirds',
     quizShow: 'Quiz',
     message: 'Message',
-    f1Timing: 'F1 timing'
+    f1Timing: 'F1 timing',
+    hockeyScorebug: 'Hockey scorebug'
   }
   const defaultName = defaultNames[type] || 'New widget'
   const name = await promptName({

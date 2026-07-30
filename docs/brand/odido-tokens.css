@@ -1,0 +1,141 @@
+/**
+ * Odido brand tokens — ProVerlay
+ * Official values from https://merk.odido.nl/en/colour (2026-07-30)
+ * Full rules: docs/brand/ODIDO.md
+ */
+
+:root {
+  /* Core */
+  --odido-black: #000000;
+  --odido-white: #ffffff;
+  --odido-glass: rgba(0, 0, 0, 0.85);
+  --odido-ink: #000000;
+  --odido-score-tile: #ffffff;
+  --odido-text-on-dark: #ffffff;
+  --odido-text-muted: rgba(255, 255, 255, 0.78);
+
+  /* Secondary — Tech blue */
+  --odido-tech-blue: #2c72ff;
+  --odido-tech-blue-80: #578fff;
+  --odido-tech-blue-60: #82acff;
+  --odido-tech-blue-40: #adc8ff;
+  --odido-tech-blue-20: #c3d7ff;
+  --odido-tech-blue-10: #eef3ff;
+
+  /* Secondary — Charm teal */
+  --odido-charm-teal: #2f9a92;
+  --odido-charm-teal-80: #59afa8;
+  --odido-charm-teal-60: #84c3be;
+  --odido-charm-teal-40: #aed8d5;
+  --odido-charm-teal-20: #d9eceb;
+  --odido-charm-teal-10: #eef7f6;
+
+  /* Secondary — Solar yellow */
+  --odido-solar-yellow: #ffac24;
+  --odido-solar-yellow-80: #ffbd51;
+  --odido-solar-yellow-60: #ffce7d;
+  --odido-solar-yellow-40: #ffdfaa;
+  --odido-solar-yellow-20: #fff0d7;
+  --odido-solar-yellow-10: #fff8ed;
+
+  /* Secondary — Dutch orange */
+  --odido-dutch-orange: #ff7621;
+  --odido-dutch-orange-80: #ff924e;
+  --odido-dutch-orange-60: #ffae7c;
+  --odido-dutch-orange-40: #ffcaa9;
+  --odido-dutch-orange-20: #ffe6d6;
+  --odido-dutch-orange-10: #fff4ed;
+
+  /* Secondary — Warm pink */
+  --odido-warm-pink: #ff808c;
+  --odido-warm-pink-80: #ff9aa3;
+  --odido-warm-pink-60: #ffb4bb;
+  --odido-warm-pink-40: #ffced2;
+  --odido-warm-pink-20: #ffe8ea;
+  --odido-warm-pink-10: #fff5f6;
+
+  /* Secondary — Lively purple */
+  --odido-lively-purple: #7066ff;
+  --odido-lively-purple-80: #8d85ff;
+  --odido-lively-purple-60: #aaa4ff;
+  --odido-lively-purple-40: #c7c4ff;
+  --odido-lively-purple-20: #e5e3ff;
+  --odido-lively-purple-10: #f3f2ff;
+
+  /* Glow stop triplets (portal Colour page) */
+  --odido-glow-1-a: #ff7621;
+  --odido-glow-1-b: #ff808c;
+  --odido-glow-1-c: #2f9a92;
+
+  --odido-glow-2-a: #ffac24;
+  --odido-glow-2-b: #7066ff;
+  --odido-glow-2-c: #2c72ff;
+
+  --odido-glow-3-a: #2f9a92;
+  --odido-glow-3-b: #2c72ff;
+  --odido-glow-3-c: #ff7621;
+
+  --odido-glow-4-a: #ff7621;
+  --odido-glow-4-b: #7066ff;
+  --odido-glow-4-c: #2c72ff;
+
+  /* Fonts */
+  --odido-font-display: 'Otypical Headline', Arial, sans-serif;
+  --odido-font-text: 'Otypical Text', Arial, sans-serif;
+
+  /* Active glow (default = four) */
+  --odido-glow: var(--odido-glow-4);
+}
+
+/* Mesh-like Glows — stacked radials from official stop triplets */
+
+.odido-glow-1,
+[data-odido-glow='1'] {
+  --odido-glow:
+    radial-gradient(ellipse 95% 75% at 18% 12%, var(--odido-glow-1-a) 0%, var(--odido-dutch-orange-80) 30%, transparent 58%),
+    radial-gradient(ellipse 80% 70% at 78% 35%, var(--odido-glow-1-b) 0%, transparent 58%),
+    radial-gradient(ellipse 90% 80% at 40% 92%, var(--odido-glow-1-c) 0%, transparent 60%),
+    #2a6e68;
+}
+
+.odido-glow-2,
+[data-odido-glow='2'] {
+  --odido-glow:
+    radial-gradient(ellipse 100% 85% at 88% 22%, var(--odido-glow-2-a) 0%, var(--odido-solar-yellow-80) 36%, transparent 60%),
+    radial-gradient(ellipse 75% 70% at 22% 88%, var(--odido-glow-2-b) 0%, transparent 55%),
+    radial-gradient(ellipse 85% 70% at 12% 18%, var(--odido-glow-2-c) 0%, var(--odido-tech-blue-60) 40%, transparent 55%),
+    #3d38a8;
+}
+
+.odido-glow-3,
+[data-odido-glow='3'] {
+  --odido-glow:
+    radial-gradient(ellipse 90% 75% at 20% 20%, var(--odido-glow-3-a) 0%, transparent 55%),
+    radial-gradient(ellipse 85% 70% at 75% 40%, var(--odido-glow-3-b) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 80% at 50% 95%, var(--odido-glow-3-c) 0%, transparent 58%),
+    #1f6b66;
+}
+
+.odido-glow-4,
+[data-odido-glow='4'] {
+  --odido-glow:
+    radial-gradient(
+      ellipse 95% 75% at 16% 10%,
+      var(--odido-glow-4-a) 0%,
+      var(--odido-dutch-orange-80) 28%,
+      transparent 55%
+    ),
+    radial-gradient(ellipse 80% 70% at 78% 38%, var(--odido-warm-pink) 0%, transparent 55%),
+    radial-gradient(
+      ellipse 95% 85% at 48% 95%,
+      var(--odido-glow-4-b) 0%,
+      var(--odido-glow-4-c) 45%,
+      transparent 65%
+    ),
+    #3a2fb8;
+}
+
+.odido-glow-fill,
+.odido-stripe {
+  background: var(--odido-glow);
+}

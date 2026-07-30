@@ -1,11 +1,28 @@
 # ProVerlay QA — Blockers
 
 **Datum:** 2026-06-09  
-**Laatste update:** Beta Tester run #2 (project system)
+**Laatste update:** 2026-07-30 robustness pass
 
-## Actieve blockers
+## Actieve blockers (huidig)
 
-### BLK-003 — Project API niet geïmplementeerd (P0)
+Geen Critical blockers na QA-008-fix (30 juli 2026). Zie `docs/qa/ROBUSTNESS-PASS-2026-07-30.md`.
+
+### Open (niet blocking voor MVP, wel voor productie-LAN / hockey)
+
+| ID | Onderwerp | Severity |
+|----|-----------|----------|
+| SEC-LAN | Geen auth op REST/Socket; CORS `*` | High op onvertrouwd netwerk |
+| INST-MIX | Electron kan zich koppelen aan willekeurige `:2014` (dev vs app data) | Medium |
+| SPORT | Veldhockey via sport-presets nog niet gebouwd (`data.sport` unused) | Product backlog |
+| PKG | Node engines vs Electron/Companion 22+; arm64-only Mac | Medium |
+
+---
+
+## Historisch — BLK-003 (project API)
+
+> **Status 2026-07:** Project API is geïmplementeerd; deze blocker is **resolved**. Tekst hieronder is historisch.
+
+### BLK-003 — Project API niet geïmplementeerd (P0) — RESOLVED
 
 | Veld | Waarde |
 |------|--------|

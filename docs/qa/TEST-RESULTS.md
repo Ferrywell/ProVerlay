@@ -661,3 +661,29 @@ node --check public/shared/operate-handlers.js public/control/control.js public/
 **Nog handmatig:** TC-450 (ticker row visueel), TC-451 (project panel collapse bij selectie).
 
 **Nieuwe bugs:** geen
+
+---
+
+## Run: 30 juli 2026 — Robustness / bugfix (multi-agent)
+
+**Besluit: Conditional Go** (Critical QA-008 gefixt en geverifieerd)
+
+| Veld | Waarde |
+|------|--------|
+| Versie | 0.4.0 + fixes |
+| Agents | QA, Netwerk/MV, Hockey-scan + Lead |
+| Omgeving | Geïsoleerd `:2015` + temp data dir |
+| Rapport | `docs/qa/ROBUSTNESS-PASS-2026-07-30.md` |
+
+| ID | Severity | Status |
+|----|----------|--------|
+| QA-008 concurrent registry corrupt | Critical | **Fixed** (write queue + atomic JSON) |
+| QA-009 orphan asset dirs | Medium | **Fixed** (projectExists → 404) |
+| QA-010 lost score taps | Medium | **Fixed** (operate action queue) |
+| QA-011 stale render apply | Medium | **Fixed** (revision guard) |
+| QA-012 HTML stack on bad JSON | Low | **Fixed** |
+| QA-007 operator clock inputs | Low | **Fixed** |
+| F1 overlapping polls | High | **Fixed** (`inFlight`) |
+| Hockey sport presets | — | Documented only (not implemented) |
+
+**Open (later):** LAN auth, Socket rooms, Electron↔dev identity, Node engines/lock sync, Intel Mac build.

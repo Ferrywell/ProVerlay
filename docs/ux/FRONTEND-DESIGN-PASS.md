@@ -246,3 +246,24 @@ Full findings: **`docs/ux/VISUAL-FEEDBACK-PASS.md`**
 - Ghost buttons on overlay card actions
 - Project & network auto-collapse + side-stack dim during operate focus
 - Header button grouping (nav | Preview)
+
+---
+
+# Frontend Design Pass — 30 juli 2026 (UX decisions sprint)
+
+Owner decisions: English UI; combined+solo OBS model; tablet→Operator (A); Design hub; Desk mode; score − immediate; F1 import on phone; `/operate` parity.
+
+## Pages touched
+
+- `public/design/` — new Design hub checklist
+- `public/control/` — Combined/Solo labels, Design link, tablet client gate
+- `public/operator/` — Design nav, Desk mode, F1 import
+- `public/shared/operate-handlers.js` — match stoppage/clock vis parity
+- `public/shared/operate-match.js` — score − without confirm
+- `server/index.js` — `/control` tablet redirect, `/design` route
+
+## Responsive
+
+- Tablet/phone: `/control` → `/operator` (server UA + client touch/width)
+- Desk mode: 2-col from 900px landscape / 1100px
+- Electron window remains resizable

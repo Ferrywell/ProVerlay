@@ -138,7 +138,9 @@ Environment (browser, OS)
 | customScoreboard render | ✅ layout + elements |
 | Control UI | ✅ Project panel (UX agent) |
 | Operator / Companion | ✅ Score bediening |
+| Design hub | ✅ `/design` — setup checklist |
 | F1 timing tower | ✅ `f1Timing` widget — MultiViewer live + manual (`docs/F1-TIMING.md`) |
+| Hockey scorebug | ✅ `hockeyScorebug` — circular clock + Glow one ring (`docs/ux/hockey-scorebug-mockup.html`) |
 | QA project tests | 🟡 Beta agent — her-test na API |
 
 ## Poorten
@@ -149,6 +151,7 @@ Environment (browser, OS)
 ## Productrichting (juni 2026)
 
 - Eigen identiteit — Apple Tahoe UI, geen Holographics-clone
+- Klant **Odido**: volg `docs/brand/ODIDO.md` + `docs/brand/odido-tokens.css` (Glow 2/4, Otypical, identity levels)
 - `/control` = desktop dashboard, `/operator` = iPad/iPhone bediening
 - Device detectie op `/` → mobiel naar operator
 - Klant branding via `data/brands/` + live editor

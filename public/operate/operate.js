@@ -51,7 +51,18 @@ function render() {
   if (title) title.textContent = graphic.name || 'Operate'
   if (subtitle) {
     subtitle.hidden = false
-    subtitle.textContent = graphic.type
+    const labels = {
+      matchScoreboard: 'Match score',
+      customTicker: 'Ticker',
+      streamCountdown: 'Stream countdown',
+      lowerThird: 'Lower third',
+      lowerThirdShow: 'Lower thirds',
+      quizShow: 'Quiz',
+      message: 'Message',
+      f1Timing: 'F1 timing',
+      hockeyScorebug: 'Hockey scorebug'
+    }
+    subtitle.textContent = labels[graphic.type] || graphic.type
   }
 
   let section = root.querySelector(`[data-graphic-id="${graphic.id}"]`)

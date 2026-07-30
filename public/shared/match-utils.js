@@ -146,6 +146,11 @@ export function resolveBindText(bind, data) {
       return widgetVisible(widgets, 'awayScore') ? String(data.awayScore ?? 0) : ''
     case 'clock':
       return !widgetVisible(widgets, 'clock') ? '' : formatClock(data.clock)
+    case 'period': {
+      const period = data.clock?.period
+      if (!period) return ''
+      return PERIOD_OPTIONS.find((p) => p.value === period)?.label || period
+    }
     case 'penaltyScore':
       if (!MATCH_PENALTIES_ENABLED || !data.penalties?.active || !widgetVisible(widgets, 'penalties')) return ''
       return `${data.penalties.homeScore ?? 0}-${data.penalties.awayScore ?? 0}`

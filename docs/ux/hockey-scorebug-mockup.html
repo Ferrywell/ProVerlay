@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="nl" data-odido-glow="1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProVerlay — Hockey scorebug · Odido Glow</title>
+    <link rel="stylesheet" href="../brand/odido-tokens.css" />
+    <style>
+      @font-face {
+        font-family: 'Otypical Headline';
+        src: url('../../data/projects/odido/assets/OtypicalHeadline-Bold.ttf') format('truetype');
+        font-weight: 700;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Otypical Headline';
+        src: url('../../data/projects/odido/assets/OtypicalHeadline-Regular.ttf') format('truetype');
+        font-weight: 400;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Otypical Text';
+        src: url('../../data/projects/odido/assets/OtypicalText-Regular.ttf') format('truetype');
+        font-weight: 400;
+        font-display: swap;
+      }
+
+      :root {
+        --bug-h: 74px;
+        --clock-d: 124px;
+        --ring-w: 7px; /* dikte van de progress-rand buiten de disc */
+        --gap: 7px;
+        /* Solide teamkleuren (handmatig; niet Glow) */
+        --home-color: #ff7621; /* NED Oranje — Odido Dutch orange */
+        --away-color: #74acdf; /* Placeholder ARG (WK-finale 2022 dames) */
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--odido-font-text);
+        color: var(--odido-ink);
+        background: #0b1a12;
+      }
+
+      .stage {
+        position: relative;
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        overflow: hidden;
+      }
+
+      .pitch {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 70% 45% at 50% 8%, rgba(253, 118, 32, 0.2), transparent 50%),
+          radial-gradient(ellipse 50% 40% at 80% 20%, rgba(112, 101, 254, 0.16), transparent 45%),
+          linear-gradient(180deg, #1a4d2e 0%, #0f3a22 42%, #0a2818 100%);
+      }
+
+      .pitch::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          90deg,
+          transparent 0,
+          transparent 47px,
+          rgba(255, 255, 255, 0.03) 47px,
+          rgba(255, 255, 255, 0.03) 48px
+        );
+        opacity: 0.65;
+      }
+
+      .pitch::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 16%, transparent 0%, rgba(0, 0, 0, 0.4) 72%);
+      }
+
+      .frame {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 7vh 24px 0;
+        gap: 26px;
+      }
+
+      .label {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .bug {
+        display: flex;
+        align-items: center;
+        gap: var(--gap);
+        filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.5));
+        transform: scale(1.18);
+        transform-origin: top center;
+      }
+
+      .arm {
+        display: flex;
+        align-items: stretch;
+        height: var(--bug-h);
+        overflow: hidden;
+        background: var(--odido-glass);
+      }
+
+      .arm--home {
+        border-radius: 999px 12px 12px 999px;
+      }
+
+      .arm--away {
+        border-radius: 12px 999px 999px 12px;
+      }
+
+      .stripe {
+        width: 16px;
+        flex: none;
+      }
+
+      .arm--home .stripe {
+        background: var(--home-color);
+      }
+
+      .arm--away .stripe {
+        background: var(--away-color);
+      }
+
+      .code {
+        display: grid;
+        place-items: center;
+        min-width: 78px;
+        padding: 0 16px;
+        color: var(--odido-text-on-dark);
+        font-family: var(--odido-font-display);
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .score {
+        display: grid;
+        place-items: center;
+        width: 58px;
+        background: var(--odido-score-tile);
+        color: var(--odido-ink);
+        font-family: var(--odido-font-display);
+        font-size: 38px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+
+      .arm--home .score {
+        border-radius: 10px 8px 8px 10px;
+        margin: 6px 6px 6px 0;
+      }
+
+      .arm--away .score {
+        border-radius: 8px 10px 10px 8px;
+        margin: 6px 0 6px 6px;
+      }
+
+      .clock {
+        position: relative;
+        width: var(--clock-d);
+        height: var(--clock-d);
+        flex: none;
+      }
+
+      .clock__disc {
+        position: absolute;
+        /* Ruimte voor de rand om de disc heen — niet eronder/erachter */
+        inset: var(--ring-w);
+        z-index: 1;
+        border-radius: 50%;
+        background: var(--odido-glass);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 6px;
+        padding: 14px 8px 16px;
+      }
+
+      .clock__time {
+        color: var(--odido-text-on-dark);
+        font-family: var(--odido-font-display);
+        font-size: 36px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+        line-height: 1;
+      }
+
+      .clock__period {
+        color: var(--odido-text-muted);
+        font-family: var(--odido-font-display);
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+      }
+
+      .clock__ring {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        overflow: visible;
+        transform: rotate(-90deg);
+        pointer-events: none;
+      }
+
+      /* Stroke gecentreerd in de buitenste band (viewBox 100 → ring-w ≈ 5.65) */
+      .clock__ring-track {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.22);
+        stroke-width: 5.65;
+      }
+
+      .clock__ring-prog {
+        fill: none;
+        stroke: url(#odidoRingStroke);
+        stroke-width: 5.65;
+        stroke-linecap: butt;
+        stroke-dasharray: 0 999;
+        transition: stroke-dasharray 120ms linear;
+      }
+
+      .panel {
+        position: relative;
+        z-index: 1;
+        margin: 24px;
+        padding: 22px 24px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+        max-width: 600px;
+        width: calc(100% - 48px);
+        justify-self: center;
+      }
+
+      .panel::before {
+        content: '';
+        display: block;
+        height: 6px;
+        border-radius: 999px;
+        margin: 0 0 16px;
+        background: var(--odido-glow);
+      }
+
+      .panel h1 {
+        margin: 0 0 4px;
+        font-family: var(--odido-font-display);
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .panel p {
+        margin: 0 0 14px;
+        color: #6e6e73;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .row label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+        min-width: 140px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6e6e73;
+      }
+
+      input[type='range'] {
+        width: 100%;
+        accent-color: var(--odido-dutch-orange);
+      }
+
+      input[type='number'],
+      input[type='text'] {
+        width: 100%;
+        padding: 9px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        font: inherit;
+        font-size: 15px;
+        background: #fafafa;
+        text-transform: uppercase;
+      }
+
+      input[type='color'] {
+        width: 100%;
+        height: 42px;
+        padding: 4px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: #fafafa;
+        cursor: pointer;
+      }
+
+      .seg {
+        display: inline-flex;
+        padding: 3px;
+        border-radius: 999px;
+        background: rgba(120, 120, 128, 0.12);
+        gap: 2px;
+      }
+
+      .seg button {
+        border: 0;
+        background: transparent;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-family: var(--odido-font-display);
+        font-size: 13px;
+        font-weight: 700;
+        color: #1d1d1f;
+        cursor: pointer;
+      }
+
+      .seg button.is-on {
+        background: #1d1d1f;
+        color: #fff;
+      }
+
+      .glow-preview {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .glow-preview button {
+        flex: 1;
+        height: 44px;
+        border: 2px solid transparent;
+        border-radius: 999px;
+        cursor: pointer;
+        font-family: var(--odido-font-display);
+        font-size: 12px;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      }
+
+      .glow-preview button[data-glow='2'] {
+        background:
+          radial-gradient(ellipse 100% 85% at 88% 22%, #ffac24 0%, #ffbd51 36%, transparent 60%),
+          radial-gradient(ellipse 75% 70% at 22% 88%, #7066ff 0%, transparent 55%),
+          radial-gradient(ellipse 85% 70% at 12% 18%, #2c72ff 0%, #82acff 40%, transparent 55%),
+          #3d38a8;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      }
+
+      .glow-preview button[data-glow='4'] {
+        background:
+          radial-gradient(ellipse 95% 75% at 16% 10%, #ff7621 0%, #ff924e 28%, transparent 55%),
+          radial-gradient(ellipse 80% 70% at 78% 38%, #ff808c 0%, transparent 55%),
+          radial-gradient(ellipse 95% 85% at 48% 95%, #7066ff 0%, #2c72ff 45%, transparent 65%),
+          #3a2fb8;
+      }
+
+      .glow-preview button.is-on {
+        border-color: #1d1d1f;
+      }
+
+      .meta {
+        font-size: 12px;
+        color: #86868b;
+      }
+
+      .meta a {
+        color: #2f72ff;
+      }
+
+      @media (max-width: 700px) {
+        .bug {
+          transform: scale(0.82);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="pitch" aria-hidden="true"></div>
+      <div class="frame">
+        <p class="label">Hockey scorebug · NED Oranje · ring = Glow one (solide) · vult mee</p>
+
+        <div class="bug" aria-label="Odido match score overlay">
+          <div class="arm arm--home">
+            <span class="stripe" aria-hidden="true"></span>
+            <span class="code" id="homeCode">NED</span>
+            <span class="score" id="homeScore">0</span>
+          </div>
+
+          <div class="clock">
+            <svg class="clock__ring" viewBox="0 0 100 100" aria-hidden="true">
+              <defs>
+                <!-- Glow one solide stroke: Dutch orange · Warm pink · Charm teal -->
+                <linearGradient id="odidoRingStroke" gradientUnits="userSpaceOnUse" x1="8" y1="8" x2="92" y2="92">
+                  <stop offset="0%" stop-color="#FF7621" />
+                  <stop offset="50%" stop-color="#FF808C" />
+                  <stop offset="100%" stop-color="#2F9A92" />
+                </linearGradient>
+              </defs>
+              <!-- r ≈ 47.2 = midden van de buitenband (ring buiten de disc) -->
+              <circle class="clock__ring-track" cx="50" cy="50" r="47.175"></circle>
+              <circle class="clock__ring-prog" id="ringProg" cx="50" cy="50" r="47.175"></circle>
+            </svg>
+            <div class="clock__disc">
+              <span class="clock__time" id="timeText">12:55</span>
+              <span class="clock__period" id="periodText">Q2</span>
+            </div>
+          </div>
+
+          <div class="arm arm--away">
+            <span class="score" id="awayScore">0</span>
+            <span class="code" id="awayCode">ARG</span>
+            <span class="stripe" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <h1>Hockey scorebug</h1>
+        <p>
+          Thuis <strong>NED</strong> = Oranje (<code>#FF7621</code>, Odido Dutch orange — past bij Oranje-tenue).
+          Uit = placeholder <strong>ARG</strong> (tegenstander WK-finale dames 2022). Kleur handmatig aanpasbaar.
+          Progress-ring: <strong>Glow one</strong> als solide gradient, loopt <em>vol</em> met de klok mee.
+        </p>
+
+        <div class="row">
+          <label>
+            Home stripe
+            <input type="color" id="homeColor" value="#ff7621" />
+          </label>
+          <label>
+            Away stripe
+            <input type="color" id="awayColor" value="#74acdf" />
+          </label>
+          <label>
+            Away code
+            <input type="text" id="awayCodeIn" maxlength="3" value="ARG" spellcheck="false" />
+          </label>
+        </div>
+
+        <div class="row">
+          <div>
+            <div class="meta" style="margin-bottom: 6px">Periode</div>
+            <div class="seg" id="periodSeg">
+              <button type="button" data-q="1">Q1</button>
+              <button type="button" data-q="2" class="is-on">Q2</button>
+              <button type="button" data-q="3">Q3</button>
+              <button type="button" data-q="4">Q4</button>
+              <button type="button" data-q="break">RUST</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>
+            Kwartlengte (min)
+            <input type="number" id="quarterMin" min="1" max="20" step="0.5" value="15" />
+          </label>
+          <label>
+            Resterende tijd
+            <input type="range" id="remain" min="0" max="900" value="775" />
+          </label>
+        </div>
+
+        <div class="row">
+          <label>
+            Home score
+            <input type="number" id="homeIn" min="0" max="99" value="0" />
+          </label>
+          <label>
+            Away score
+            <input type="number" id="awayIn" min="0" max="99" value="0" />
+          </label>
+        </div>
+
+        <p class="meta">
+          Ring start leeg bij 15:00, is vol bij 00:00. Spec:
+          <a href="../brand/ODIDO.md">docs/brand/ODIDO.md</a>
+        </p>
+      </aside>
+    </div>
+
+    <script>
+      const R = 47.175
+      const C = 2 * Math.PI * R
+      const ring = document.getElementById('ringProg')
+      const timeText = document.getElementById('timeText')
+      const periodText = document.getElementById('periodText')
+      const remain = document.getElementById('remain')
+      const quarterMin = document.getElementById('quarterMin')
+      const root = document.documentElement
+
+      let period = '2'
+
+      function durationSec() {
+        return Math.max(1, Number(quarterMin.value) || 15) * 60
+      }
+
+      function fmt(sec) {
+        const s = Math.max(0, Math.round(sec))
+        return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+      }
+
+      function render() {
+        const total = durationSec()
+        remain.max = String(total)
+        if (Number(remain.value) > total) remain.value = String(total)
+        const left = Number(remain.value)
+        // Vol lopen met verstreken tijd (klok mee); einde kwart = volle rand
+        const elapsedPct = period === 'break' ? 0 : (total - left) / total
+        ring.style.strokeDasharray = `${elapsedPct * C} ${C}`
+        ring.style.opacity = period === 'break' ? '0.35' : '1'
+        if (period === 'break') {
+          timeText.textContent = '—:—'
+          periodText.textContent = 'RUST'
+        } else {
+          timeText.textContent = fmt(left)
+          periodText.textContent = `Q${period}`
+        }
+      }
+
+      document.getElementById('homeColor').addEventListener('input', (e) => {
+        root.style.setProperty('--home-color', e.target.value)
+      })
+      document.getElementById('awayColor').addEventListener('input', (e) => {
+        root.style.setProperty('--away-color', e.target.value)
+      })
+      document.getElementById('awayCodeIn').addEventListener('input', (e) => {
+        document.getElementById('awayCode').textContent = String(e.target.value || '???')
+          .trim()
+          .toUpperCase()
+          .slice(0, 3)
+      })
+
+      document.getElementById('periodSeg').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-q]')
+        if (!btn) return
+        period = btn.dataset.q
+        for (const b of e.currentTarget.querySelectorAll('button')) {
+          b.classList.toggle('is-on', b === btn)
+        }
+        if (period === '2' && Number(quarterMin.value) === 15) remain.value = '775'
+        render()
+      })
+
+      remain.addEventListener('input', render)
+      quarterMin.addEventListener('input', render)
+      document.getElementById('homeIn').addEventListener('input', (e) => {
+        document.getElementById('homeScore').textContent = String(Math.max(0, Number(e.target.value) || 0))
+      })
+      document.getElementById('awayIn').addEventListener('input', (e) => {
+        document.getElementById('awayScore').textContent = String(Math.max(0, Number(e.target.value) || 0))
+      })
+
+      render()
+    </script>
+  </body>
+</html>

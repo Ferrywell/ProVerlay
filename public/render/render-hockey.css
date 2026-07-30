@@ -1,0 +1,233 @@
+/* ---------------------------------------------------------------------------
+   Hockey scorebug — Odido-style circular clock + team arms
+   Visual source: docs/ux/hockey-scorebug-mockup.html
+   Default size ≈ 2× mockup (broadcast). --hockey-scale fine-tunes.
+   --------------------------------------------------------------------------- */
+
+.hockey-bug {
+  --bug-h: calc(var(--hockey-scale, 1) * 13.7vmin);
+  --clock-d: calc(var(--hockey-scale, 1) * 23vmin);
+  --ring-w: calc(var(--hockey-scale, 1) * 1.3vmin);
+  --gap: calc(var(--hockey-scale, 1) * 1.3vmin);
+  --home-color: #ff7621;
+  --away-color: #74acdf;
+  --hockey-glass: rgba(0, 0, 0, 0.85);
+  --hockey-score-tile: #ffffff;
+  --hockey-ink: #000000;
+  --hockey-text: #ffffff;
+  --hockey-muted: rgba(255, 255, 255, 0.78);
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  filter: drop-shadow(0 0.8vmin 2.4vmin rgba(0, 0, 0, 0.45));
+  font-family: var(--brand-font, system-ui, sans-serif);
+  will-change: transform, opacity;
+}
+
+.hockey-bug.is-entering {
+  animation: overlay-drop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.hockey-bug.is-entering .hockey-arm--home {
+  animation: hockey-arm-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hockey-bug.is-entering .hockey-clock {
+  animation: hockey-clock-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both;
+}
+
+.hockey-bug.is-entering .hockey-arm--away {
+  animation: hockey-arm-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.hockey-bug.is-leaving {
+  animation: overlay-drop-out 0.35s ease forwards;
+}
+
+@keyframes hockey-arm-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--hockey-arm-from, -12px)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.hockey-arm--home {
+  --hockey-arm-from: -14px;
+}
+
+.hockey-arm--away {
+  --hockey-arm-from: 14px;
+}
+
+@keyframes hockey-clock-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.hockey-arm {
+  display: flex;
+  align-items: stretch;
+  height: var(--bug-h);
+  overflow: hidden;
+  background: var(--hockey-glass);
+  transition: background 220ms ease;
+}
+
+.hockey-arm--home {
+  border-radius: 999px 1.1vmin 1.1vmin 999px;
+}
+
+.hockey-arm--away {
+  border-radius: 1.1vmin 999px 999px 1.1vmin;
+}
+
+.hockey-stripe {
+  width: calc(var(--hockey-scale, 1) * 3vmin);
+  flex: none;
+  transition: background-color 280ms ease;
+}
+
+.hockey-arm--home .hockey-stripe {
+  background: var(--home-color);
+}
+
+.hockey-arm--away .hockey-stripe {
+  background: var(--away-color);
+}
+
+.hockey-code {
+  display: grid;
+  place-items: center;
+  min-width: calc(var(--hockey-scale, 1) * 14.4vmin);
+  padding: 0 calc(var(--hockey-scale, 1) * 2.9vmin);
+  color: var(--hockey-text);
+  font-size: calc(var(--hockey-scale, 1) * 5.6vmin);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.hockey-code.is-swap {
+  animation: hockey-code-swap 280ms ease;
+}
+
+@keyframes hockey-code-swap {
+  0% {
+    opacity: 0.35;
+    transform: translateY(0.5vmin);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hockey-score {
+  display: grid;
+  place-items: center;
+  width: calc(var(--hockey-scale, 1) * 10.8vmin);
+  background: var(--hockey-score-tile);
+  color: var(--hockey-ink);
+  font-size: calc(var(--hockey-scale, 1) * 7vmin);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.hockey-arm--home .hockey-score {
+  border-radius: 1.8vmin 1.4vmin 1.4vmin 1.8vmin;
+  margin: calc(var(--hockey-scale, 1) * 1.1vmin) calc(var(--hockey-scale, 1) * 1.1vmin)
+    calc(var(--hockey-scale, 1) * 1.1vmin) 0;
+}
+
+.hockey-arm--away .hockey-score {
+  border-radius: 1.4vmin 1.8vmin 1.8vmin 1.4vmin;
+  margin: calc(var(--hockey-scale, 1) * 1.1vmin) 0 calc(var(--hockey-scale, 1) * 1.1vmin)
+    calc(var(--hockey-scale, 1) * 1.1vmin);
+}
+
+.hockey-clock {
+  position: relative;
+  width: var(--clock-d);
+  height: var(--clock-d);
+  flex: none;
+}
+
+.hockey-clock__disc {
+  position: absolute;
+  inset: var(--ring-w);
+  z-index: 1;
+  border-radius: 50%;
+  background: var(--hockey-glass);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: calc(var(--hockey-scale, 1) * 1.1vmin);
+  padding: calc(var(--hockey-scale, 1) * 2.4vmin) calc(var(--hockey-scale, 1) * 1.4vmin)
+    calc(var(--hockey-scale, 1) * 2.8vmin);
+}
+
+.hockey-clock__time {
+  color: var(--hockey-text);
+  font-size: calc(var(--hockey-scale, 1) * 6.6vmin);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  transition: opacity 160ms ease;
+}
+
+.hockey-clock__period {
+  color: var(--hockey-muted);
+  font-size: calc(var(--hockey-scale, 1) * 2.8vmin);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  transition: opacity 200ms ease, transform 220ms ease, color 220ms ease;
+}
+
+.hockey-clock__period.is-swap {
+  animation: hockey-code-swap 320ms ease;
+}
+
+.hockey-clock__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  overflow: visible;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+.hockey-clock__ring-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 5.65;
+}
+
+.hockey-clock__ring-prog {
+  fill: none;
+  stroke-width: 5.65;
+  stroke-linecap: butt;
+  stroke-dasharray: 0 999;
+  transition: stroke-dasharray 180ms linear, opacity 220ms ease;
+}
+
+.hockey-bug--break .hockey-clock__ring-prog {
+  opacity: 0.35;
+}

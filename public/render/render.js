@@ -20,6 +20,14 @@ import { persistAutoStoppageIfNeeded } from '/public/shared/operate-match.js'
 import { canvasAspectRatio, elementBoxStyle, isStripLayout, isFullFrameBackground, layoutBackgroundVisible, placementStyle, fontSizeStyle, resolveContainerWidthPx, projectCanvas, supportsContainerQueries, clockPillBoxStyle, clockPillTextStyle } from '/public/shared/canvas-layout.js'
 import { injectProjectFontFaces, fetchProjectFontAssets, injectBrandFontFace, resolveRenderFontFamily } from '/public/shared/project-fonts.js'
 import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows, resolveF1Animation, resolveF1Decimals, f1TyreInfo, f1TrackFlag } from '/public/shared/f1-timing.js'
+import {
+  formatHockeyClock,
+  hockeyPeriodLabel,
+  HOCKEY_RING_C,
+  HOCKEY_RING_R,
+  resolveLiveHockeyClock,
+  safeTeamColor
+} from '/public/shared/hockey-utils.js'
 
 const stage = document.getElementById('stage')
 const layers = new Map()
@@ -385,6 +393,96 @@ function buildStreamCountdown(data, graphicId) {
   `
 }
 
+function buildHockeyScorebug(data, graphicId) {
+  const homeColor = safeTeamColor(data.homeColor, '#FF7621')
+  const awayColor = safeTeamColor(data.awayColor, '#74ACDF')
+  const scale = Number(data.style?.scale) || 1
+  const live = resolveLiveHockeyClock(data.clock || {})
+  const timeText = formatHockeyClock(data.clock || {})
+  const periodText = hockeyPeriodLabel(live.period)
+  const dash = `${live.progress * HOCKEY_RING_C} ${HOCKEY_RING_C}`
+  const gradId = `hockeyRing-${graphicId}`
+  const breakClass = live.period === 'break' ? ' hockey-bug--break' : ''
+  const vars = [
+    `--hockey-scale:${scale}`,
+    `--home-color:${homeColor}`,
+    `--away-color:${awayColor}`
+  ].join(';')
+
+  return `
+    <div class="hockey-bug${breakClass}" data-hockey-id="${graphicId}" style="${vars}">
+      <div class="hockey-arm hockey-arm--home">
+        <span class="hockey-stripe" aria-hidden="true"></span>
+        <span class="hockey-code" data-bind="homeCode">${escape(data.homeCode || 'NED')}</span>
+        <span class="hockey-score"><span class="score-el-text score-el-text--animated" data-score-bind="homeScore" data-graphic-id="${graphicId}">${escape(String(data.homeScore ?? 0))}</span></span>
+      </div>
+      <div class="hockey-clock">
+        <svg class="hockey-clock__ring" viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="8" y1="8" x2="92" y2="92">
+              <stop offset="0%" stop-color="#FF7621" />
+              <stop offset="50%" stop-color="#FF808C" />
+              <stop offset="100%" stop-color="#2F9A92" />
+            </linearGradient>
+          </defs>
+          <circle class="hockey-clock__ring-track" cx="50" cy="50" r="${HOCKEY_RING_R}"></circle>
+          <circle class="hockey-clock__ring-prog" data-bind="ring" cx="50" cy="50" r="${HOCKEY_RING_R}"
+            stroke="url(#${gradId})" style="stroke-dasharray:${dash}"></circle>
+        </svg>
+        <div class="hockey-clock__disc">
+          <span class="hockey-clock__time" data-bind="clock">${escape(timeText)}</span>
+          <span class="hockey-clock__period" data-bind="period">${escape(periodText)}</span>
+        </div>
+      </div>
+      <div class="hockey-arm hockey-arm--away">
+        <span class="hockey-score"><span class="score-el-text score-el-text--animated" data-score-bind="awayScore" data-graphic-id="${graphicId}">${escape(String(data.awayScore ?? 0))}</span></span>
+        <span class="hockey-code" data-bind="awayCode">${escape(data.awayCode || 'ARG')}</span>
+        <span class="hockey-stripe" aria-hidden="true"></span>
+      </div>
+    </div>
+  `
+}
+
+function setHockeyText(node, text, { animate = false } = {}) {
+  if (!node) return
+  const next = String(text ?? '')
+  if (node.textContent === next) return
+  node.textContent = next
+  if (!animate) return
+  node.classList.remove('is-swap')
+  void node.offsetWidth
+  node.classList.add('is-swap')
+}
+
+function updateHockeyScorebug(layer, graphic) {
+  const bug = layer.querySelector(`[data-hockey-id="${graphic.id}"]`)
+  if (!bug) return
+  const d = graphic.data || {}
+  const live = resolveLiveHockeyClock(d.clock || {})
+  const anim = d.animation || { enabled: true, durationMs: 420 }
+
+  bug.style.setProperty('--hockey-scale', String(Number(d.style?.scale) || 1))
+  bug.style.setProperty('--home-color', safeTeamColor(d.homeColor, '#FF7621'))
+  bug.style.setProperty('--away-color', safeTeamColor(d.awayColor, '#74ACDF'))
+  bug.classList.toggle('hockey-bug--break', live.period === 'break')
+
+  setHockeyText(bug.querySelector('[data-bind="homeCode"]'), d.homeCode || 'NED', { animate: true })
+  setHockeyText(bug.querySelector('[data-bind="awayCode"]'), d.awayCode || 'ARG', { animate: true })
+  setHockeyText(bug.querySelector('[data-bind="period"]'), hockeyPeriodLabel(live.period), { animate: true })
+  setHockeyText(bug.querySelector('[data-bind="clock"]'), formatHockeyClock(d.clock || {}))
+
+  const ring = bug.querySelector('[data-bind="ring"]')
+  if (ring) {
+    ring.style.strokeDasharray = `${live.progress * HOCKEY_RING_C} ${HOCKEY_RING_C}`
+  }
+
+  bug.querySelectorAll('[data-score-bind]').forEach((node) => {
+    const bind = node.dataset.scoreBind
+    const text = String(d[bind] ?? 0)
+    animateScore(node, text, graphic.id, bind, anim)
+  })
+}
+
 function mountGraphicRuntime(layer, graphic) {
   const inner = layer.querySelector('.graphic')
   if (!inner) return
@@ -467,51 +565,77 @@ function f1SessionInfo(graphic) {
 const F1_FLAG_SVG =
   '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 0h4v4H0zM8 0h4v4H8zM4 4h4v4H4zM12 4h4v4h-4zM0 8h4v4H0zM8 8h4v4H8zM4 12h4v4H4zM12 12h4v4h-4z"/></svg>'
 
+function isF1GapLabel(text) {
+  return text === 'INTERVAL' || text === 'GAP TO LEADER'
+}
+
 // Rijvolgorde als in de officiële F1-toren: pos, team, code, gap, band, vlag
 function f1RowHtml(row, gapMode, decimals, showTyres) {
   const gapText = f1RowGapText(row, gapMode, decimals)
+  const gapClass = isF1GapLabel(gapText) ? 'f1-row__gap f1-row__gap--label' : 'f1-row__gap'
   const tyre = showTyres ? f1TyreInfo(row) : null
   return `
     <span class="f1-row__pos">${row.pos || ''}</span>
     <span class="f1-row__team" style="--team:${safeCssColor(row.teamColor)}"></span>
     <span class="f1-row__code">${escape(row.code || '')}</span>
-    <span class="f1-row__gap">${escape(gapText)}</span>
+    <span class="${gapClass}">${escape(gapText)}</span>
     ${tyre ? `<span class="f1-row__tyre" style="--tyre:${safeCssColor(tyre.color)}">${escape(tyre.letter)}</span>` : ''}
     ${row.finished ? `<span class="f1-row__flag">${F1_FLAG_SVG}</span>` : ''}
   `
 }
 
 /** Band-indicator in een bestaande rij bijwerken (compound kan live wisselen). */
-function syncF1TyreNode(node, row, showTyres) {
+function syncF1TyreNode(node, row, showTyres, { animate = true } = {}) {
   let tyreNode = node.querySelector('.f1-row__tyre')
   const tyre = showTyres ? f1TyreInfo(row) : null
   if (!tyre) {
-    if (tyreNode) tyreNode.remove()
+    if (tyreNode && !tyreNode.dataset.leaving) {
+      if (animate) popOutIndicator(tyreNode)
+      else tyreNode.remove()
+    }
     return
   }
   if (!tyreNode) {
     tyreNode = document.createElement('span')
     tyreNode.className = 'f1-row__tyre'
     node.insertBefore(tyreNode, node.querySelector('.f1-row__flag'))
-    popInIndicator(tyreNode)
+    if (animate) popInIndicator(tyreNode)
   }
+  // Letter/kleur uit de live feed: zonder animatie (alleen tonen/verbergen animeert)
   tyreNode.textContent = tyre.letter
   tyreNode.style.setProperty('--tyre', safeCssColor(tyre.color))
 }
 
 /** Indicator die live verschijnt: pop-in, rest van de rij schuift vloeiend mee. */
 function popInIndicator(node) {
+  node.classList.remove('f1-anim-pop-out')
   node.classList.add('f1-anim-pop-in')
   node.addEventListener('animationend', () => node.classList.remove('f1-anim-pop-in'), {
     once: true
   })
 }
 
+/** Indicator die verdwijnt: pop-out, daarna DOM-remove. */
+function popOutIndicator(node) {
+  if (!node || node.dataset.leaving === '1') return
+  node.dataset.leaving = '1'
+  node.classList.remove('f1-anim-pop-in')
+  node.classList.add('f1-anim-pop-out')
+  const done = () => {
+    if (node.parentNode) node.remove()
+  }
+  node.addEventListener('animationend', done, { once: true })
+  setTimeout(done, 400)
+}
+
 /** Chequered flag tonen zodra de coureur over de finish is. */
-function syncF1FlagNode(node, row) {
+function syncF1FlagNode(node, row, { animate = true } = {}) {
   let flagNode = node.querySelector('.f1-row__flag')
   if (!row.finished) {
-    if (flagNode) flagNode.remove()
+    if (flagNode && !flagNode.dataset.leaving) {
+      if (animate) popOutIndicator(flagNode)
+      else flagNode.remove()
+    }
     return
   }
   if (!flagNode) {
@@ -519,17 +643,175 @@ function syncF1FlagNode(node, row) {
     flagNode.className = 'f1-row__flag'
     flagNode.innerHTML = F1_FLAG_SVG
     node.appendChild(flagNode)
-    popInIndicator(flagNode)
+    if (animate) popInIndicator(flagNode)
   }
 }
 
-/** Header-pill (lap + track status) vullen; kleur via data-track in CSS. */
-function syncF1Header(header, session) {
+/** Gap-tekst zetten; bij configwijziging subtiele swap, bij live feed hard. */
+function setF1GapText(gapNode, text, { animate = false } = {}) {
+  if (!gapNode) return
+  gapNode.classList.toggle('f1-row__gap--label', isF1GapLabel(text))
+  if (gapNode.textContent === text) return
+  if (!animate) {
+    gapNode.textContent = text
+    return
+  }
+  gapNode.classList.remove('f1-gap-swap')
+  void gapNode.offsetWidth
+  gapNode.textContent = text
+  gapNode.classList.add('f1-gap-swap')
+  gapNode.addEventListener('animationend', () => gapNode.classList.remove('f1-gap-swap'), {
+    once: true
+  })
+}
+
+/** Parse "LAP 21/57" → delen voor digit-rollers. */
+function parseF1LapParts(text) {
+  const m = String(text || '').match(/^(LAP\s*)(\d+)(\s*\/\s*)(\d+|\?)(.*)$/i)
+  if (!m) return null
+  return { prefix: m[1], current: m[2], sep: m[3], total: m[4], suffix: m[5] || '' }
+}
+
+function ensureF1LapStatic(parent, modifier, text) {
+  let el = parent.querySelector(`:scope > .f1-lap-static--${modifier}`)
+  if (!el) {
+    el = document.createElement('span')
+    el.className = `f1-lap-static f1-lap-static--${modifier}`
+    parent.appendChild(el)
+  }
+  el.textContent = text
+  return el
+}
+
+function ensureF1LapNum(parent, part) {
+  let el = parent.querySelector(`:scope > .f1-lap-num[data-part="${part}"]`)
+  if (!el) {
+    el = document.createElement('span')
+    el.className = 'f1-lap-num'
+    el.dataset.part = part
+    parent.appendChild(el)
+  }
+  return el
+}
+
+/** Één digit-slot: alleen bij wijziging een roller (nieuw van boven → omlaag). */
+function syncF1LapDigit(digitEl, nextCh, animate) {
+  const val = digitEl.querySelector('.f1-lap-digit__val:not(.f1-lap-digit__val--out):not(.f1-lap-digit__val--in)')
+  const current = val?.textContent ?? digitEl.textContent
+  if (current === nextCh && !digitEl.classList.contains('is-rolling')) {
+    if (!val) digitEl.innerHTML = `<span class="f1-lap-digit__val">${escape(nextCh)}</span>`
+    return
+  }
+  if (!animate || current === nextCh) {
+    digitEl.classList.remove('is-rolling')
+    digitEl.innerHTML = `<span class="f1-lap-digit__val">${escape(nextCh)}</span>`
+    return
+  }
+  digitEl.classList.add('is-rolling')
+  digitEl.innerHTML = `
+    <span class="f1-lap-digit__val f1-lap-digit__val--out">${escape(current)}</span>
+    <span class="f1-lap-digit__val f1-lap-digit__val--in">${escape(nextCh)}</span>
+  `
+  const done = () => {
+    if (!digitEl.isConnected) return
+    digitEl.classList.remove('is-rolling')
+    digitEl.innerHTML = `<span class="f1-lap-digit__val">${escape(nextCh)}</span>`
+  }
+  digitEl.addEventListener('animationend', done, { once: true })
+  setTimeout(done, 420)
+}
+
+function syncF1LapNumGroup(groupEl, nextStr, animate) {
+  const next = [...String(nextStr)]
+  let digits = [...groupEl.querySelectorAll(':scope > .f1-lap-digit')]
+  if (digits.length !== next.length) {
+    groupEl.innerHTML = next
+      .map((ch) => `<span class="f1-lap-digit"><span class="f1-lap-digit__val">${escape(ch)}</span></span>`)
+      .join('')
+    digits = [...groupEl.querySelectorAll(':scope > .f1-lap-digit')]
+    return
+  }
+  next.forEach((ch, i) => syncF1LapDigit(digits[i], ch, animate))
+}
+
+/** Lap-tekst met per-digit roller; onveranderde cijfers blijven stil. */
+function syncF1LapText(lapEl, lapText, { animate = true } = {}) {
+  const text = String(lapText || '')
+  const prev = lapEl.dataset.lap || ''
+  if (prev === text && lapEl.childElementCount) return
+  const parts = parseF1LapParts(text)
+  if (!parts) {
+    lapEl.textContent = text
+    lapEl.dataset.lap = text
+    return
+  }
+  // Opbouw: LAP [digits] / [digits] — volgorde in DOM behouden
+  if (!lapEl.querySelector('.f1-lap-num')) {
+    lapEl.textContent = ''
+    ensureF1LapStatic(lapEl, 'prefix', parts.prefix)
+    ensureF1LapNum(lapEl, 'current')
+    ensureF1LapStatic(lapEl, 'sep', parts.sep)
+    ensureF1LapNum(lapEl, 'total')
+  } else {
+    const prefix = lapEl.querySelector('.f1-lap-static--prefix')
+    const sep = lapEl.querySelector('.f1-lap-static--sep')
+    if (prefix) prefix.textContent = parts.prefix
+    if (sep) sep.textContent = parts.sep
+  }
+  const doAnim = animate && Boolean(prev)
+  syncF1LapNumGroup(ensureF1LapNum(lapEl, 'current'), parts.current, doAnim)
+  syncF1LapNumGroup(ensureF1LapNum(lapEl, 'total'), parts.total, doAnim)
+  lapEl.dataset.lap = text
+}
+
+/** Header-pill (lap + track status); lap-digits rollen, track-wissels pulsen. */
+function syncF1Header(header, session, { animateTrack = true } = {}) {
   const flag = f1TrackFlag(session)
+  const prevTrack = header.dataset.track || 'clear'
+  const trackChanged = prevTrack !== flag.track
   header.dataset.track = flag.track
-  header.innerHTML = `<span class="f1-tower__lap">${escape(session.lapText || '')}</span>${
-    flag.label ? `<span class="f1-tower__flag">${escape(flag.label)}</span>` : ''
-  }`
+
+  let lapEl = header.querySelector('.f1-tower__lap')
+  if (!lapEl) {
+    lapEl = document.createElement('span')
+    lapEl.className = 'f1-tower__lap'
+    header.appendChild(lapEl)
+  }
+  syncF1LapText(lapEl, session.lapText || '', { animate: true })
+
+  let flagEl = header.querySelector('.f1-tower__flag')
+  if (flag.label) {
+    if (!flagEl) {
+      flagEl = document.createElement('span')
+      flagEl.className = 'f1-tower__flag'
+      header.appendChild(flagEl)
+    }
+    flagEl.textContent = flag.label
+  } else if (flagEl) {
+    flagEl.remove()
+  }
+
+  if (animateTrack && trackChanged) {
+    header.classList.remove('f1-header-track-in')
+    void header.offsetWidth
+    header.classList.add('f1-header-track-in')
+    header.addEventListener('animationend', () => header.classList.remove('f1-header-track-in'), {
+      once: true
+    })
+  }
+}
+
+/** Config-handtekening: handmatige UI-wijzigingen (niet de live feed). */
+function f1ConfigKey(d = {}) {
+  return [
+    d.gapMode || 'interval',
+    resolveF1Decimals(d),
+    d.topCount || 5,
+    d.focusDriver || '',
+    Boolean(d.showTyres),
+    Boolean(d.showHeader),
+    resolveF1Animation(d).in
+  ].join('|')
 }
 
 function updateF1Tower(layer, graphic) {
@@ -567,7 +849,7 @@ function updateF1Tower(layer, graphic) {
   const focusGap = Math.round(s.rowHeightPx * 0.45)
   const session = f1SessionInfo(graphic)
   const headerVisible = Boolean(d.showHeader && session.lapText)
-  const headerOffset = headerVisible ? Math.round(s.rowHeightPx * 0.72) + s.rowGapPx : 0
+  const headerOffset = headerVisible ? Math.round(s.rowHeightPx * 0.95) + s.rowGapPx : 0
 
   const entries = top.map((row, i) => ({
     key: (row.code || `p${row.pos}`).toUpperCase(),
@@ -584,21 +866,42 @@ function updateF1Tower(layer, graphic) {
     })
   }
 
+  // Handmatige config vs live feed: alleen config/status krijgt subtiele motion
+  const nextConfig = f1ConfigKey(d)
+  const configChanged = tower.dataset.configKey !== nextConfig
+  const hadConfig = Boolean(tower.dataset.configKey)
+  tower.dataset.configKey = nextConfig
+  const animateConfig = hadConfig && configChanged
+
   // Header (lap-teller + track status) als apart pill-element bovenaan
   let header = tower.querySelector('.f1-tower__header')
   if (headerVisible) {
+    const headerJustAdded = !header
     if (!header) {
       header = document.createElement('div')
       header.className = 'f1-tower__header'
       tower.appendChild(header)
     }
-    syncF1Header(header, session)
-  } else if (header) {
-    header.remove()
+    syncF1Header(header, session, { animateTrack: true })
+    if (headerJustAdded && animateConfig) {
+      header.classList.add('f1-anim-in-fade')
+      header.addEventListener('animationend', () => header.classList.remove('f1-anim-in-fade'), {
+        once: true
+      })
+    }
+  } else if (header && !header.dataset.leaving) {
+    if (animateConfig) {
+      header.dataset.leaving = '1'
+      header.classList.add('f1-anim-out-fade')
+      const gone = () => header.remove()
+      header.addEventListener('animationend', gone, { once: true })
+      setTimeout(gone, 420)
+    } else {
+      header.remove()
+    }
   }
 
-  // In-animatie met stagger: alleen bij een lege toren (net live gezet of
-  // volledig herbouwd), niet bij reguliere data-updates.
+  // In-animatie met stagger: lege toren (live zetten) of structurele configwijziging
   const anim = resolveF1Animation(d)
   tower.dataset.animIn = anim.in
   tower.dataset.animDur = String(anim.durationMs)
@@ -606,14 +909,34 @@ function updateF1Tower(layer, graphic) {
   const skipEnter = layer.dataset.skipEnter === '1'
   const isEntrance =
     !skipEnter && anim.in !== 'cut' && !tower.querySelector('.f1-row')
+  const animateStructure =
+    !skipEnter && anim.in !== 'cut' && (isEntrance || animateConfig)
 
   const setRowY = (node, y) => {
     node.style.setProperty('--f1-y', `${y}px`)
     node.style.transform = 'translateY(var(--f1-y))'
   }
 
+  const playRowIn = (node, rowClass, index) => {
+    node.dataset.entering = '1'
+    node.className = `${rowClass} f1-anim-in-${anim.in}`
+    node.style.animationDelay = `${index * anim.staggerMs}ms`
+    node.style.animationDuration = `${anim.durationMs}ms`
+    node.addEventListener(
+      'animationend',
+      () => {
+        delete node.dataset.entering
+        node.classList.remove(`f1-anim-in-${anim.in}`)
+        node.style.animationDelay = ''
+        node.style.animationDuration = ''
+      },
+      { once: true }
+    )
+  }
+
   const seen = new Set()
-  entries.forEach((entry, index) => {
+  let enterIndex = 0
+  entries.forEach((entry) => {
     seen.add(entry.key)
     let node = tower.querySelector(`.f1-row[data-key="${entry.key}"]`)
     const rowClass = [
@@ -628,23 +951,10 @@ function updateF1Tower(layer, graphic) {
       node.dataset.key = entry.key
       setRowY(node, entry.y)
       node.innerHTML = f1RowHtml(entry.row, gapMode, decimals, showTyres)
-      if (isEntrance) {
-        node.dataset.entering = '1'
-        node.className = `${rowClass} f1-anim-in-${anim.in}`
-        node.style.animationDelay = `${index * anim.staggerMs}ms`
-        node.style.animationDuration = `${anim.durationMs}ms`
-        node.addEventListener(
-          'animationend',
-          () => {
-            delete node.dataset.entering
-            node.classList.remove(`f1-anim-in-${anim.in}`)
-            node.style.animationDelay = ''
-          },
-          { once: true }
-        )
+      if (animateStructure) {
+        playRowIn(node, rowClass, enterIndex++)
       } else {
-        node.className = `${rowClass} f1-row--enter`
-        requestAnimationFrame(() => node.classList.remove('f1-row--enter'))
+        node.className = rowClass
       }
       tower.appendChild(node)
     } else {
@@ -655,11 +965,15 @@ function updateF1Tower(layer, graphic) {
       const gapNode = node.querySelector('.f1-row__gap')
       const posNode = node.querySelector('.f1-row__pos')
       const teamNode = node.querySelector('.f1-row__team')
-      if (gapNode) gapNode.textContent = f1RowGapText(entry.row, gapMode, decimals)
+      setF1GapText(gapNode, f1RowGapText(entry.row, gapMode, decimals), {
+        animate: animateConfig
+      })
       if (posNode) posNode.textContent = entry.row.pos || ''
       if (teamNode) teamNode.style.setProperty('--team', safeCssColor(entry.row.teamColor))
-      syncF1FlagNode(node, entry.row)
-      syncF1TyreNode(node, entry.row, showTyres)
+      // Finish-vlag: wel animeren (status). Tyre letter live: geen animatie;
+      // tyre show/hide via config: wel animeren.
+      syncF1FlagNode(node, entry.row, { animate: true })
+      syncF1TyreNode(node, entry.row, showTyres, { animate: animateConfig })
     }
   })
 
@@ -671,11 +985,29 @@ function updateF1Tower(layer, graphic) {
     })
   }
 
-  for (const node of [...tower.querySelectorAll('.f1-row')]) {
-    if (!seen.has(node.dataset.key)) {
-      node.classList.add('f1-row--enter')
-      setTimeout(() => node.remove(), 320)
-    }
+  // Uit: onderaan eerst (meer → minder rijen). In: bovenaan eerst (zie enterIndex).
+  const leaving = [...tower.querySelectorAll('.f1-row')].filter(
+    (node) => !seen.has(node.dataset.key) && node.dataset.leaving !== '1'
+  )
+  if (animateStructure) {
+    leaving.sort((a, b) => {
+      const ya = Number.parseFloat(a.style.getPropertyValue('--f1-y')) || 0
+      const yb = Number.parseFloat(b.style.getPropertyValue('--f1-y')) || 0
+      return yb - ya
+    })
+    leaving.forEach((node, leaveIndex) => {
+      const leaveDelay = leaveIndex * anim.staggerMs
+      node.dataset.leaving = '1'
+      node.classList.remove(`f1-anim-in-${anim.in}`)
+      node.classList.add(`f1-anim-out-${anim.in}`)
+      node.style.animationDelay = `${leaveDelay}ms`
+      node.style.animationDuration = `${anim.durationMs}ms`
+      const gone = () => node.remove()
+      node.addEventListener('animationend', gone, { once: true })
+      setTimeout(gone, anim.durationMs + leaveDelay + 80)
+    })
+  } else {
+    leaving.forEach((node) => node.remove())
   }
 
   const totalRows = entries.length
@@ -743,11 +1075,14 @@ function tickCountdownGraphic(layer, graphic) {
 }
 
 function applyScoreAnimations(layer, graphic) {
-  if (graphic.type !== 'matchScoreboard') return
+  if (graphic.type !== 'matchScoreboard' && graphic.type !== 'hockeyScorebug') return
   const anim = graphic.data?.animation || {}
   layer.querySelectorAll('[data-score-bind]').forEach((node) => {
     const bind = node.dataset.scoreBind
-    const text = resolveBindText(bind, graphic.data)
+    const text =
+      graphic.type === 'hockeyScorebug'
+        ? String(graphic.data?.[bind] ?? 0)
+        : resolveBindText(bind, graphic.data)
     animateScore(node, text, graphic.id, bind, anim)
   })
 }
@@ -811,6 +1146,8 @@ function graphicHtml(graphic) {
       return buildStreamCountdown(d, graphic.id)
     case 'f1Timing':
       return buildF1Timing(d, graphic.id)
+    case 'hockeyScorebug':
+      return buildHockeyScorebug(d, graphic.id)
     case 'clock':
       return `<span class="time">--:--</span>`
     default:
@@ -833,6 +1170,7 @@ function graphicTransition(graphic) {
 function transitionTarget(layer) {
   return (
     layer.querySelector('.match-board') ||
+    layer.querySelector('.hockey-bug') ||
     layer.querySelector('.lt-board') ||
     layer.querySelector('.quiz-board') ||
     layer.querySelector('.graphic')
@@ -855,6 +1193,12 @@ function updateLayerContent(layer, graphic) {
     applyLayerPosition(layer, graphic)
     rememberTransition(layer, graphic)
     updateF1Tower(layer, graphic)
+    return
+  }
+  if (graphic.type === 'hockeyScorebug' && inner.querySelector(`[data-hockey-id="${graphic.id}"]`)) {
+    applyLayerPosition(layer, graphic)
+    rememberTransition(layer, graphic)
+    updateHockeyScorebug(layer, graphic)
     return
   }
   stopCustomTicker(graphic.id)
@@ -911,6 +1255,8 @@ function renderGraphic(graphic) {
       inner.querySelector('.quiz-board')?.classList.add('is-entering')
     } else if (graphic.type === 'f1Timing') {
       // Rijen animeren individueel met stagger (zie updateF1Tower)
+    } else if (graphic.type === 'hockeyScorebug') {
+      inner.querySelector('.hockey-bug')?.classList.add('is-entering')
     } else {
       inner.classList.add('is-entering')
     }
@@ -985,7 +1331,8 @@ function syncGraphics(graphics) {
       if (out === 'auto' && f1Tower) {
         wait = animateF1TowerOut(f1Tower)
       } else if (out === 'auto') {
-        const board = layer.querySelector('.match-board')
+        const board =
+          layer.querySelector('.match-board') || layer.querySelector('.hockey-bug')
         if (board) board.classList.add('is-leaving')
         else layer.querySelector('.graphic')?.classList.add('is-leaving')
         wait = board ? 360 : 220
@@ -1042,14 +1389,21 @@ function syncGraphics(graphics) {
 
 function tickMatchClocks() {
   for (const graphic of cachedGraphics) {
-    if (!graphicShown(graphic) || graphic.type !== 'matchScoreboard' || !graphic.data?.clock?.running) continue
-    void persistAutoStoppageIfNeeded(graphic)
-    const layer = layers.get(graphic.id)
-    if (!layer) continue
-    const text = formatClock(graphic.data.clock)
-    layer.querySelectorAll('[data-bind="clock"]').forEach((node) => {
-      node.textContent = text
-    })
+    if (!graphicShown(graphic) || !graphic.data?.clock?.running) continue
+    if (graphic.type === 'matchScoreboard') {
+      void persistAutoStoppageIfNeeded(graphic)
+      const layer = layers.get(graphic.id)
+      if (!layer) continue
+      const text = formatClock(graphic.data.clock)
+      layer.querySelectorAll('[data-bind="clock"]').forEach((node) => {
+        node.textContent = text
+      })
+      continue
+    }
+    if (graphic.type === 'hockeyScorebug') {
+      const layer = layers.get(graphic.id)
+      if (layer) updateHockeyScorebug(layer, graphic)
+    }
   }
 }
 
@@ -1064,10 +1418,14 @@ function tickCountdowns() {
 function ensureMatchClockTimer(graphics) {
   cachedGraphics = graphics
   const needsMatch = graphics.some(
-    (g) => graphicShown(g) && g.type === 'matchScoreboard' && g.data?.clock?.running
+    (g) =>
+      graphicShown(g) &&
+      g.data?.clock?.running &&
+      (g.type === 'matchScoreboard' || g.type === 'hockeyScorebug')
   )
   if (needsMatch && !matchClockTimer) {
-    matchClockTimer = setInterval(tickMatchClocks, 1000)
+    // Hockey ring fills smoothly — 250ms; football text is fine at same cadence
+    matchClockTimer = setInterval(tickMatchClocks, 250)
   } else if (!needsMatch && matchClockTimer) {
     clearInterval(matchClockTimer)
     matchClockTimer = null
@@ -1086,7 +1444,11 @@ async function applyState(state) {
   applyServerTimeFromState(state)
   applyCanvas(state)
   applyBrand(state)
+  const rev = (applyState._rev = (applyState._rev || 0) + 1)
   await applyProjectFonts(state)
+  // Skip stale apply als er intussen een nieuwere stateChanged binnenkwam
+  // (fonts laden async; anders kan een oudere paint over een nieuwere heen).
+  if (rev !== applyState._rev) return
   syncGraphics(state.graphics)
   ensureMatchClockTimer(state.graphics)
 }

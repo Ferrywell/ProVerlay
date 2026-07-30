@@ -36,8 +36,17 @@ app.get('/render/:graphicId', (req, res) => {
   res.redirect(`/render?graphic=${encodeURIComponent(req.params.graphicId)}`)
 })
 
-app.get('/control', (_req, res) => {
+app.get('/control', (req, res) => {
+  // Decision A: tablets/phones use Operator for live control — not the dense desktop dashboard.
+  const device = detectDevice(req.headers['user-agent'] || '')
+  if (device === 'mobile' || device === 'tablet') {
+    return res.redirect('/operator')
+  }
   res.sendFile(path.join(ROOT, 'public', 'control', 'index.html'))
+})
+
+app.get('/design', (_req, res) => {
+  res.sendFile(path.join(ROOT, 'public', 'design', 'index.html'))
 })
 
 app.get('/operator', (_req, res) => {
@@ -76,6 +85,19 @@ app.get('/', (req, res) => {
   const device = detectDevice(req.headers['user-agent'] || '')
   const dashboard = preferredDashboard(device, req.query)
   res.redirect(`/${dashboard}`)
+})
+
+// API/JSON errors → JSON (geen HTML stack traces met filesystem-paden)
+app.use((err, _req, res, next) => {
+  if (res.headersSent) return next(err)
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON body' })
+  }
+  const status = Number(err.status || err.statusCode) || 500
+  if (_req.path?.startsWith('/api') || _req.originalUrl?.startsWith('/api')) {
+    return res.status(status).json({ error: err.message || 'Internal server error' })
+  }
+  next(err)
 })
 
 io.on('connection', (socket) => {

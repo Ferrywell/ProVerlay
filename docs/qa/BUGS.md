@@ -272,4 +272,69 @@ Display tikt door; inputs tonen verouderde base-waarden.
 
 ## Opmerkingen
 Handmatige wijziging via inputs roept `freezeClock()` aan (`handleFieldChange`) — dat pad is correct. Puur visuele inconsistentie.
+
+## Status (30 juli 2026)
+**Fixed** — template + `updateMatchCard` gebruiken `resolveLiveClock`.
+```
+
+---
+
+## QA-008 — Concurrent PATCH corrupt registry / crash server
+
+```
+ID: QA-008
+Datum: 2026-07-30
+Severity: Critical
+Component: server/state.js, server/projects.js
+Status: Fixed (writeQueue + atomic JSON)
+
+## Samenvatting
+Gelijktijdige graphic-patches riepen parallel `touchActiveProject()` aan → truncated `registry.json` → SyntaxError → process exit.
+
+## Fix
+`server/writeQueue.js`: geserialiseerde writes + `writeJsonAtomic` (temp + rename).
+```
+
+---
+
+## QA-009 — Asset upload naar onbekend project-id
+
+```
+ID: QA-009
+Datum: 2026-07-30
+Severity: Medium
+Status: Fixed — projectExists() → HTTP 404, geen orphan map
+```
+
+---
+
+## QA-010 — Snelle score-taps verliezen increments
+
+```
+ID: QA-010
+Datum: 2026-07-30
+Severity: Medium
+Status: Fixed — per-widget queue + optimistic data in operate-match.js
+```
+
+---
+
+## QA-011 — Render past stale state toe na nieuwere update
+
+```
+ID: QA-011
+Datum: 2026-07-30
+Severity: Medium
+Status: Fixed — applyState revision guard in render.js
+```
+
+---
+
+## QA-012 — Invalid JSON → HTML stack trace
+
+```
+ID: QA-012
+Datum: 2026-07-30
+Severity: Low
+Status: Fixed — Express JSON error middleware in server/index.js
 ```

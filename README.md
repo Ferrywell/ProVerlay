@@ -2,14 +2,27 @@
 
 Live broadcast overlays met eigen identiteit — minimalistisch, Apple Tahoe UI, mobiel operator-paneel en Companion/Stream Deck.
 
-## Starten
+**Huidige versie:** [v0.6.0](https://github.com/Ferrywell/ProVerlay/releases/tag/v0.6.0)
+
+## Mac-app (Apple Silicon)
+
+Download: **[ProVerlay-mac-arm64.zip](https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip)**
+
+1. Zip uitpakken → `ProVerlay.app` naar **Applications**
+2. Eerste keer: rechtsklik → **Open** → nogmaals **Open**
+3. Bij blokkade: `xattr -cr /Applications/ProVerlay.app`
+
+Poort **2014** · OBS/vMix render: `http://localhost:2014/render` · Operator: `http://<ip>:2014/operator`
+
+Zie `docs/APP.md` voor details.
+
+## Starten (dev)
 
 ```bash
+nvm use 22   # aanbevolen voor Electron-builds
 npm install
 npm start
 ```
-
-Standaard poort: **2014**
 
 | Interface | URL | Voor wie |
 |-----------|-----|----------|
@@ -22,10 +35,18 @@ Op mobiel opent `/` automatisch het operator-paneel.
 ## Highlights
 
 - **Eigen look** — licht, glass, Apple-achtig (geen Holographics-clone)
-- **Voetbalscore overlay** — configureerbaar + live bedienbaar vanaf iPad
-- **Klant branding** — presets in `data/brands/`, kleuren & fonts live
+- **Hockey scorebug** — circulaire klok met Odido Glow-ring, Q1–Q4, teamkleuren
+- **F1 timing tower** — MultiViewer live of handmatig, tyres, track status, animaties
+- **Voetbalscore overlay** — PNG-strip + live bediening vanaf iPad
+- **Klant branding** — projectfonts, kleuren, assets per project
 - **Drie triggers** — web, mobiel (lokaal netwerk), Companion/Stream Deck
-- **Windows-ready** — plain Node.js, geen Mac-only dependencies
+
+### v0.6.0
+
+- Nieuw widget `hockeyScorebug` (render + operator/control)
+- Hockey-klok: blijft lopen bij minute/second-spinner; Start/Pause betrouwbaarder
+- F1-polish: animaties, lap-rollers, MultiViewer-hulp, operate-parity
+- Odido brand tokens/docs + scorebug-mockup
 
 ## Structuur
 
@@ -35,10 +56,9 @@ ProVerlay/
 ├── public/control/            # Desktop dashboard
 ├── public/operator/           # Touch operator UI
 ├── public/editor/             # WYSIWYG scorebord composer
-├── public/render/               # OBS overlay output
+├── public/render/             # OBS overlay output
 ├── data/registry.json         # Actief project + lijst
 ├── data/projects/{id}/        # project.json + assets/
-├── templates/                 # Overlay templates voor klanten
 ├── companion/                 # Bitfocus Companion module
 └── docs/                      # Product & agent docs
 ```
@@ -57,10 +77,6 @@ ProVerlay/
 3. Sleep tekstvelden (teams, scores) naar positie
 4. Pas lettertype, grootte en kleur aan
 5. Opslaan → direct live op render + operator
-
-## Voetbalscore toevoegen
-
-Zie `templates/football-score.md`.
 
 ## Companion
 
