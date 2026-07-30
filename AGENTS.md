@@ -128,7 +128,7 @@ Environment (browser, OS)
 - Beta tester blokkeert op ontbrekende features → noteer in `docs/qa/BLOCKERS.md`
 - Reddit/design filosofie: `.cursor/skills/frontend-design/REFERENCE.md`
 
-## Huidige status (v0.2.0)
+## Huidige status (v0.6.1)
 
 | Component | Status |
 |-----------|--------|

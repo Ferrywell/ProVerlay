@@ -746,7 +746,7 @@ html[data-preview-window] .score-canvas--no-bg {
   left: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.55em;
+  gap: 0.35em;
   height: calc(var(--f1-row-h) * 0.95);
   padding: 0 calc(var(--f1-row-h) * 0.42);
   border-radius: var(--f1-radius);
@@ -776,20 +776,49 @@ html[data-preview-window] .score-canvas--no-bg {
 }
 
 .f1-tower__flag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.08em;
+  padding-left: 0.42em;
+  border-left: 1.5px solid rgba(0, 0, 0, 0.28);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.f1-tower__header[data-track='red'] .f1-tower__flag {
+  border-left-color: rgba(255, 255, 255, 0.4);
+}
+
+.f1-tower__header:not([data-track='yellow']):not([data-track='sc']):not([data-track='vsc']):not([data-track='red'])
+  .f1-tower__flag {
+  border-left-color: rgba(255, 255, 255, 0.35);
 }
 
 .f1-tower__lap {
   display: inline-flex;
   align-items: center;
+  gap: 0.32em;
   white-space: nowrap;
   line-height: 1;
+  letter-spacing: 0.03em;
+}
+
+.f1-lap-static--prefix {
+  letter-spacing: 0.08em;
+}
+
+.f1-lap-static--sep {
+  letter-spacing: 0;
+  opacity: 0.85;
+  /* Iets strakker rond de slash dan rond LAP ↔ cijfers */
+  margin: 0 -0.06em;
 }
 
 .f1-lap-num {
   display: inline-flex;
   align-items: center;
+  letter-spacing: 0;
 }
 
 .f1-lap-digit {
