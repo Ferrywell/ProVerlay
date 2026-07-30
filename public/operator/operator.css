@@ -312,24 +312,139 @@ body.operator {
   line-height: 1.25;
 }
 
-.empty-state {
-  padding: var(--pv-space-2xl) var(--pv-space-md);
-  text-align: center;
-  color: var(--pv-text-secondary);
-  font-size: var(--pv-type-body);
-  line-height: 1.5;
-  background: var(--pv-bg-solid);
-  border-radius: var(--pv-radius-group);
+.pv-nav-bar__action.is-active {
+  background: var(--pv-fill-tertiary);
+  font-weight: 600;
 }
 
 @media (min-width: 768px) {
-  .operator {
+  html:not(.is-electron) .operator:not(.operator--desk) {
     max-width: 720px;
     margin: 0 auto;
   }
 
   .op-toolbar:not(.op-toolbar--primary):not(.op-toolbar--live) {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Mac app / Electron: same density as Dashboard — no forced phone column */
+html.is-electron body.operator {
+  max-width: none;
+  margin: 0;
+  padding: var(--pv-space-lg) var(--pv-space-xl) 2rem;
+  padding-bottom: calc(var(--pv-space-lg) + env(safe-area-inset-bottom, 0px));
+  min-height: 100vh;
+}
+
+html.is-electron .operator .pv-nav-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--pv-space-lg);
+  grid-template-columns: unset;
+  min-height: auto;
+  margin: 0 0 var(--pv-space-lg);
+  padding: 0.7rem var(--pv-space-xl);
+  background: var(--pv-bg-solid);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 0.5px solid var(--pv-separator);
+  border-radius: var(--pv-radius-group);
+  box-shadow: var(--pv-shadow-group);
+  position: sticky;
+  top: 0;
+}
+
+html.is-electron .operator .pv-nav-bar__back,
+html.is-electron .operator .pv-nav-bar__action {
+  min-height: 36px;
+  border-radius: var(--pv-radius-sm);
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  border: 0.5px solid var(--pv-separator);
+  font-size: var(--pv-type-subhead);
+}
+
+html.is-electron .operator .pv-nav-bar__sync .status-label {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: nowrap;
+}
+
+html.is-electron .pv-sync-bar {
+  display: none;
+}
+
+html.is-electron body.operate .op-main {
+  max-width: none;
+}
+
+html.is-electron .op-section > .pv-group {
+  border: 0.5px solid var(--pv-separator);
+  box-shadow: var(--pv-shadow-group);
+}
+
+html.is-electron .op-section.is-live > .pv-group {
+  box-shadow:
+    var(--pv-shadow-group),
+    0 0 0 2px rgba(52, 199, 89, 0.22);
+}
+
+/* Wide desktop browser: also drop the 720px phone column */
+@media (min-width: 980px) {
+  html:not(.is-electron) body.operator {
+    max-width: none;
+    margin: 0;
+    padding: var(--pv-space-lg) var(--pv-space-xl) 2rem;
+  }
+
+  html:not(.is-electron) .operator:not(.operator--desk) {
+    max-width: none;
+    margin: 0;
+  }
+
+  html:not(.is-electron) .op-main {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* Desk mode: two operator cards side-by-side on landscape / wide tablets */
+@media (min-width: 900px) and (orientation: landscape), (min-width: 1100px) {
+  .operator.operator--desk {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  html.is-electron .operator.operator--desk {
+    max-width: none;
+  }
+
+  .operator.operator--desk .op-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--pv-space-md);
+    align-items: start;
+    padding-left: max(var(--pv-screen-margin), env(safe-area-inset-left));
+    padding-right: max(var(--pv-screen-margin), env(safe-area-inset-right));
+  }
+
+  html.is-electron .operator.operator--desk .op-main {
+    padding-left: 0;
+    padding-right: 0;
+    gap: var(--pv-space-lg);
+  }
+
+  .operator.operator--desk .op-main > .empty-state {
+    grid-column: 1 / -1;
   }
 }
 

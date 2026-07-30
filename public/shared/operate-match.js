@@ -80,15 +80,33 @@ function penaltiesEnabled(data = {}) {
   return penaltiesFeatureEnabled() && data.widgets?.penalties !== false
 }
 
-export async function handleMatchOperateAction(graphic, action, event, { confirmDecrement = true } = {}) {
+/** Serialize operate actions per widget so rapid score taps cannot lose increments. */
+const matchActionQueues = new Map()
+/** Last data written by a queued action — next queued action builds on this. */
+const matchOptimisticData = new Map()
+
+function enqueueMatchAction(graphicId, fn) {
+  const prev = matchActionQueues.get(graphicId) || Promise.resolve()
+  const next = prev.then(fn, fn)
+  matchActionQueues.set(
+    graphicId,
+    next.catch(() => {}).finally(() => {
+      if (matchActionQueues.get(graphicId) === next) matchActionQueues.delete(graphicId)
+    })
+  )
+  return next
+}
+
+export async function handleMatchOperateAction(graphic, action, event, { confirmDecrement = false } = {}) {
   if (graphic.type !== 'matchScoreboard') return false
+  return enqueueMatchAction(graphic.id, () =>
+    runMatchOperateAction(graphic, action, event, { confirmDecrement })
+  )
+}
 
-  if (action === 'toggle-live') {
-    await toggleGraphic(graphic.id, !graphic.visible)
-    return true
-  }
-
-  const data = structuredClone(graphic.data || {})
+async function runMatchOperateAction(graphic, action, event, { confirmDecrement = false } = {}) {
+  const prior = matchOptimisticData.get(graphic.id)
+  const data = structuredClone(prior || graphic.data || {})
   let clk = { ...(data.clock || {}) }
   const pen = {
     ...(data.penalties || {}),
@@ -99,6 +117,11 @@ export async function handleMatchOperateAction(graphic, action, event, { confirm
   const syncPenaltyScores = () => {
     pen.homeScore = penaltyCount(pen.homeKicks)
     pen.awayScore = penaltyCount(pen.awayKicks)
+  }
+
+  if (action === 'toggle-live') {
+    await toggleGraphic(graphic.id, !graphic.visible)
+    return true
   }
 
   if (action === 'home-plus') data.homeScore = (data.homeScore ?? 0) + 1
@@ -124,8 +147,10 @@ export async function handleMatchOperateAction(graphic, action, event, { confirm
   }
   if (action === 'toggle-clock-visible') {
     const widgets = { ...(data.widgets || {}), clock: !widgetVisible(data.widgets, 'clock') }
+    data.widgets = widgets
+    matchOptimisticData.set(graphic.id, data)
     await patchGraphic(graphic.id, { data: { widgets } })
-    return true
+    return { ...graphic, data }
   }
   if (action === 'toggle-penalties') {
     if (!penaltiesFeatureEnabled()) return true
@@ -168,8 +193,9 @@ export async function handleMatchOperateAction(graphic, action, event, { confirm
 
   data.clock = clk
   data.penalties = pen
+  matchOptimisticData.set(graphic.id, data)
   await patchGraphic(graphic.id, { data })
-  return { ...graphic, data: { ...graphic.data, ...data } }
+  return { ...graphic, data }
 }
 
 function normalizeTeamCode(value) {

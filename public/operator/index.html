@@ -14,9 +14,9 @@
   <body class="operator">
     <header class="pv-nav-bar">
       <div class="pv-nav-bar__side pv-nav-bar__side--start">
-        <a href="/control?view=control" class="pv-nav-bar__back" aria-label="Back to dashboard">
+        <a href="/design" class="pv-nav-bar__back" aria-label="Design setup">
           <span class="pv-nav-bar__chevron" aria-hidden="true"></span>
-          <span class="pv-nav-bar__back-label">Dashboard</span>
+          <span class="pv-nav-bar__back-label">Design</span>
         </a>
       </div>
       <div class="pv-nav-bar__title pv-nav-bar__title--brand">
@@ -27,6 +27,9 @@
         </div>
       </div>
       <div class="pv-nav-bar__side pv-nav-bar__side--end">
+        <button type="button" class="pv-nav-bar__action" id="desk-mode-toggle" aria-pressed="false" title="Desk mode: two columns on wide screens">
+          Desk
+        </button>
         <div class="pill pill--sync is-connected pv-nav-bar__sync" id="connection-status" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
           <span class="status-label">Live sync</span>

@@ -1,6 +1,6 @@
 import { patchGraphic, toggleGraphic } from '/public/shared/client.js'
 import { createTickerMessage, migrateTickerMessages, tickerMessageText } from '/public/shared/ticker-messages.js'
-import { formatClock, resolveLiveClock } from '/public/shared/match-utils.js'
+import { formatClock, resolveLiveClock, widgetVisible } from '/public/shared/match-utils.js'
 import {
   formatMatchStatusLine,
   handleMatchOperateAction,
@@ -8,6 +8,16 @@ import {
   persistAutoStoppageIfNeeded,
   PERIOD_OPTIONS
 } from '/public/shared/operate-match.js'
+import {
+  handleHockeyOperateAction,
+  handleHockeyFieldChange
+} from '/public/shared/operate-hockey.js'
+import {
+  formatHockeyClock,
+  formatHockeyStatusLine,
+  HOCKEY_PERIOD_OPTIONS,
+  resolveLiveHockeyClock
+} from '/public/shared/hockey-utils.js'
 import {
   F1_SOURCE_OPTIONS,
   F1_GAP_MODES,
@@ -27,7 +37,53 @@ const TYPE_LABELS = {
   lowerThirdShow: 'Lower thirds',
   quizShow: 'Quiz',
   message: 'Message',
-  f1Timing: 'F1 timing'
+  f1Timing: 'F1 timing',
+  hockeyScorebug: 'Hockey scorebug'
+}
+
+const F1_MV_HELP_KEY = 'pv-f1-mv-help-dismissed'
+
+function isF1MvHelpDismissed() {
+  try {
+    return localStorage.getItem(F1_MV_HELP_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function setF1MvHelpDismissed(dismissed) {
+  try {
+    if (dismissed) localStorage.setItem(F1_MV_HELP_KEY, '1')
+    else localStorage.removeItem(F1_MV_HELP_KEY)
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+/** Sync Open MultiViewer tip visibility in an F1 operate mount or operator card. */
+export function syncF1MvHelp(root, { forceOpen = false } = {}) {
+  const help = root.querySelector('[data-f1-mv-help]')
+  if (!help) return
+  const dismissed = isF1MvHelpDismissed()
+  const open = forceOpen || !dismissed
+  help.hidden = !open
+  const toggle = root.querySelector('[data-bind="f1-mv-help-toggle"]')
+  if (toggle) toggle.textContent = open ? 'Hide tip' : 'Setup tip'
+}
+
+export async function openMultiViewerApp() {
+  try {
+    const res = await fetch('/api/system/open-multiviewer', { method: 'POST' })
+    const body = await res.json().catch(() => ({}))
+    if (body.opened) return { ok: true }
+    if (body.url) {
+      window.open(body.url, '_blank', 'noopener,noreferrer')
+      return { ok: true, fallback: true }
+    }
+  } catch {
+    window.open('https://multiviewer.app', '_blank', 'noopener,noreferrer')
+  }
+  return { ok: false }
 }
 
 const clockRoots = new Set()
@@ -49,6 +105,9 @@ function operateStatusLine(graphic) {
   }
   if (graphic.type === 'matchScoreboard') {
     return formatMatchStatusLine(graphic.data?.clock || {})
+  }
+  if (graphic.type === 'hockeyScorebug') {
+    return formatHockeyStatusLine(graphic.data?.clock || {})
   }
   if (graphic.type === 'f1Timing') {
     const source = graphic.data?.source === 'multiviewer' ? 'MultiViewer' : 'Manual'
@@ -185,17 +244,161 @@ export function matchOperateHtml(graphic, { embedded = false } = {}) {
         <button type="button" class="button ${clock.running ? 'button--gray' : 'button--live'} match-operate__clock-btn" data-action="toggle-clock">
           ${clock.running ? 'Pause' : 'Start'}
         </button>
+        <button type="button" class="button ${widgetVisible(d.widgets, 'clock') ? 'button--gray' : 'button--secondary'} match-operate__clock-vis" data-action="toggle-clock-visible">
+          ${widgetVisible(d.widgets, 'clock') ? 'Hide clock' : 'Show clock'}
+        </button>
         <label class="field match-operate__period">
           <span>Period</span>
           <select data-field="period">
             ${PERIOD_OPTIONS.map((p) => `<option value="${p.value}"${clock.period === p.value ? ' selected' : ''}>${p.label}</option>`).join('')}
           </select>
         </label>
+        <button type="button" class="button ${clock.stoppageTime ? 'button--live' : 'button--gray'} match-operate__stoppage" data-action="toggle-stoppage">
+          ${clock.stoppageTime ? 'Stoppage (45+/90+)' : 'Normal time'}
+        </button>
         <button type="button" class="button ${clock.autoStoppageAt90 ? 'button--live' : 'button--gray'} match-operate__auto-stoppage" data-action="toggle-auto-stoppage">
           Automatic stoppage from 90'
         </button>
       </div>
     </div>`
+}
+
+
+export function hockeyOperateHtml(graphic, { embedded = false } = {}) {
+  const d = graphic.data || {}
+  const clock = d.clock || {}
+  const live = resolveLiveHockeyClock(clock)
+  const remSec = Math.round(live.remainingMs / 1000)
+  const minute = Math.floor(remSec / 60)
+  const second = remSec % 60
+  const quarterMin = Math.round(live.quarterMs / 60000)
+  const embeddedClass = embedded ? ' match-operate--embedded' : ''
+  const homeColor = escapeHtml(d.homeColor || '#FF7621')
+  const awayColor = escapeHtml(d.awayColor || '#74ACDF')
+
+  return `
+    <div class="match-operate hockey-operate${embeddedClass}">
+      <div class="pv-group__cell pv-group__cell--flush">
+        <div class="match-operate__teams">
+          <div class="match-operate__team">
+            <input class="match-operate__team-code" type="text" maxlength="3" data-field="homeCode" value="${escapeHtml(d.homeCode || '')}" aria-label="Home team code" spellcheck="false" />
+            <label class="field" style="margin:0">
+              <span class="visually-hidden">Home colour</span>
+              <input type="color" data-field="homeColor" value="${homeColor}" aria-label="Home stripe colour" />
+            </label>
+            <div class="match-operate__score" data-bind="homeScore">${d.homeScore ?? 0}</div>
+            <div class="match-operate__score-actions">
+              <button type="button" class="button button--gray match-operate__score-btn" data-action="home-minus" aria-label="Lower home score">−</button>
+              <button type="button" class="button button--tinted match-operate__score-btn" data-action="home-plus" aria-label="Raise home score">+</button>
+            </div>
+          </div>
+          <div class="match-operate__mid">
+            <div class="match-operate__clock" data-bind="clock">${formatHockeyClock(clock)}</div>
+            <div class="op-status" data-bind="period">${HOCKEY_PERIOD_OPTIONS.find((p) => p.value === live.period)?.label || live.period}</div>
+          </div>
+          <div class="match-operate__team">
+            <input class="match-operate__team-code" type="text" maxlength="3" data-field="awayCode" value="${escapeHtml(d.awayCode || '')}" aria-label="Away team code" spellcheck="false" />
+            <label class="field" style="margin:0">
+              <span class="visually-hidden">Away colour</span>
+              <input type="color" data-field="awayColor" value="${awayColor}" aria-label="Away stripe colour" />
+            </label>
+            <div class="match-operate__score" data-bind="awayScore">${d.awayScore ?? 0}</div>
+            <div class="match-operate__score-actions">
+              <button type="button" class="button button--gray match-operate__score-btn" data-action="away-minus" aria-label="Lower away score">−</button>
+              <button type="button" class="button button--tinted match-operate__score-btn" data-action="away-plus" aria-label="Raise away score">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pv-group__cell match-operate__clock-set">
+        <div class="match-operate__clock-fields">
+          <label class="field match-operate__clock-field">
+            <span>Minute</span>
+            <input type="number" min="0" max="30" inputmode="numeric" data-field="minute" value="${minute}" />
+          </label>
+          <label class="field match-operate__clock-field">
+            <span>Second</span>
+            <input type="number" min="0" max="59" inputmode="numeric" data-field="second" value="${second}" />
+          </label>
+          <label class="field match-operate__clock-field">
+            <span>Quarter (min)</span>
+            <input type="number" min="1" max="20" step="0.5" inputmode="decimal" data-field="quarterMin" value="${quarterMin}" />
+          </label>
+        </div>
+      </div>
+      <div class="pv-group__cell pv-group__cell--flush">
+        <div class="match-operate__nudge-grid" role="group" aria-label="Adjust clock">
+          <button type="button" class="match-operate__nudge-btn" data-action="sec-minus-1">−1s</button>
+          <button type="button" class="match-operate__nudge-btn" data-action="sec-plus-1">+1s</button>
+          <button type="button" class="match-operate__nudge-btn" data-action="sec-minus">−15s</button>
+          <button type="button" class="match-operate__nudge-btn" data-action="sec-plus">+15s</button>
+          <button type="button" class="match-operate__nudge-btn" data-action="min-minus">−1 min</button>
+          <button type="button" class="match-operate__nudge-btn" data-action="min-plus">+1 min</button>
+        </div>
+      </div>
+      <div class="pv-group__cell match-operate__controls">
+        <button type="button" class="button ${clock.running ? 'button--gray' : 'button--live'} match-operate__clock-btn" data-action="toggle-clock">
+          ${clock.running ? 'Pause' : 'Start'}
+        </button>
+        <button type="button" class="button button--secondary" data-action="reset-quarter">Reset quarter</button>
+        <label class="field match-operate__period">
+          <span>Period</span>
+          <select data-field="period">
+            ${HOCKEY_PERIOD_OPTIONS.map((p) => `<option value="${p.value}"${live.period === p.value ? ' selected' : ''}>${p.label}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+    </div>`
+}
+
+function updateHockeyOperateMount(mount, graphic) {
+  const d = graphic.data || {}
+  const clock = d.clock || {}
+  const live = resolveLiveHockeyClock(clock)
+  const remSec = Math.round(live.remainingMs / 1000)
+
+  mount.querySelectorAll('[data-bind="homeScore"]').forEach((n) => {
+    n.textContent = d.homeScore ?? 0
+  })
+  mount.querySelectorAll('[data-bind="awayScore"]').forEach((n) => {
+    n.textContent = d.awayScore ?? 0
+  })
+  const clockEl = mount.querySelector('[data-bind="clock"]')
+  if (clockEl) clockEl.textContent = formatHockeyClock(clock)
+  const periodEl = mount.querySelector('[data-bind="period"]')
+  if (periodEl) {
+    periodEl.textContent = HOCKEY_PERIOD_OPTIONS.find((p) => p.value === live.period)?.label || live.period
+  }
+
+  const minuteInput = mount.querySelector('[data-field="minute"]')
+  const secondInput = mount.querySelector('[data-field="second"]')
+  const quarterInput = mount.querySelector('[data-field="quarterMin"]')
+  if (minuteInput && document.activeElement !== minuteInput) minuteInput.value = Math.floor(remSec / 60)
+  if (secondInput && document.activeElement !== secondInput) secondInput.value = remSec % 60
+  if (quarterInput && document.activeElement !== quarterInput) {
+    quarterInput.value = Math.round(live.quarterMs / 60000 * 10) / 10
+  }
+
+  const clockBtn = mount.querySelector('[data-action="toggle-clock"]')
+  if (clockBtn) {
+    clockBtn.className = `button ${clock.running ? 'button--gray' : 'button--live'} match-operate__clock-btn`
+    clockBtn.textContent = clock.running ? 'Pause' : 'Start'
+  }
+
+  const periodSelect = mount.querySelector('[data-field="period"]')
+  if (periodSelect && document.activeElement !== periodSelect) {
+    periodSelect.value = live.period || 'q1'
+  }
+
+  for (const [field, val] of [
+    ['homeCode', d.homeCode || ''],
+    ['awayCode', d.awayCode || ''],
+    ['homeColor', d.homeColor || '#FF7621'],
+    ['awayColor', d.awayColor || '#74ACDF']
+  ]) {
+    const input = mount.querySelector(`[data-field="${field}"]`)
+    if (input && document.activeElement !== input) input.value = val
+  }
 }
 
 function f1DriverRowHtml(d, i) {
@@ -277,6 +480,19 @@ export function f1OperateHtml(graphic) {
             <input type="number" min="0" max="120" step="0.5" inputmode="decimal" data-field="f1-mv-delay" value="${(Number(mv.delayMs) || 0) / 1000}" />
           </label>
         </div>
+        <div class="f1-mv-toolbar">
+          <button type="button" class="button button--secondary" data-action="f1-open-multiviewer">Open MultiViewer</button>
+          <button type="button" class="button button--gray" data-action="f1-toggle-mv-help" data-bind="f1-mv-help-toggle">Setup tip</button>
+        </div>
+        <aside class="f1-mv-help" data-f1-mv-help hidden>
+          <p class="f1-mv-help__lead">Live timing must be on in MultiViewer — playing video alone sends no standings.</p>
+          <ol class="f1-mv-help__steps">
+            <li>Open MultiViewer and load the F1 session.</li>
+            <li>Start <strong>Live Timing</strong> (replays: <strong>Replay Live Timing</strong> on the session card).</li>
+            <li>Confirm ProVerlay host/port match MultiViewer (default <code>127.0.0.1:10101</code>).</li>
+          </ol>
+          <button type="button" class="button button--gray button--small" data-action="f1-dismiss-mv-help">Got it</button>
+        </aside>
         <p class="op-status f1-live-line">
           <span class="f1-status-dot" data-bind="f1-status-dot"></span>
           <span data-bind="f1-status">Waiting for MultiViewer…</span>
@@ -328,6 +544,7 @@ export function updateF1OperateMount(mount, graphic) {
   if (mvBlock) mvBlock.hidden = !isLiveSource
   const manualBlock = mount.querySelector('[data-f1-manual]')
   if (manualBlock) manualBlock.hidden = isLiveSource
+  if (isLiveSource) syncF1MvHelp(mount)
 
   // Rijderslijst alleen verversen als niemand er in aan het typen is
   const list = mount.querySelector('.f1-drv-list')
@@ -384,7 +601,7 @@ async function handleF1DriverEdit(graphic, field, index, value) {
   await patchGraphic(graphic.id, { data: { drivers } })
 }
 
-async function handleF1Action(graphic, action, event) {
+export async function handleF1Action(graphic, action, event) {
   if (action === 'f1-toggle-header') {
     await patchGraphic(graphic.id, { data: { showHeader: !graphic.data?.showHeader } })
     return
@@ -392,6 +609,33 @@ async function handleF1Action(graphic, action, event) {
 
   if (action === 'f1-toggle-tyres') {
     await patchGraphic(graphic.id, { data: { showTyres: !graphic.data?.showTyres } })
+    return
+  }
+
+  if (action === 'f1-open-multiviewer') {
+    await openMultiViewerApp()
+    return
+  }
+
+  if (action === 'f1-dismiss-mv-help') {
+    setF1MvHelpDismissed(true)
+    const root = event?.target?.closest('[data-graphic-id]') || event?.target?.closest('.f1-operate')
+    if (root) syncF1MvHelp(root)
+    return
+  }
+
+  if (action === 'f1-toggle-mv-help') {
+    const root = event?.target?.closest('[data-graphic-id]') || event?.target?.closest('.f1-operate')
+    if (!root) return
+    const help = root.querySelector('[data-f1-mv-help]')
+    if (!help) return
+    if (help.hidden) {
+      setF1MvHelpDismissed(false)
+      syncF1MvHelp(root, { forceOpen: true })
+    } else {
+      setF1MvHelpDismissed(true)
+      syncF1MvHelp(root)
+    }
     return
   }
 
@@ -564,6 +808,19 @@ function updateMatchOperateMount(mount, graphic) {
     autoStoppageBtn.className = `button ${clock.autoStoppageAt90 ? 'button--live' : 'button--gray'} match-operate__auto-stoppage`
   }
 
+  const stoppageBtn = mount.querySelector('[data-action="toggle-stoppage"]')
+  if (stoppageBtn) {
+    stoppageBtn.className = `button ${clock.stoppageTime ? 'button--live' : 'button--gray'} match-operate__stoppage`
+    stoppageBtn.textContent = clock.stoppageTime ? 'Stoppage (45+/90+)' : 'Normal time'
+  }
+
+  const clockVisBtn = mount.querySelector('[data-action="toggle-clock-visible"]')
+  if (clockVisBtn) {
+    const shown = widgetVisible(d.widgets, 'clock')
+    clockVisBtn.className = `button ${shown ? 'button--gray' : 'button--secondary'} match-operate__clock-vis`
+    clockVisBtn.textContent = shown ? 'Hide clock' : 'Show clock'
+  }
+
   const homeCodeInput = mount.querySelector('[data-field="homeCode"]')
   const awayCodeInput = mount.querySelector('[data-field="awayCode"]')
   const homeNameInput = mount.querySelector('[data-field="homeName"]')
@@ -585,11 +842,19 @@ function tickOperateMatchClocks(root, getGraphic) {
     const status = section.querySelector('[data-bind="status-line"]')
     if (status) status.textContent = formatMatchStatusLine(graphic.data.clock)
   }
+  for (const section of root.querySelectorAll('[data-type="hockeyScorebug"]')) {
+    const graphic = getGraphic(section.dataset.graphicId)
+    if (!graphic?.data?.clock?.running) continue
+    const mount = section.querySelector('[data-operate-mount]')
+    if (mount) updateHockeyOperateMount(mount, graphic)
+    const status = section.querySelector('[data-bind="status-line"]')
+    if (status) status.textContent = formatHockeyStatusLine(graphic.data.clock)
+  }
 }
 
 function ensureOperateClockTimer() {
   const needs = [...clockRoots].some(({ root, getGraphic }) =>
-    [...root.querySelectorAll('[data-type="matchScoreboard"]')].some((section) => {
+    [...root.querySelectorAll('[data-type="matchScoreboard"], [data-type="hockeyScorebug"]')].some((section) => {
       const graphic = getGraphic(section.dataset.graphicId)
       return graphic?.data?.clock?.running
     })
@@ -618,6 +883,17 @@ export async function handleOperateAction(graphic, action, event, root) {
       const section = event?.target?.closest('[data-graphic-id]')
       const mount = section?.querySelector('[data-operate-mount]')
       if (mount) updateMatchOperateMount(mount, result)
+    }
+    ensureOperateClockTimer()
+    return
+  }
+
+  if (graphic.type === 'hockeyScorebug') {
+    const result = await handleHockeyOperateAction(graphic, action, event)
+    if (result && typeof result === 'object' && result.data) {
+      const section = event?.target?.closest('[data-graphic-id]')
+      const mount = section?.querySelector('[data-operate-mount]')
+      if (mount) updateHockeyOperateMount(mount, result)
     }
     ensureOperateClockTimer()
     return
@@ -700,11 +976,19 @@ export function wireOperateSection(root, getGraphic) {
       ensureF1StatusTimer()
       return
     }
-    if (!['minute', 'second', 'period', 'homeCode', 'awayCode', 'homeName', 'awayName'].includes(field)) return
+    const hockeyFields = ['minute', 'second', 'period', 'homeCode', 'awayCode', 'homeColor', 'awayColor', 'quarterMin']
+    const matchFields = ['minute', 'second', 'period', 'homeCode', 'awayCode', 'homeName', 'awayName']
+    if (![...new Set([...hockeyFields, ...matchFields])].includes(field)) return
     const section = event.target.closest('[data-graphic-id]')
     if (!section) return
     const graphic = getGraphic(section.dataset.graphicId)
-    if (!graphic || graphic.type !== 'matchScoreboard') return
+    if (!graphic) return
+    if (graphic.type === 'hockeyScorebug' && hockeyFields.includes(field)) {
+      await handleHockeyFieldChange(graphic, field, event.target.value)
+      ensureOperateClockTimer()
+      return
+    }
+    if (graphic.type !== 'matchScoreboard' || !matchFields.includes(field)) return
     await handleMatchFieldChange(graphic, field, event.target.value)
     ensureOperateClockTimer()
   })
@@ -716,12 +1000,18 @@ export function wireOperateSection(root, getGraphic) {
     const section = event.target.closest('[data-graphic-id]')
     if (!section) return
     const graphic = getGraphic(section.dataset.graphicId)
-    if (!graphic || graphic.type !== 'matchScoreboard') return
+    if (!graphic) return
+    if (graphic.type !== 'matchScoreboard' && graphic.type !== 'hockeyScorebug') return
     const key = `${section.dataset.graphicId}:${field}`
     clearTimeout(fieldDebounce[key])
     fieldDebounce[key] = setTimeout(async () => {
       const latest = getGraphic(section.dataset.graphicId)
-      if (!latest || latest.type !== 'matchScoreboard') return
+      if (!latest) return
+      if (latest.type === 'hockeyScorebug') {
+        await handleHockeyFieldChange(latest, field, event.target.value)
+        return
+      }
+      if (latest.type !== 'matchScoreboard') return
       await handleMatchFieldChange(latest, field, event.target.value)
     }, 350)
   })
@@ -757,6 +1047,12 @@ export function refreshOperateSection(section, graphic) {
       mount.innerHTML = matchOperateHtml(graphic, { embedded: isEmbeddedSection(section) })
     } else {
       updateMatchOperateMount(mount, graphic)
+    }
+  } else if (graphic.type === 'hockeyScorebug') {
+    if (!mount.querySelector('.hockey-operate')) {
+      mount.innerHTML = hockeyOperateHtml(graphic, { embedded: isEmbeddedSection(section) })
+    } else {
+      updateHockeyOperateMount(mount, graphic)
     }
   } else if (graphic.type === 'f1Timing') {
     if (!mount.querySelector('.f1-operate')) {

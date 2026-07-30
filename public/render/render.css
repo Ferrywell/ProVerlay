@@ -747,13 +747,14 @@ html[data-preview-window] .score-canvas--no-bg {
   display: inline-flex;
   align-items: center;
   gap: 0.55em;
-  height: calc(var(--f1-row-h) * 0.72);
-  padding: 0 calc(var(--f1-row-h) * 0.4);
+  height: calc(var(--f1-row-h) * 0.95);
+  padding: 0 calc(var(--f1-row-h) * 0.42);
   border-radius: var(--f1-radius);
   background: var(--f1-bg);
   color: var(--f1-color);
-  font-size: calc(var(--f1-font) * 0.72);
-  letter-spacing: 0.06em;
+  font-size: calc(var(--f1-font) * 0.98);
+  font-weight: 700;
+  letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
   transition:
     background 300ms ease,
@@ -777,6 +778,64 @@ html[data-preview-window] .score-canvas--no-bg {
 .f1-tower__flag {
   font-weight: 800;
   letter-spacing: 0.08em;
+}
+
+.f1-tower__lap {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.f1-lap-num {
+  display: inline-flex;
+  align-items: center;
+}
+
+.f1-lap-digit {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 0.62em;
+  height: 1.05em;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.f1-lap-digit__val {
+  grid-area: 1 / 1;
+  display: block;
+  line-height: 1.05em;
+}
+
+.f1-lap-digit.is-rolling .f1-lap-digit__val--out {
+  animation: f1-digit-out 380ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+.f1-lap-digit.is-rolling .f1-lap-digit__val--in {
+  animation: f1-digit-in 380ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+@keyframes f1-digit-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(110%);
+    opacity: 0;
+  }
+}
+
+@keyframes f1-digit-in {
+  from {
+    transform: translateY(-110%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .f1-row {
@@ -833,6 +892,21 @@ html[data-preview-window] .score-canvas--no-bg {
   font-variant-numeric: tabular-nums;
   opacity: 0.92;
   white-space: nowrap;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* P1-kolomkop (INTERVAL / GAP TO LEADER): kleiner zodat de tekst past;
+   echte gaptijden blijven op normale rij-grootte. */
+.f1-row__gap--label {
+  font-size: calc(var(--f1-font) * 0.52);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  opacity: 0.88;
+  max-width: none;
+  overflow: visible;
+  text-overflow: unset;
 }
 
 /* Bandencompound: gekleurde ring met letter (S/M/H/I/W), rechts van de tijd */
@@ -841,6 +915,7 @@ html[data-preview-window] .score-canvas--no-bg {
   place-items: center;
   width: calc(var(--f1-row-h) * 0.52);
   height: calc(var(--f1-row-h) * 0.52);
+  max-width: calc(var(--f1-row-h) * 0.6);
   border-radius: 50%;
   border: calc(var(--f1-row-h) * 0.055) solid var(--tyre, #b0b0b0);
   color: var(--tyre, #b0b0b0);
@@ -848,6 +923,8 @@ html[data-preview-window] .score-canvas--no-bg {
   font-weight: 800;
   flex: none;
   margin-left: 0.4em;
+  overflow: hidden;
+  transform-origin: center;
 }
 
 /* Chequered flag zodra de coureur gefinisht is (helemaal rechts) */
@@ -856,6 +933,9 @@ html[data-preview-window] .score-canvas--no-bg {
   place-items: center;
   flex: none;
   margin-left: 0.4em;
+  max-width: calc(var(--f1-row-h) * 0.6);
+  overflow: hidden;
+  transform-origin: center;
 }
 
 .f1-row__flag svg {
@@ -864,10 +944,14 @@ html[data-preview-window] .score-canvas--no-bg {
   display: block;
 }
 
-/* Pop-in voor indicatoren die live verschijnen (vlag, band): max-width groeit
-   mee zodat de rest van de pill-inhoud vloeiend opschuift i.p.v. verspringt. */
+/* Pop-in/out voor indicatoren (vlag, band): max-width groeit/krimpt zodat
+   de rest van de pill vloeiend meebeweegt i.p.v. verspringt. */
 .f1-anim-pop-in {
   animation: f1-pop-in 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.f1-anim-pop-out {
+  animation: f1-pop-out 280ms cubic-bezier(0.55, 0, 0.55, 0.2) both;
 }
 
 @keyframes f1-pop-in {
@@ -881,6 +965,55 @@ html[data-preview-window] .score-canvas--no-bg {
     max-width: calc(var(--f1-row-h) * 0.6);
     margin-left: 0.4em;
     opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes f1-pop-out {
+  from {
+    max-width: calc(var(--f1-row-h) * 0.6);
+    margin-left: 0.4em;
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    max-width: 0;
+    margin-left: 0;
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/* Subtiele swap bij handmatige gap-mode / decimals */
+.f1-gap-swap {
+  animation: f1-gap-swap 280ms ease both;
+}
+
+@keyframes f1-gap-swap {
+  from {
+    opacity: 0.35;
+    transform: translateY(0.15em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Track status (SC / VSC / yellow / red) */
+.f1-header-track-in {
+  animation: f1-header-track 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes f1-header-track {
+  from {
+    opacity: 0.55;
+    filter: brightness(1.35);
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1);
     transform: scale(1);
   }
 }

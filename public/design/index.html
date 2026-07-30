@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProVerlay — Design</title>
+    <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/public/shared/tahoe.css" />
+    <link rel="stylesheet" href="/public/shared/form-controls.css" />
+    <link rel="stylesheet" href="/public/design/design.css" />
+  </head>
+  <body class="design-hub">
+    <header class="pv-nav-bar">
+      <div class="pv-nav-bar__side pv-nav-bar__side--start">
+        <a href="/control" class="pv-nav-bar__back" aria-label="Back to dashboard">
+          <span class="pv-nav-bar__chevron" aria-hidden="true"></span>
+          <span class="pv-nav-bar__back-label">Dashboard</span>
+        </a>
+      </div>
+      <div class="pv-nav-bar__title pv-nav-bar__title--brand">
+        <img class="app-brand__mark app-brand__mark--sm" src="/public/shared/proverlay-logo.png" alt="" width="28" height="28" />
+        <div class="pv-nav-bar__title-text">
+          <h1>Design</h1>
+          <span class="pv-nav-bar__subtitle">Setup checklist</span>
+        </div>
+      </div>
+      <div class="pv-nav-bar__side pv-nav-bar__side--end">
+        <a href="/operator" class="pv-nav-bar__action">Operator</a>
+      </div>
+    </header>
+
+    <main class="design-main">
+      <p class="design-intro">
+        Build overlays in order, then go live from the Dashboard. Phone and tablet go straight to Operator for show control.
+      </p>
+
+      <ol class="design-steps">
+        <li class="design-step glass">
+          <div class="design-step__num" aria-hidden="true">1</div>
+          <div class="design-step__body">
+            <h2>Project</h2>
+            <p>Client name, canvas size (1080p / 4K), branding colours, and asset uploads.</p>
+            <a class="button button--primary" href="/project">Open project</a>
+          </div>
+        </li>
+        <li class="design-step glass">
+          <div class="design-step__num" aria-hidden="true">2</div>
+          <div class="design-step__body">
+            <h2>Scoreboard from design</h2>
+            <p>Optional: turn a PNG into a match scoreboard (Compose), or edit an existing one in the editor.</p>
+            <div class="design-step__actions">
+              <a class="button button--primary" href="/compose">Compose from PNG</a>
+              <a class="button button--secondary" href="/editor">Scoreboard editor</a>
+            </div>
+          </div>
+        </li>
+        <li class="design-step glass">
+          <div class="design-step__num" aria-hidden="true">3</div>
+          <div class="design-step__body">
+            <h2>Overlay layout</h2>
+            <p>Place all widgets on the stage. Drag to position for the combined render.</p>
+            <a class="button button--primary" href="/layout">Open layout</a>
+          </div>
+        </li>
+        <li class="design-step glass">
+          <div class="design-step__num" aria-hidden="true">4</div>
+          <div class="design-step__body">
+            <h2>Go live</h2>
+            <p>
+              Desktop: Dashboard — <strong>Go live</strong> = combined <code>/render</code> Browser Source;
+              <strong>Solo source</strong> = separate layer in OBS/vMix.
+            </p>
+            <div class="design-step__actions">
+              <a class="button button--primary" href="/control">Dashboard</a>
+              <a class="button button--secondary" href="/operator">Operator</a>
+              <a class="button button--secondary" href="/render">Preview</a>
+            </div>
+          </div>
+        </li>
+      </ol>
+    </main>
+
+    <script src="/public/shared/app-shell.js"></script>
+  </body>
+</html>

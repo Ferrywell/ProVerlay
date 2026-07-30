@@ -12,6 +12,7 @@ import {
   normalizeTickerMessagesInput
 } from './tickerMessages.js'
 import { penaltiesFeatureEnabled } from '../public/shared/match-utils.js'
+import { enqueueWrite, writeJsonAtomic } from './writeQueue.js'
 
 const BRANDS_DIR = path.join(DATA_DIR, 'brands')
 const LEGACY_SHOW = path.join(DATA_DIR, 'show.json')
@@ -53,12 +54,14 @@ export function getState() {
 }
 
 export async function saveState(next) {
-  const { projectId: _drop, ...payload } = next
-  state = { ...payload, projectId: activeProjectId }
-  await fs.writeFile(projectFile(activeProjectId), JSON.stringify(payload, null, 2))
-  await touchActiveProject()
-  notify()
-  return getState()
+  return enqueueWrite(async () => {
+    const { projectId: _drop, ...payload } = next
+    state = { ...payload, projectId: activeProjectId }
+    await writeJsonAtomic(projectFile(activeProjectId), payload)
+    await touchActiveProject()
+    notify()
+    return getState()
+  })
 }
 
 export async function patchState(patch) {

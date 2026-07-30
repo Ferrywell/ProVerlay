@@ -54,6 +54,9 @@ Single JSON document (`data/show.json`):
 | `clock` | format (`12H` / `24H`) |
 | `countdown` | seconds, running, format |
 | `image` | src, alt |
+| `matchScoreboard` | home/away codes & scores, FIFA clock, layout strip |
+| `f1Timing` | drivers/session, MultiViewer or manual |
+| `hockeyScorebug` | home/away codes & scores & colors, quarter countdown clock + SVG ring |
 
 ### Transitions
 

@@ -19,9 +19,19 @@ import {
   matchPenaltiesVisible,
   persistAutoStoppageIfNeeded
 } from '/public/shared/operate-match.js'
+import {
+  handleHockeyOperateAction,
+  handleHockeyFieldChange
+} from '/public/shared/operate-hockey.js'
+import {
+  formatHockeyClock,
+  formatHockeyStatusLine,
+  HOCKEY_PERIOD_OPTIONS,
+  resolveLiveHockeyClock
+} from '/public/shared/hockey-utils.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
-import { handleF1FieldChange, refreshF1LiveSection } from '/public/shared/operate-handlers.js'
+import { handleF1FieldChange, refreshF1LiveSection, handleF1Action, syncF1MvHelp } from '/public/shared/operate-handlers.js'
 import { F1_SOURCE_OPTIONS } from '/public/shared/f1-timing.js'
 
 const root = document.getElementById('operator-root')
@@ -136,11 +146,11 @@ function matchCardTemplate(graphic) {
       <div class="clock-controls">
         <label class="field field--inline">
           <span>Minute</span>
-          <input type="number" min="0" max="130" data-field="minute" value="${clock.minute ?? 0}" />
+          <input type="number" min="0" max="130" data-field="minute" value="${resolveLiveClock(clock).minute ?? 0}" />
         </label>
         <label class="field field--inline">
           <span>Second</span>
-          <input type="number" min="0" max="59" data-field="second" value="${clock.second ?? 0}" />
+          <input type="number" min="0" max="59" data-field="second" value="${resolveLiveClock(clock).second ?? 0}" />
         </label>
         <label class="field field--inline field--grow">
           <span>Period</span>
@@ -425,6 +435,19 @@ function f1CardTemplate(graphic) {
           <span class="f1-status-dot" data-bind="f1-status-dot"></span>
           <span data-bind="f1-status">Checking live timing…</span>
         </p>
+        <div class="f1-mv-toolbar">
+          <button type="button" class="button button--secondary touch-btn" data-action="f1-open-multiviewer">Open MultiViewer</button>
+          <button type="button" class="button button--gray touch-btn" data-action="f1-toggle-mv-help" data-bind="f1-mv-help-toggle">Setup tip</button>
+        </div>
+        <aside class="f1-mv-help" data-f1-mv-help hidden>
+          <p class="f1-mv-help__lead">Turn on Live Timing in MultiViewer — video alone sends no standings.</p>
+          <ol class="f1-mv-help__steps">
+            <li>Open MultiViewer and load the session.</li>
+            <li>Start <strong>Live Timing</strong> (or <strong>Replay Live Timing</strong>).</li>
+            <li>Keep ProVerlay host/port aligned (default <code>127.0.0.1:10101</code>).</li>
+          </ol>
+          <button type="button" class="button button--gray touch-btn" data-action="f1-dismiss-mv-help">Got it</button>
+        </aside>
       </div>
       <div class="pv-group__cell f1-card__fields">
         <label class="field">
@@ -446,6 +469,12 @@ function f1CardTemplate(graphic) {
           <input type="number" min="0" max="120" step="0.5" inputmode="decimal" data-field="f1-mv-delay" value="${(Number(mv.delayMs) || 0) / 1000}" />
         </label>
       </div>
+      <div class="pv-group__cell f1-card__prepare">
+        <button type="button" class="button button--secondary touch-btn" data-action="f1-import-drivers">
+          Import from MultiViewer
+        </button>
+        <p class="op-status f1-operate__import-status" data-bind="f1-import-status"></p>
+      </div>
       <div class="pv-group__cell pv-group__cell--actions">
       <div class="op-toolbar op-toolbar--primary">
         <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
@@ -465,6 +494,7 @@ function updateF1Card(card, graphic) {
   if (status) status.textContent = f1StatusText(graphic)
   const liveBlock = card.querySelector('.f1-card__live')
   if (liveBlock) liveBlock.hidden = d.source !== 'multiviewer'
+  if (d.source === 'multiviewer') syncF1MvHelp(card)
   const setIfIdle = (selector, value) => {
     const input = card.querySelector(selector)
     if (input && document.activeElement !== input) input.value = value
@@ -478,12 +508,141 @@ function updateF1Card(card, graphic) {
   updateLiveState(card, graphic)
 }
 
+
+function hockeyCardTemplate(graphic) {
+  const d = graphic.data || {}
+  const clock = d.clock || {}
+  const live = resolveLiveHockeyClock(clock)
+  const remSec = Math.round(live.remainingMs / 1000)
+  const minute = Math.floor(remSec / 60)
+  const second = remSec % 60
+  const quarterMin = Math.round((live.quarterMs / 60000) * 10) / 10
+
+  return `
+    <section class="op-section score-panel${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
+      <div class="pv-group">
+      ${sectionHead(graphic, formatHockeyStatusLine(clock), { statusBind: true })}
+      <div class="pv-group__cell pv-group__cell--flush">
+      <div class="score-teams">
+        <div class="team-block">
+          <input class="team-code-input" type="text" maxlength="3" data-field="homeCode" value="${escapeHtml(d.homeCode || '')}" aria-label="Home team code" spellcheck="false" />
+          <input type="color" data-field="homeColor" value="${escapeHtml(d.homeColor || '#FF7621')}" aria-label="Home colour" />
+          <div class="score-value" data-bind="homeScore">${d.homeScore ?? 0}</div>
+          <div class="score-actions">
+            <button class="button button--gray touch-btn touch-btn--score" data-action="home-minus">−</button>
+            <button class="button button--tinted touch-btn touch-btn--score" data-action="home-plus">+</button>
+          </div>
+        </div>
+        <div class="score-mid">
+          <div class="clock-display" data-bind="clock">${formatHockeyClock(clock)}</div>
+          <div data-bind="period">${HOCKEY_PERIOD_OPTIONS.find((p) => p.value === live.period)?.label || live.period}</div>
+        </div>
+        <div class="team-block">
+          <input class="team-code-input" type="text" maxlength="3" data-field="awayCode" value="${escapeHtml(d.awayCode || '')}" aria-label="Away team code" spellcheck="false" />
+          <input type="color" data-field="awayColor" value="${escapeHtml(d.awayColor || '#74ACDF')}" aria-label="Away colour" />
+          <div class="score-value" data-bind="awayScore">${d.awayScore ?? 0}</div>
+          <div class="score-actions">
+            <button class="button button--gray touch-btn touch-btn--score" data-action="away-minus">−</button>
+            <button class="button button--tinted touch-btn touch-btn--score" data-action="away-plus">+</button>
+          </div>
+        </div>
+      </div>
+      </div>
+      <div class="pv-group__cell">
+      <div class="clock-controls">
+        <label class="field field--inline">
+          <span>Minute</span>
+          <input type="number" min="0" max="30" data-field="minute" value="${minute}" />
+        </label>
+        <label class="field field--inline">
+          <span>Second</span>
+          <input type="number" min="0" max="59" data-field="second" value="${second}" />
+        </label>
+        <label class="field field--inline">
+          <span>Quarter</span>
+          <input type="number" min="1" max="20" step="0.5" data-field="quarterMin" value="${quarterMin}" />
+        </label>
+        <label class="field field--inline field--grow">
+          <span>Period</span>
+          <select data-field="period">
+            ${HOCKEY_PERIOD_OPTIONS.map((p) => `<option value="${p.value}"${live.period === p.value ? ' selected' : ''}>${p.label}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      </div>
+      <div class="pv-group__cell pv-group__cell--flush">
+        <div class="pv-segmented pv-segmented--cols-3" role="group" aria-label="Adjust seconds">
+          <button type="button" class="pv-segmented__btn" data-action="sec-minus-1">−1s</button>
+          <button type="button" class="pv-segmented__btn" data-action="sec-plus-1">+1s</button>
+          <button type="button" class="pv-segmented__btn" data-action="sec-minus">−15s</button>
+        </div>
+        <div class="pv-segmented pv-segmented--cols-3" role="group" aria-label="Adjust minutes">
+          <button type="button" class="pv-segmented__btn" data-action="sec-plus">+15s</button>
+          <button type="button" class="pv-segmented__btn" data-action="min-minus">−1 min</button>
+          <button type="button" class="pv-segmented__btn" data-action="min-plus">+1 min</button>
+        </div>
+      </div>
+      <div class="pv-group__cell pv-group__cell--actions">
+      <div class="op-toolbar op-toolbar--primary">
+        <button type="button" class="button ${clock.running ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-clock">
+          ${clock.running ? 'Pause' : 'Start clock'}
+        </button>
+        <button type="button" class="button button--secondary touch-btn" data-action="reset-quarter">Reset quarter</button>
+        <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
+          ${graphic.visible ? 'Hide' : 'Go live'}
+        </button>
+      </div>
+      </div>
+      </div>
+    </section>
+  `
+}
+
+function updateHockeyCard(card, graphic) {
+  const d = graphic.data || {}
+  const clock = d.clock || {}
+  const live = resolveLiveHockeyClock(clock)
+  const remSec = Math.round(live.remainingMs / 1000)
+  card.querySelectorAll('[data-bind="homeScore"]').forEach((n) => { n.textContent = d.homeScore ?? 0 })
+  card.querySelectorAll('[data-bind="awayScore"]').forEach((n) => { n.textContent = d.awayScore ?? 0 })
+  const clockEl = card.querySelector('[data-bind="clock"]')
+  if (clockEl) clockEl.textContent = formatHockeyClock(clock)
+  const periodEl = card.querySelector('[data-bind="period"]')
+  if (periodEl) periodEl.textContent = HOCKEY_PERIOD_OPTIONS.find((p) => p.value === live.period)?.label || live.period
+  const status = card.querySelector('[data-bind="status-line"]')
+  if (status) status.textContent = formatHockeyStatusLine(clock)
+  const minuteInput = card.querySelector('[data-field="minute"]')
+  const secondInput = card.querySelector('[data-field="second"]')
+  const quarterInput = card.querySelector('[data-field="quarterMin"]')
+  if (minuteInput && document.activeElement !== minuteInput) minuteInput.value = Math.floor(remSec / 60)
+  if (secondInput && document.activeElement !== secondInput) secondInput.value = remSec % 60
+  if (quarterInput && document.activeElement !== quarterInput) quarterInput.value = Math.round((live.quarterMs / 60000) * 10) / 10
+  const periodSelect = card.querySelector('[data-field="period"]')
+  if (periodSelect && document.activeElement !== periodSelect) periodSelect.value = live.period || 'q1'
+  const clockBtn = card.querySelector('[data-action="toggle-clock"]')
+  if (clockBtn) {
+    clockBtn.className = `button ${clock.running ? 'button--gray' : 'button--live'} touch-btn`
+    clockBtn.textContent = clock.running ? 'Pause' : 'Start clock'
+  }
+  for (const [field, val] of [
+    ['homeCode', d.homeCode || ''],
+    ['awayCode', d.awayCode || ''],
+    ['homeColor', d.homeColor || '#FF7621'],
+    ['awayColor', d.awayColor || '#74ACDF']
+  ]) {
+    const input = card.querySelector(`[data-field="${field}"]`)
+    if (input && document.activeElement !== input) input.value = val
+  }
+  updateLiveState(card, graphic)
+}
+
 function cardTemplate(graphic) {
   if (graphic.type === 'matchScoreboard') return matchCardTemplate(graphic)
   if (graphic.type === 'customTicker') return tickerCardTemplate(graphic)
   if (graphic.type === 'lowerThirdShow') return lowerThirdShowCardTemplate(graphic)
   if (graphic.type === 'quizShow') return quizShowCardTemplate(graphic)
   if (graphic.type === 'f1Timing') return f1CardTemplate(graphic)
+  if (graphic.type === 'hockeyScorebug') return hockeyCardTemplate(graphic)
   return legacyCardTemplate(graphic)
 }
 
@@ -504,6 +663,7 @@ function updateLiveState(card, graphic) {
 function updateMatchCard(card, graphic) {
   const d = graphic.data || {}
   const clock = d.clock || {}
+  const liveClock = resolveLiveClock(clock)
   const penalties = d.penalties || {}
   const nextSide = nextPenaltySide(penalties.homeKicks || [], penalties.awayKicks || [])
 
@@ -544,8 +704,8 @@ function updateMatchCard(card, graphic) {
   const minuteInput = card.querySelector('[data-field="minute"]')
   const secondInput = card.querySelector('[data-field="second"]')
   const periodSelect = card.querySelector('[data-field="period"]')
-  if (minuteInput && document.activeElement !== minuteInput) minuteInput.value = clock.minute ?? 0
-  if (secondInput && document.activeElement !== secondInput) secondInput.value = clock.second ?? 0
+  if (minuteInput && document.activeElement !== minuteInput) minuteInput.value = liveClock.minute ?? 0
+  if (secondInput && document.activeElement !== secondInput) secondInput.value = liveClock.second ?? 0
   if (periodSelect && document.activeElement !== periodSelect) periodSelect.value = clock.period || 'second_half'
 
   const clockBtn = card.querySelector('[data-action="toggle-clock"]')
@@ -679,8 +839,22 @@ async function handleAction(graphicId, action, event) {
     return
   }
 
+  if (latest.type === 'hockeyScorebug') {
+    const result = await handleHockeyOperateAction(latest, action, event, { confirmDecrement: true })
+    if (result && typeof result === 'object' && result.data) {
+      const card = root.querySelector(`[data-graphic-id="${graphicId}"]`)
+      if (card) updateHockeyCard(card, result)
+    }
+    ensureClockTimer()
+    return
+  }
+
   if (latest.type === 'f1Timing') {
-    if (action === 'toggle-live') await toggleGraphic(graphicId, !latest.visible)
+    if (action === 'toggle-live') {
+      await toggleGraphic(graphicId, !latest.visible)
+      return
+    }
+    await handleF1Action(latest, action, event)
     return
   }
 
@@ -719,6 +893,12 @@ async function handleFieldChange(graphicId, field, value) {
 
   if (latest.type === 'matchScoreboard') {
     await handleMatchFieldChange(latest, field, value)
+    return
+  }
+
+  if (latest.type === 'hockeyScorebug') {
+    await handleHockeyFieldChange(latest, field, value)
+    ensureClockTimer()
     return
   }
 }
@@ -779,16 +959,23 @@ function mountHandlers() {
 function tickLiveClocks() {
   if (!currentState) return
   for (const graphic of operatorGraphics()) {
-    if (graphic.type !== 'matchScoreboard' || !graphic.data?.clock?.running) continue
-    void persistAutoStoppageIfNeeded(graphic)
-    const live = resolveLiveClock(graphic.data.clock)
+    if (!graphic.data?.clock?.running) continue
     const card = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
-    const clockEl = card?.querySelector('[data-bind="clock"]')
-    if (clockEl) clockEl.textContent = formatClock(graphic.data.clock)
-    const minuteInput = card?.querySelector('[data-field="minute"]')
-    const secondInput = card?.querySelector('[data-field="second"]')
-    if (minuteInput && document.activeElement !== minuteInput) minuteInput.value = live.minute
-    if (secondInput && document.activeElement !== secondInput) secondInput.value = live.second
+    if (!card) continue
+    if (graphic.type === 'matchScoreboard') {
+      void persistAutoStoppageIfNeeded(graphic)
+      const live = resolveLiveClock(graphic.data.clock)
+      const clockEl = card.querySelector('[data-bind="clock"]')
+      if (clockEl) clockEl.textContent = formatClock(graphic.data.clock)
+      const minuteInput = card.querySelector('[data-field="minute"]')
+      const secondInput = card.querySelector('[data-field="second"]')
+      if (minuteInput && document.activeElement !== minuteInput) minuteInput.value = live.minute
+      if (secondInput && document.activeElement !== secondInput) secondInput.value = live.second
+      continue
+    }
+    if (graphic.type === 'hockeyScorebug') {
+      updateHockeyCard(card, graphic)
+    }
   }
 }
 
@@ -817,7 +1004,10 @@ function ensureF1LiveTimer() {
 }
 
 function ensureClockTimer() {
-  const needs = operatorGraphics().some((g) => g.type === 'matchScoreboard' && g.data?.clock?.running)
+  const needs = operatorGraphics().some(
+    (g) =>
+      (g.type === 'matchScoreboard' || g.type === 'hockeyScorebug') && g.data?.clock?.running
+  )
   if (needs && !clockTimer) {
     clockTimer = setInterval(tickLiveClocks, 250)
   } else if (!needs && clockTimer) {
@@ -857,11 +1047,17 @@ function render() {
 
   if (existingIds.join() !== nextIds.join() || root.querySelector('.empty-state')) {
     root.innerHTML = ordered.map((g) => cardTemplate(g)).join('')
+    for (const graphic of ordered) {
+      if (graphic.type !== 'f1Timing' || graphic.data?.source !== 'multiviewer') continue
+      const card = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
+      if (card) syncF1MvHelp(card)
+    }
   } else {
     for (const graphic of ordered) {
       const card = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
       if (!card) continue
       if (graphic.type === 'matchScoreboard') updateMatchCard(card, graphic)
+      else if (graphic.type === 'hockeyScorebug') updateHockeyCard(card, graphic)
       else if (graphic.type === 'customTicker') updateTickerCard(card, graphic)
       else if (graphic.type === 'f1Timing') updateF1Card(card, graphic)
       else if (graphic.type === 'lowerThirdShow' || graphic.type === 'quizShow') {
@@ -889,5 +1085,22 @@ const socket = io()
 socket.on('connect', () => setConnectionStatus(true))
 socket.on('disconnect', () => setConnectionStatus(false))
 socket.on('stateChanged', applyState)
+
+const DESK_KEY = 'pv-operator-desk'
+function syncDeskMode() {
+  const on = localStorage.getItem(DESK_KEY) === '1'
+  document.body.classList.toggle('operator--desk', on)
+  const btn = document.getElementById('desk-mode-toggle')
+  if (btn) {
+    btn.setAttribute('aria-pressed', String(on))
+    btn.classList.toggle('is-active', on)
+  }
+}
+document.getElementById('desk-mode-toggle')?.addEventListener('click', () => {
+  const next = localStorage.getItem(DESK_KEY) !== '1'
+  localStorage.setItem(DESK_KEY, next ? '1' : '0')
+  syncDeskMode()
+})
+syncDeskMode()
 
 fetch('/api/state').then((r) => r.json()).then(applyState)

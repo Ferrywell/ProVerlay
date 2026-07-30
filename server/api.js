@@ -122,7 +122,8 @@ export function createApiRouter() {
       const filename = await saveAsset(req.params.id, req.file.originalname, req.file.buffer)
       res.json({ filename, url: `/projects/${req.params.id}/assets/${encodeURIComponent(filename)}` })
     } catch (err) {
-      res.status(500).json({ error: err.message || 'Upload failed' })
+      const status = err.status || 500
+      res.status(status).json({ error: err.message || 'Upload failed' })
     }
   })
 
@@ -287,6 +288,28 @@ export function createApiRouter() {
     const { importDriversOnce } = await import('./f1Timing.js')
     const result = await importDriversOnce(req.params.id)
     res.status(result.status).json(result.body)
+  })
+
+  /** Probeert MultiViewer lokaal te openen (Mac/Windows/Linux); anders download-URL. */
+  router.post('/system/open-multiviewer', async (_req, res) => {
+    const { execFile } = await import('node:child_process')
+    const { promisify } = await import('node:util')
+    const execFileAsync = promisify(execFile)
+    const downloadUrl = 'https://multiviewer.app'
+    try {
+      if (process.platform === 'darwin') {
+        await execFileAsync('open', ['-a', 'MultiViewer'])
+      } else if (process.platform === 'win32') {
+        await execFileAsync('cmd', ['/c', 'start', '', 'multiviewer://'], {
+          windowsHide: true
+        })
+      } else {
+        await execFileAsync('xdg-open', ['multiviewer://'])
+      }
+      res.json({ ok: true, opened: true })
+    } catch {
+      res.json({ ok: false, opened: false, url: downloadUrl })
+    }
   })
 
   router.post('/graphics', async (req, res) => {

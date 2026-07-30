@@ -57,12 +57,17 @@ en verhoog de delay tot een positiewissel in de toren gelijk valt met het beeld.
 
 **Track status:** de lap-pill kleurt mee met de baanstatus uit de feed
 (`TrackStatus`): geel bij yellow flag, geel met **SC**/**VSC**-label bij een
-(virtual) safety car, rood bij een rode vlag. Geen extra instelling nodig;
+(virtual) safety car, rood bij een rode vlag. Wissels animeren subtiel;
 werkt zodra de lap counter aan staat.
 
 **Finish:** zodra een coureur over de finish komt (status-bit 1024 in de
 feed) verschijnt automatisch een blokjesvlag helemaal rechts in zijn rij,
 zoals in de officiële F1-toren.
+
+**Animatie-semantiek:** handmatige config (top N, gap-modus, decimalen,
+tyres aan/uit, lap-header) krijgt in-/uit- en swap-animaties. Live
+feed-waarden (gaptijden, posities) updaten zonder motion. Track-status en
+finish-vlag wél met korte indicator-animatie.
 
 De in-animatie heeft een stagger: P1 verschijnt eerst, de rest volgt kort
 erna (70 ms per rij). De uit-animatie loopt in omgekeerde volgorde. Fijnere
@@ -70,7 +75,9 @@ afstelling kan via `data.animation.durationMs` en `data.animation.staggerMs`.
 
 **Live-indicator:** bij bron MultiViewer tonen dashboard-operate én operator
 een dot: groen = live timing komt binnen, rood = geen data (met foutmelding),
-plus een top-5 preview van de binnenkomende data.
+plus een top-5 preview. Daarnaast: **Open MultiViewer** (start de app lokaal
+via `POST /api/system/open-multiviewer`) en een dismissible setup-tip die
+benadrukt dat **Live Timing** / **Replay Live Timing** aan moet staan.
 
 Styling via `data.style` (widthPx, rowHeightPx, rowGapPx, borderRadiusPx,
 fontSize, background, focusBackground, focusColor). De focusrij gebruikt

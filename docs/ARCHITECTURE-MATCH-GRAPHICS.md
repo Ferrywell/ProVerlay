@@ -133,6 +133,7 @@ Existing projects without `clockPlate` continue using PNG crop if `clockPlateWid
 | 1 | ✅ Done | CSS clock pill (`layout.clockPlate`), vMix px compat |
 | 2 | ✅ Done | Team code/name editing from operate UI |
 | 3 | Planned | Preset registry (`sport` → element pack + clock rules) |
+| 3b | Planned | **Field hockey (veldhockey)** preset: quarters/halves, countdown option, no stoppage, optional PC binds — reuse `matchScoreboard`, do not fork a new type unless operate UI outgrows presets (see `docs/qa/ROBUSTNESS-PASS-2026-07-30.md`) |
 | 4 | Planned | Basketball preset (quarters, shot clock bind) |
 | 5 | Planned | Esports scoreboard preset or dedicated type |
 | 6 | Future | Editor panel for `clockPlate` tuning |

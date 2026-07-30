@@ -1,6 +1,31 @@
 import { defaultMatchData } from './matchClock.js'
 import { defaultF1Drivers } from './f1Timing.js'
 
+export function defaultHockeyScorebugData() {
+  return {
+    homeCode: 'NED',
+    awayCode: 'ARG',
+    homeScore: 0,
+    awayScore: 0,
+    homeColor: '#FF7621',
+    awayColor: '#74ACDF',
+    clock: {
+      period: 'q2',
+      remainingMs: 775000,
+      quarterMs: 900000,
+      running: false,
+      runningSince: null
+    },
+    animation: {
+      enabled: true,
+      durationMs: 420
+    },
+    style: {
+      scale: 1
+    }
+  }
+}
+
 export function defaultF1TimingData() {
   return {
     source: 'manual',
@@ -183,6 +208,15 @@ const GRAPHIC_TEMPLATES = {
     position: 'custom',
     operator: true,
     data: defaultF1TimingData()
+  }),
+  hockeyScorebug: (name) => ({
+    type: 'hockeyScorebug',
+    name,
+    visible: false,
+    soloVisible: false,
+    position: 'top-center',
+    operator: true,
+    data: defaultHockeyScorebugData()
   })
 }
 
