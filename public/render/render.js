@@ -665,11 +665,11 @@ function setF1GapText(gapNode, text, { animate = false } = {}) {
   })
 }
 
-/** Parse "LAP 21/57" → delen voor digit-rollers. */
+/** Parse "LAP 21/57" → delen voor digit-rollers (spacing via CSS gap, niet via spaties). */
 function parseF1LapParts(text) {
-  const m = String(text || '').match(/^(LAP\s*)(\d+)(\s*\/\s*)(\d+|\?)(.*)$/i)
+  const m = String(text || '').match(/^LAP\s*(\d+)\s*\/\s*(\d+|\?)(.*)$/i)
   if (!m) return null
-  return { prefix: m[1], current: m[2], sep: m[3], total: m[4], suffix: m[5] || '' }
+  return { prefix: 'LAP', current: m[1], sep: '/', total: m[2], suffix: m[3] || '' }
 }
 
 function ensureF1LapStatic(parent, modifier, text) {
