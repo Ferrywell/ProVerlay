@@ -2,7 +2,7 @@
 
 Live broadcast overlays met eigen identiteit — minimalistisch, Apple Tahoe UI, mobiel operator-paneel en Companion/Stream Deck.
 
-**Huidige versie:** [v0.6.2](https://github.com/Ferrywell/ProVerlay/releases/tag/v0.6.2)
+**Huidige versie:** [v0.6.3](https://github.com/Ferrywell/ProVerlay/releases/tag/v0.6.3)
 
 ## Mac-app (Apple Silicon)
 
@@ -41,7 +41,7 @@ Op mobiel opent `/` automatisch het operator-paneel.
 - **Klant branding** — projectfonts, kleuren, assets per project
 - **Drie triggers** — web, mobiel (lokaal netwerk), Companion/Stream Deck
 
-### v0.6.2
+### v0.6.3
 
 - F1 lap-counter spacing (LAP / cijfers / SC·VSC) netter
 
