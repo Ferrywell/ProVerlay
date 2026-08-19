@@ -1,25 +1,20 @@
 /* ---------------------------------------------------------------------------
-   Hockey scorebug — Odido-style circular clock + team arms
-   Visual source: docs/ux/hockey-scorebug-mockup.html
-   Default size ≈ 2× mockup (broadcast). --hockey-scale fine-tunes.
+   Hockey scorebug — Odido goedgekeurde basis
+   Visual source: docs/brand/assets/odido-hockey-scorebug-basis.png
+   Geen Glow-ring om de klok — solide zwarte cirkel + Glow alleen in teamcodes.
    --------------------------------------------------------------------------- */
 
 .hockey-bug {
-  --bug-h: calc(var(--hockey-scale, 1) * 13.7vmin);
-  --clock-d: calc(var(--hockey-scale, 1) * 23vmin);
-  --ring-w: calc(var(--hockey-scale, 1) * 1.3vmin);
-  --gap: calc(var(--hockey-scale, 1) * 1.3vmin);
-  --home-color: #ff7621;
-  --away-color: #74acdf;
-  --hockey-glass: rgba(0, 0, 0, 0.85);
-  --hockey-score-tile: #ffffff;
-  --hockey-ink: #000000;
+  --bug-h: calc(var(--hockey-scale, 1) * 11.2vmin);
+  --clock-d: calc(var(--hockey-scale, 1) * 18.5vmin);
+  --gap: calc(var(--hockey-scale, 1) * 1.1vmin);
+  --hockey-black: #000000;
   --hockey-text: #ffffff;
-  --hockey-muted: rgba(255, 255, 255, 0.78);
+  --hockey-muted: rgba(255, 255, 255, 0.88);
   display: flex;
   align-items: center;
   gap: var(--gap);
-  filter: drop-shadow(0 0.8vmin 2.4vmin rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 0.55vmin 1.8vmin rgba(0, 0, 0, 0.4));
   font-family: var(--brand-font, system-ui, sans-serif);
   will-change: transform, opacity;
 }
@@ -79,43 +74,45 @@
   align-items: stretch;
   height: var(--bug-h);
   overflow: hidden;
-  background: var(--hockey-glass);
-  transition: background 220ms ease;
+  background: var(--hockey-black);
 }
 
 .hockey-arm--home {
-  border-radius: 999px 1.1vmin 1.1vmin 999px;
+  border-radius: 999px;
 }
 
 .hockey-arm--away {
-  border-radius: 1.1vmin 999px 999px 1.1vmin;
+  border-radius: 999px;
 }
 
-.hockey-stripe {
-  width: calc(var(--hockey-scale, 1) * 3vmin);
-  flex: none;
-  transition: background-color 280ms ease;
-}
-
-.hockey-arm--home .hockey-stripe {
-  background: var(--home-color);
-}
-
-.hockey-arm--away .hockey-stripe {
-  background: var(--away-color);
-}
-
+/* Teamcode = Odido Glow mesh (Participation), zoals goedgekeurde PNG */
 .hockey-code {
   display: grid;
   place-items: center;
-  min-width: calc(var(--hockey-scale, 1) * 14.4vmin);
-  padding: 0 calc(var(--hockey-scale, 1) * 2.9vmin);
+  min-width: calc(var(--hockey-scale, 1) * 16vmin);
+  padding: 0 calc(var(--hockey-scale, 1) * 3.2vmin);
   color: var(--hockey-text);
-  font-size: calc(var(--hockey-scale, 1) * 5.6vmin);
+  font-size: calc(var(--hockey-scale, 1) * 5.4vmin);
   font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1;
   transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.hockey-arm--home .hockey-code {
+  background:
+    radial-gradient(ellipse 95% 90% at 8% 18%, #ff7621 0%, #ff924e 28%, transparent 58%),
+    radial-gradient(ellipse 75% 70% at 55% 35%, #ff808c 0%, transparent 55%),
+    radial-gradient(ellipse 90% 85% at 92% 88%, #2f9a92 0%, #59afa8 40%, transparent 62%),
+    #ff7621;
+}
+
+.hockey-arm--away .hockey-code {
+  background:
+    radial-gradient(ellipse 95% 90% at 92% 18%, #2f9a92 0%, #59afa8 28%, transparent 58%),
+    radial-gradient(ellipse 75% 70% at 45% 40%, #ff808c 0%, transparent 55%),
+    radial-gradient(ellipse 90% 85% at 8% 88%, #ff7621 0%, #ffae7c 40%, transparent 62%),
+    #2f9a92;
 }
 
 .hockey-code.is-swap {
@@ -133,29 +130,18 @@
   }
 }
 
+/* Score = zwart vlak, witte cijfers (aansluitend op arm, geen witte tegel) */
 .hockey-score {
   display: grid;
   place-items: center;
-  width: calc(var(--hockey-scale, 1) * 10.8vmin);
-  background: var(--hockey-score-tile);
-  color: var(--hockey-ink);
-  font-size: calc(var(--hockey-scale, 1) * 7vmin);
+  width: calc(var(--hockey-scale, 1) * 11vmin);
+  background: var(--hockey-black);
+  color: var(--hockey-text);
+  font-size: calc(var(--hockey-scale, 1) * 6.4vmin);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   overflow: hidden;
-}
-
-.hockey-arm--home .hockey-score {
-  border-radius: 1.8vmin 1.4vmin 1.4vmin 1.8vmin;
-  margin: calc(var(--hockey-scale, 1) * 1.1vmin) calc(var(--hockey-scale, 1) * 1.1vmin)
-    calc(var(--hockey-scale, 1) * 1.1vmin) 0;
-}
-
-.hockey-arm--away .hockey-score {
-  border-radius: 1.4vmin 1.8vmin 1.8vmin 1.4vmin;
-  margin: calc(var(--hockey-scale, 1) * 1.1vmin) 0 calc(var(--hockey-scale, 1) * 1.1vmin)
-    calc(var(--hockey-scale, 1) * 1.1vmin);
 }
 
 .hockey-clock {
@@ -163,26 +149,19 @@
   width: var(--clock-d);
   height: var(--clock-d);
   flex: none;
-}
-
-.hockey-clock__disc {
-  position: absolute;
-  inset: var(--ring-w);
-  z-index: 1;
   border-radius: 50%;
-  background: var(--hockey-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: var(--hockey-black);
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: calc(var(--hockey-scale, 1) * 1.1vmin);
-  padding: calc(var(--hockey-scale, 1) * 2.4vmin) calc(var(--hockey-scale, 1) * 1.4vmin)
-    calc(var(--hockey-scale, 1) * 2.8vmin);
+  gap: calc(var(--hockey-scale, 1) * 0.85vmin);
+  padding: calc(var(--hockey-scale, 1) * 1.6vmin) calc(var(--hockey-scale, 1) * 1.2vmin)
+    calc(var(--hockey-scale, 1) * 1.8vmin);
 }
 
 .hockey-clock__time {
   color: var(--hockey-text);
-  font-size: calc(var(--hockey-scale, 1) * 6.6vmin);
+  font-size: calc(var(--hockey-scale, 1) * 5.8vmin);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -192,9 +171,9 @@
 
 .hockey-clock__period {
   color: var(--hockey-muted);
-  font-size: calc(var(--hockey-scale, 1) * 2.8vmin);
+  font-size: calc(var(--hockey-scale, 1) * 2.4vmin);
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   line-height: 1;
   transition: opacity 200ms ease, transform 220ms ease, color 220ms ease;
 }
@@ -203,31 +182,6 @@
   animation: hockey-code-swap 320ms ease;
 }
 
-.hockey-clock__ring {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  overflow: visible;
-  transform: rotate(-90deg);
-  pointer-events: none;
-}
-
-.hockey-clock__ring-track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.22);
-  stroke-width: 5.65;
-}
-
-.hockey-clock__ring-prog {
-  fill: none;
-  stroke-width: 5.65;
-  stroke-linecap: butt;
-  stroke-dasharray: 0 999;
-  transition: stroke-dasharray 180ms linear, opacity 220ms ease;
-}
-
-.hockey-bug--break .hockey-clock__ring-prog {
-  opacity: 0.35;
+.hockey-bug--break .hockey-clock {
+  opacity: 0.72;
 }

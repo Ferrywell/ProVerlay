@@ -298,7 +298,7 @@
         "textInsetLeft": 16.1,
         "textInsetRight": 0,
         "fadeWidth": 0,
-        "separator": "   •   ",
+        "separator": "   \u2022   ",
         "fontSize": 130,
         "color": "#ffffff",
         "fontFamily": "",
@@ -670,11 +670,11 @@
       },
       "data": {
         "homeCode": "NED",
-        "awayCode": "DUI",
+        "awayCode": "SPA",
         "homeScore": 0,
         "awayScore": 0,
         "homeColor": "#FF7621",
-        "awayColor": "#303030",
+        "awayColor": "#2F9A92",
         "clock": {
           "period": "q2",
           "remainingMs": 161319,

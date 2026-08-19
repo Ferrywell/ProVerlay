@@ -128,7 +128,7 @@ Environment (browser, OS)
 - Beta tester blokkeert op ontbrekende features → noteer in `docs/qa/BLOCKERS.md`
 - Reddit/design filosofie: `.cursor/skills/frontend-design/REFERENCE.md`
 
-## Huidige status (v0.6.1)
+## Huidige status (v0.6.2)
 
 | Component | Status |
 |-----------|--------|
@@ -140,7 +140,7 @@ Environment (browser, OS)
 | Operator / Companion | ✅ Score bediening |
 | Design hub | ✅ `/design` — setup checklist |
 | F1 timing tower | ✅ `f1Timing` widget — MultiViewer live + manual (`docs/F1-TIMING.md`) |
-| Hockey scorebug | ✅ `hockeyScorebug` — circular clock + Glow one ring (`docs/ux/hockey-scorebug-mockup.html`) |
+| Hockey scorebug | ✅ `hockeyScorebug` — Odido PNG-basis (geen ring; Glow in codes) |
 | QA project tests | 🟡 Beta agent — her-test na API |
 
 ## Poorten

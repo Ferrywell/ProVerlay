@@ -31,7 +31,7 @@ Pagina’s: [Introduction](https://merk.odido.nl/en/) · [Colour](https://merk.o
 | **Participation** | Kleurrijk, warm, speels — **Glow** | Live overlays: ring, strepen, Mirror-achtergronden |
 | **Functional** | Wit of zwart + accenten (dark mode digitaal) | Operate/dashboard, praktische UI |
 
-**Hockey/match live scorebug:** Entry-basis (zwart glass + wit type) + Participation-accenten (Glow op ring/strepen). Colour logo **niet** op Glow (zie Colour Don’ts).
+**Hockey live scorebug:** Entry-basis (solide zwart + wit type) + Participation Glow **alleen in teamcode-capsules**. Geen Glow-ring om de timer (merk-goedgekeurde PNG). Colour logo **niet** op Glow.
 
 ### Colour proportions across levels (portal)
 
@@ -297,24 +297,23 @@ Geen nieuwe kleuren / crop / effects / proporties wijzigen / recreate / colour l
 
 ## 8. ProVerlay — hockey scorebug recept
 
-Indeling (vastgelegd UX):
+**Goedgekeurde visual (merk):** [`assets/odido-hockey-scorebug-basis.png`](./assets/odido-hockey-scorebug-basis.png)
+
+Indeling:
 
 ```
-[glow-stripe | CODE | score]  (○ klok + ring)  [score | CODE | glow-stripe]
+[CODE op Glow-mesh | score zwart]  (○ solide zwarte klok)  [score zwart | CODE op Glow-mesh]
 ```
 
 | Element | Spec |
 |---------|------|
-| Niveau | Entry glass + Participation Glow accents |
-| Armen | `#000` @ 85% opacity, capsule buitenhoeken (pill-taal) |
-| Streep | **Glow four** fill (of two) — duidelijk zichtbaar |
-| Score | Wit/licht tegel, ink zwart, Otypical Headline |
-| Klok | Zwart glass; periode `Q1`–`Q4` |
-| Ring | SVG stroke met Glow-four stops; dik genoeg op veldgroen |
-| Merkje | Solid/mini mark — **niet** colour logo op Glow-disc |
-| Type | ≥24px Headline; wit op glass |
+| Niveau | Entry zwart + Participation Glow in teamcodes |
+| Armen | Volle pill; code-helft Glow one mesh, score-helft `#000` |
+| Score | Wit type op zwart (geen witte tegel) |
+| Klok | Solide zwarte cirkel; tijd + `Q1`–`Q4`; **geen** ring/verloop eromheen |
+| Type | Otypical / brand-font; wit |
 
-Mockup: `docs/ux/hockey-scorebug-mockup.html`
+Render: `public/render/render-hockey.css` · `buildHockeyScorebug` in `render.js`
 
 ---
 

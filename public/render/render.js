@@ -23,10 +23,7 @@ import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows, resolveF1Animatio
 import {
   formatHockeyClock,
   hockeyPeriodLabel,
-  HOCKEY_RING_C,
-  HOCKEY_RING_R,
-  resolveLiveHockeyClock,
-  safeTeamColor
+  resolveLiveHockeyClock
 } from '/public/shared/hockey-utils.js'
 
 const stage = document.getElementById('stage')
@@ -394,50 +391,26 @@ function buildStreamCountdown(data, graphicId) {
 }
 
 function buildHockeyScorebug(data, graphicId) {
-  const homeColor = safeTeamColor(data.homeColor, '#FF7621')
-  const awayColor = safeTeamColor(data.awayColor, '#74ACDF')
   const scale = Number(data.style?.scale) || 1
   const live = resolveLiveHockeyClock(data.clock || {})
   const timeText = formatHockeyClock(data.clock || {})
   const periodText = hockeyPeriodLabel(live.period)
-  const dash = `${live.progress * HOCKEY_RING_C} ${HOCKEY_RING_C}`
-  const gradId = `hockeyRing-${graphicId}`
   const breakClass = live.period === 'break' ? ' hockey-bug--break' : ''
-  const vars = [
-    `--hockey-scale:${scale}`,
-    `--home-color:${homeColor}`,
-    `--away-color:${awayColor}`
-  ].join(';')
+  const vars = [`--hockey-scale:${scale}`].join(';')
 
   return `
     <div class="hockey-bug${breakClass}" data-hockey-id="${graphicId}" style="${vars}">
       <div class="hockey-arm hockey-arm--home">
-        <span class="hockey-stripe" aria-hidden="true"></span>
         <span class="hockey-code" data-bind="homeCode">${escape(data.homeCode || 'NED')}</span>
         <span class="hockey-score"><span class="score-el-text score-el-text--animated" data-score-bind="homeScore" data-graphic-id="${graphicId}">${escape(String(data.homeScore ?? 0))}</span></span>
       </div>
       <div class="hockey-clock">
-        <svg class="hockey-clock__ring" viewBox="0 0 100 100" aria-hidden="true">
-          <defs>
-            <linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="8" y1="8" x2="92" y2="92">
-              <stop offset="0%" stop-color="#FF7621" />
-              <stop offset="50%" stop-color="#FF808C" />
-              <stop offset="100%" stop-color="#2F9A92" />
-            </linearGradient>
-          </defs>
-          <circle class="hockey-clock__ring-track" cx="50" cy="50" r="${HOCKEY_RING_R}"></circle>
-          <circle class="hockey-clock__ring-prog" data-bind="ring" cx="50" cy="50" r="${HOCKEY_RING_R}"
-            stroke="url(#${gradId})" style="stroke-dasharray:${dash}"></circle>
-        </svg>
-        <div class="hockey-clock__disc">
-          <span class="hockey-clock__time" data-bind="clock">${escape(timeText)}</span>
-          <span class="hockey-clock__period" data-bind="period">${escape(periodText)}</span>
-        </div>
+        <span class="hockey-clock__time" data-bind="clock">${escape(timeText)}</span>
+        <span class="hockey-clock__period" data-bind="period">${escape(periodText)}</span>
       </div>
       <div class="hockey-arm hockey-arm--away">
         <span class="hockey-score"><span class="score-el-text score-el-text--animated" data-score-bind="awayScore" data-graphic-id="${graphicId}">${escape(String(data.awayScore ?? 0))}</span></span>
-        <span class="hockey-code" data-bind="awayCode">${escape(data.awayCode || 'ARG')}</span>
-        <span class="hockey-stripe" aria-hidden="true"></span>
+        <span class="hockey-code" data-bind="awayCode">${escape(data.awayCode || 'SPA')}</span>
       </div>
     </div>
   `
@@ -462,19 +435,12 @@ function updateHockeyScorebug(layer, graphic) {
   const anim = d.animation || { enabled: true, durationMs: 420 }
 
   bug.style.setProperty('--hockey-scale', String(Number(d.style?.scale) || 1))
-  bug.style.setProperty('--home-color', safeTeamColor(d.homeColor, '#FF7621'))
-  bug.style.setProperty('--away-color', safeTeamColor(d.awayColor, '#74ACDF'))
   bug.classList.toggle('hockey-bug--break', live.period === 'break')
 
   setHockeyText(bug.querySelector('[data-bind="homeCode"]'), d.homeCode || 'NED', { animate: true })
-  setHockeyText(bug.querySelector('[data-bind="awayCode"]'), d.awayCode || 'ARG', { animate: true })
+  setHockeyText(bug.querySelector('[data-bind="awayCode"]'), d.awayCode || 'SPA', { animate: true })
   setHockeyText(bug.querySelector('[data-bind="period"]'), hockeyPeriodLabel(live.period), { animate: true })
   setHockeyText(bug.querySelector('[data-bind="clock"]'), formatHockeyClock(d.clock || {}))
-
-  const ring = bug.querySelector('[data-bind="ring"]')
-  if (ring) {
-    ring.style.strokeDasharray = `${live.progress * HOCKEY_RING_C} ${HOCKEY_RING_C}`
-  }
 
   bug.querySelectorAll('[data-score-bind]').forEach((node) => {
     const bind = node.dataset.scoreBind
