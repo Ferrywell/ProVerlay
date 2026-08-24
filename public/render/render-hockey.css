@@ -14,8 +14,11 @@
   --score-pct: 32.2%;
   --fs-code: calc(var(--bug-h) * 0.733);
   --fs-score: calc(var(--bug-h) * 0.733);
-  --fs-time: calc(var(--clock-d) * 0.331);
-  --fs-period: calc(var(--clock-d) * 0.295);
+  --fs-time: calc(var(--clock-d) * 0.285);
+  --fs-period: calc(var(--clock-d) * 0.19);
+  --clock-pad-x: calc(var(--clock-d) * 0.08);
+  --clock-pad-top: calc(var(--clock-d) * 0.17);
+  --clock-pad-bottom: calc(var(--clock-d) * 0.13);
   --pad-optical: calc(var(--clock-d) * 0.087); /* ≈ 0.75cqw @1920 */
   --pad-score-cap: calc(var(--clock-d) * 0.093); /* ≈ 0.8cqw */
   --hockey-black: #000000;
@@ -180,9 +183,9 @@
   background: var(--hockey-black);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: calc(var(--clock-d) * 0.064);
+  align-items: stretch;
+  justify-content: space-between;
+  padding: var(--clock-pad-top) var(--clock-pad-x) var(--clock-pad-bottom);
   box-sizing: border-box;
 }
 
@@ -192,8 +195,14 @@
   font-size: var(--fs-time);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.07em;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.045em;
   line-height: 1;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  /* Otypical + tabular + tight tracking: optisch naar links corrigeren */
+  padding-left: 0.07em;
   transition: opacity 160ms ease;
 }
 
@@ -202,8 +211,12 @@
   font-family: var(--hockey-type);
   font-size: var(--fs-period);
   font-weight: 400;
-  letter-spacing: 0.005em;
+  letter-spacing: 0.02em;
   line-height: 1;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  align-self: center;
   transition: opacity 200ms ease, transform 220ms ease;
 }
 
