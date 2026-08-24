@@ -32,6 +32,7 @@ import {
   refreshOperateSection,
   wireOperateSection
 } from '/public/shared/operate-handlers.js'
+import { defaultHockeyTypography, resolveHockeyTypography } from '/public/shared/hockey-utils.js'
 
 const TYPE_LABELS = {
   matchScoreboard: 'Match score',
@@ -159,6 +160,8 @@ const tickerPanel = document.getElementById('ticker-panel')
 const tickerForm = document.getElementById('ticker-form')
 const countdownPanel = document.getElementById('countdown-panel')
 const countdownForm = document.getElementById('countdown-form')
+const hockeyPanel = document.getElementById('hockey-panel')
+const hockeyTypeForm = document.getElementById('hockey-type-form')
 const countdownPreview = document.getElementById('countdown-preview')
 const countdownPreviewTime = document.getElementById('countdown-preview-time')
 const inspectorEmpty = document.getElementById('inspector-empty')
@@ -408,6 +411,7 @@ function hideAllInspectorPanels() {
   if (widgetPanel) widgetPanel.hidden = true
   if (tickerPanel) tickerPanel.hidden = true
   if (countdownPanel) countdownPanel.hidden = true
+  if (hockeyPanel) hockeyPanel.hidden = true
   if (rosterPanel) rosterPanel.hidden = true
   if (quizPanel) quizPanel.hidden = true
   if (transitionPanel) transitionPanel.hidden = true
@@ -457,6 +461,11 @@ function showSettingsInspector(graphic) {
     if (quizPanel) {
       quizPanel.hidden = false
       fillQuizPanel(graphic)
+    }
+  } else if (graphic.type === 'hockeyScorebug') {
+    if (hockeyPanel) {
+      hockeyPanel.hidden = false
+      fillHockeyTypeForm(graphic)
     }
   }
   if (transitionPanel) {
@@ -1004,6 +1013,71 @@ async function fillCountdownForm(graphic = countdownGraphic()) {
   updateCountdownPreview()
 }
 
+function hockeyGraphic() {
+  const selected = getSelectedGraphic()
+  if (selected?.type === 'hockeyScorebug') return selected
+  const configureId = configureGraphicId()
+  if (configureId) {
+    const g = getGraphicById(configureId)
+    if (g?.type === 'hockeyScorebug') return g
+  }
+  return null
+}
+
+const HOCKEY_TYPE_FIELDS = [
+  { key: 'code', sizeId: 'hockey-code-size', weightId: 'hockey-code-weight', outId: 'hockey-code-size-out' },
+  { key: 'score', sizeId: 'hockey-score-size', weightId: 'hockey-score-weight', outId: 'hockey-score-size-out' },
+  { key: 'time', sizeId: 'hockey-time-size', weightId: 'hockey-time-weight', outId: 'hockey-time-size-out' },
+  { key: 'period', sizeId: 'hockey-period-size', weightId: 'hockey-period-weight', outId: 'hockey-period-size-out' }
+]
+
+function hockeyTypographyFromForm() {
+  if (!hockeyTypeForm) return defaultHockeyTypography()
+  const typography = {}
+  for (const { key, sizeId, weightId } of HOCKEY_TYPE_FIELDS) {
+    const sizeEl = document.getElementById(sizeId)
+    const weightEl = document.getElementById(weightId)
+    typography[key] = {
+      size: Math.min(1.5, Math.max(0.5, (Number(sizeEl?.value) || 100) / 100)),
+      weight: Number(weightEl?.value) === 700 ? 700 : 400
+    }
+  }
+  return typography
+}
+
+function fillHockeyTypeForm(graphic = hockeyGraphic()) {
+  if (!hockeyTypeForm || !graphic || graphic.type !== 'hockeyScorebug') return
+  const typography = resolveHockeyTypography(graphic.data?.style)
+  for (const { key, sizeId, weightId, outId } of HOCKEY_TYPE_FIELDS) {
+    const cat = typography[key]
+    const sizeEl = document.getElementById(sizeId)
+    const weightEl = document.getElementById(weightId)
+    const outEl = document.getElementById(outId)
+    const pct = Math.round(cat.size * 100)
+    if (sizeEl && document.activeElement !== sizeEl) {
+      sizeEl.value = String(pct)
+      if (outEl) outEl.textContent = String(pct)
+    }
+    if (weightEl && document.activeElement !== weightEl) {
+      weightEl.value = String(cat.weight)
+    }
+  }
+}
+
+let hockeyTypePatchTimer = null
+function scheduleHockeyTypePatch() {
+  clearTimeout(hockeyTypePatchTimer)
+  hockeyTypePatchTimer = setTimeout(pushHockeyTypography, 120)
+}
+
+async function pushHockeyTypography() {
+  const graphic = hockeyGraphic()
+  if (!graphic || hockeyPanel?.hidden) return
+  await patchGraphic(graphic.id, {
+    data: { style: { typography: hockeyTypographyFromForm() } }
+  })
+}
+
 function countdownPreviewFontFamily() {
   const selected = countdownForm?.fontFamily?.value?.trim()
   if (selected) return selected
@@ -1363,6 +1437,16 @@ tickerForm?.addEventListener('submit', async (event) => {
 
 countdownForm?.addEventListener('input', updateCountdownPreview)
 countdownForm?.fontFamily?.addEventListener('change', updateCountdownPreview)
+
+hockeyTypeForm?.addEventListener('input', (event) => {
+  const target = event.target
+  if (target instanceof HTMLInputElement && target.type === 'range') {
+    const out = hockeyTypeForm.querySelector(`output[for="${target.id}"]`)
+    if (out) out.textContent = target.value
+  }
+  scheduleHockeyTypePatch()
+})
+hockeyTypeForm?.addEventListener('change', scheduleHockeyTypePatch)
 
 document.getElementById('countdown-start-duration')?.addEventListener('click', async () => {
   const graphic = countdownGraphic()

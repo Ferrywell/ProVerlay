@@ -362,6 +362,72 @@
           </form>
         </section>
 
+        <section class="glass panel panel--inspector" id="hockey-panel" hidden>
+          <div class="panel-head">
+            <h2>Hockey scorebug — typography</h2>
+            <p>Text size and weight per element. Layout proportions stay fixed; changes apply live on the overlay.</p>
+          </div>
+          <form id="hockey-type-form" class="form-grid">
+            <fieldset class="widget-fieldset">
+              <legend>Team code</legend>
+              <label class="field">
+                <span>Size <output id="hockey-code-size-out" for="hockey-code-size">100</output>%</span>
+                <input id="hockey-code-size" name="codeSize" type="range" min="50" max="150" step="1" value="100" />
+              </label>
+              <label class="field">
+                <span>Weight</span>
+                <select id="hockey-code-weight" name="codeWeight">
+                  <option value="400">Regular (400)</option>
+                  <option value="700">Bold (700)</option>
+                </select>
+              </label>
+            </fieldset>
+            <fieldset class="widget-fieldset">
+              <legend>Score</legend>
+              <label class="field">
+                <span>Size <output id="hockey-score-size-out" for="hockey-score-size">100</output>%</span>
+                <input id="hockey-score-size" name="scoreSize" type="range" min="50" max="150" step="1" value="100" />
+              </label>
+              <label class="field">
+                <span>Weight</span>
+                <select id="hockey-score-weight" name="scoreWeight">
+                  <option value="400">Regular (400)</option>
+                  <option value="700">Bold (700)</option>
+                </select>
+              </label>
+            </fieldset>
+            <fieldset class="widget-fieldset">
+              <legend>Clock — time</legend>
+              <label class="field">
+                <span>Size <output id="hockey-time-size-out" for="hockey-time-size">100</output>%</span>
+                <input id="hockey-time-size" name="timeSize" type="range" min="50" max="150" step="1" value="100" />
+              </label>
+              <label class="field">
+                <span>Weight</span>
+                <select id="hockey-time-weight" name="timeWeight">
+                  <option value="400">Regular (400)</option>
+                  <option value="700">Bold (700)</option>
+                </select>
+              </label>
+            </fieldset>
+            <fieldset class="widget-fieldset">
+              <legend>Clock — period (Q1)</legend>
+              <label class="field">
+                <span>Size <output id="hockey-period-size-out" for="hockey-period-size">100</output>%</span>
+                <input id="hockey-period-size" name="periodSize" type="range" min="50" max="150" step="1" value="100" />
+              </label>
+              <label class="field">
+                <span>Weight</span>
+                <select id="hockey-period-weight" name="periodWeight">
+                  <option value="400">Regular (400)</option>
+                  <option value="700">Bold (700)</option>
+                </select>
+              </label>
+            </fieldset>
+            <p class="op-status">Tip: turn the overlay on in the list so you see changes immediately in OBS or <code>/render</code>.</p>
+          </form>
+        </section>
+
         <section class="glass panel panel--inspector" id="transition-panel" hidden>
           <div class="panel-head">
             <h2>Transition</h2>

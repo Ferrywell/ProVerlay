@@ -23,6 +23,8 @@ import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows, resolveF1Animatio
 import {
   formatHockeyClock,
   hockeyPeriodLabel,
+  hockeyTypographyCssVars,
+  resolveHockeyTypography,
   resolveLiveHockeyClock
 } from '/public/shared/hockey-utils.js'
 
@@ -390,6 +392,15 @@ function buildStreamCountdown(data, graphicId) {
   `
 }
 
+function applyHockeyTypographyVars(bug, style = {}) {
+  if (!bug) return
+  const t = resolveHockeyTypography(style)
+  for (const [key, { size, weight }] of Object.entries(t)) {
+    bug.style.setProperty(`--hockey-${key}-size`, String(size))
+    bug.style.setProperty(`--hockey-${key}-weight`, String(weight))
+  }
+}
+
 function buildHockeyScorebug(data, graphicId) {
   const scale = Number(data.style?.scale) || 1
   const live = resolveLiveHockeyClock(data.clock || {})
@@ -401,7 +412,8 @@ function buildHockeyScorebug(data, graphicId) {
   const vars = [
     `--hockey-scale:${scale}`,
     `--home-color:${homeColor}`,
-    `--away-color:${awayColor}`
+    `--away-color:${awayColor}`,
+    hockeyTypographyCssVars(data.style || {})
   ].join(';')
 
   return `
@@ -443,6 +455,7 @@ function updateHockeyScorebug(layer, graphic) {
   bug.style.setProperty('--hockey-scale', String(Number(d.style?.scale) || 1))
   bug.style.setProperty('--home-color', safeCssColor(d.homeColor, '#FF7621'))
   bug.style.setProperty('--away-color', safeCssColor(d.awayColor, '#2F9A92'))
+  applyHockeyTypographyVars(bug, d.style)
   bug.classList.toggle('hockey-bug--break', live.period === 'break')
 
   setHockeyText(bug.querySelector('[data-bind="homeCode"]'), d.homeCode || 'NED', { animate: true })

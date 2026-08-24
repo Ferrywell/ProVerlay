@@ -11,6 +11,42 @@ export const HOCKEY_PERIOD_OPTIONS = [
 export const HOCKEY_RING_R = 47.175
 export const HOCKEY_RING_C = 2 * Math.PI * HOCKEY_RING_R
 
+export const HOCKEY_TYPE_CATEGORIES = ['code', 'score', 'time', 'period']
+
+export function defaultHockeyTypography() {
+  return {
+    code: { size: 1, weight: 400 },
+    score: { size: 1, weight: 400 },
+    time: { size: 1, weight: 400 },
+    period: { size: 1, weight: 400 }
+  }
+}
+
+/** Clamp stored typography; layout ratios in CSS stay fixed. */
+export function resolveHockeyTypography(style = {}) {
+  const base = defaultHockeyTypography()
+  const src = style?.typography || {}
+  const out = {}
+  for (const key of HOCKEY_TYPE_CATEGORIES) {
+    const item = src[key] || {}
+    const size = Number(item.size)
+    const weight = Number(item.weight)
+    out[key] = {
+      size: Number.isFinite(size) ? Math.min(2, Math.max(0.25, size)) : base[key].size,
+      weight: weight === 700 ? 700 : 400
+    }
+  }
+  return out
+}
+
+export function hockeyTypographyCssVars(style = {}) {
+  const t = resolveHockeyTypography(style)
+  return HOCKEY_TYPE_CATEGORIES.flatMap((key) => {
+    const { size, weight } = t[key]
+    return [`--hockey-${key}-size:${size}`, `--hockey-${key}-weight:${weight}`]
+  }).join(';')
+}
+
 export function defaultHockeyScorebugData() {
   return {
     homeCode: 'NED',
@@ -31,7 +67,8 @@ export function defaultHockeyScorebugData() {
       durationMs: 420
     },
     style: {
-      scale: 1
+      scale: 1,
+      typography: defaultHockeyTypography()
     }
   }
 }
