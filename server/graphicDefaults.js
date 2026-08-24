@@ -21,7 +21,13 @@ export function defaultHockeyScorebugData() {
       durationMs: 420
     },
     style: {
-      scale: 1
+      scale: 1,
+      typography: {
+        code: { size: 1, weight: 400 },
+        score: { size: 1, weight: 400 },
+        time: { size: 1, weight: 400 },
+        period: { size: 1, weight: 400 }
+      }
     }
   }
 }

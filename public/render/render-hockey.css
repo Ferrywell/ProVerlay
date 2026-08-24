@@ -12,10 +12,10 @@
   --arm-w: calc(var(--clock-d) * 1.536);
   --mesh-pct: 67.8%;
   --score-pct: 32.2%;
-  --fs-code: calc(var(--bug-h) * 0.733);
-  --fs-score: calc(var(--bug-h) * 0.733);
-  --fs-time: calc(var(--clock-d) * 0.285);
-  --fs-period: calc(var(--clock-d) * 0.19);
+  --fs-code: calc(var(--bug-h) * 0.733 * var(--hockey-code-size, 1));
+  --fs-score: calc(var(--bug-h) * 0.733 * var(--hockey-score-size, 1));
+  --fs-time: calc(var(--clock-d) * 0.285 * var(--hockey-time-size, 1));
+  --fs-period: calc(var(--clock-d) * 0.19 * var(--hockey-period-size, 1));
   --clock-pad-x: calc(var(--clock-d) * 0.08);
   --clock-pad-top: calc(var(--clock-d) * 0.17);
   --clock-pad-bottom: calc(var(--clock-d) * 0.13);
@@ -110,7 +110,7 @@
   color: var(--hockey-text);
   font-family: var(--hockey-type);
   font-size: var(--fs-code);
-  font-weight: 400;
+  font-weight: var(--hockey-code-weight, 400);
   letter-spacing: 0.005em;
   line-height: 1;
   background-color: var(--home-color);
@@ -158,7 +158,7 @@
   color: var(--hockey-text);
   font-family: var(--hockey-type);
   font-size: var(--fs-score);
-  font-weight: 400;
+  font-weight: var(--hockey-score-weight, 400);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   line-height: 1;
@@ -193,7 +193,7 @@
   color: var(--hockey-text);
   font-family: var(--hockey-type);
   font-size: var(--fs-time);
-  font-weight: 400;
+  font-weight: var(--hockey-time-weight, 400);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
   letter-spacing: -0.045em;
@@ -210,7 +210,7 @@
   color: var(--hockey-text);
   font-family: var(--hockey-type);
   font-size: var(--fs-period);
-  font-weight: 400;
+  font-weight: var(--hockey-period-weight, 400);
   letter-spacing: 0.02em;
   line-height: 1;
   text-align: center;
