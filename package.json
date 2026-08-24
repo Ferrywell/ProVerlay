@@ -1,6 +1,6 @@
 {
   "name": "proverlay",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Simple live broadcast graphics with Companion support",
   "type": "module",
   "main": "electron/main.js",
