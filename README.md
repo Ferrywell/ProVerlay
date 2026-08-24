@@ -2,7 +2,7 @@
 
 Live broadcast overlays met eigen identiteit — minimalistisch, Apple Tahoe UI, mobiel operator-paneel en Companion/Stream Deck.
 
-**Huidige versie:** [v0.6.3](https://github.com/Ferrywell/ProVerlay/releases/tag/v0.6.3)
+**Huidige versie:** [v0.6.4](https://github.com/Ferrywell/ProVerlay/releases/tag/v0.6.4)
 
 ## Mac-app (Apple Silicon)
 
@@ -40,6 +40,10 @@ Op mobiel opent `/` automatisch het operator-paneel.
 - **Voetbalscore overlay** — PNG-strip + live bediening vanaf iPad
 - **Klant branding** — projectfonts, kleuren, assets per project
 - **Drie triggers** — web, mobiel (lokaal netwerk), Companion/Stream Deck
+
+### v0.6.4
+
+- Hockey scorebug: Claude Design / PNG-tokens (proporties, Regular type, Glow-mesh slices)
 
 ### v0.6.3
 

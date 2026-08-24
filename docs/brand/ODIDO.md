@@ -313,7 +313,8 @@ Indeling:
 | Klok | Solide zwarte cirkel; tijd + `Q1`–`Q4`; **geen** ring/verloop eromheen |
 | Type | Otypical / brand-font; wit |
 
-Render: `public/render/render-hockey.css` · `buildHockeyScorebug` in `render.js`
+Render: `public/render/render-hockey.css` · `buildHockeyScorebug` in `render.js`  
+Tokens (Claude Design / PNG-meting @1080p): clock ≈166px · arm-h ≈75 · mesh/score ≈68/32 · type Regular 400 · geen ring. Mesh-slices: `public/render/assets/hockey-glow-{home,away}.png`.
 
 ---
 

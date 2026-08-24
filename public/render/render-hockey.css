@@ -1,22 +1,36 @@
 /* ---------------------------------------------------------------------------
-   Hockey scorebug — Odido goedgekeurde basis (spacing/type pass)
-   Visual source: docs/brand/assets/odido-hockey-scorebug-basis.png
-   Geen Glow-ring. Solide zwarte cirkel; Glow alleen in teamcodes.
+   Hockey scorebug — Claude Design tokens (pad B), measured from
+   ODIDO_SCOREBALK_HOCKEY_BASIS. No progress ring. Glow-mesh on codes only.
+   1080p ref: clock 166 · arm-h 75 · mesh 173 · score 82 · gap 19 · type 55/49
    --------------------------------------------------------------------------- */
 
 .hockey-bug {
-  /* Armen ±75% van klokdiameter; smalle spleet naar de cirkel */
-  --bug-h: calc(var(--hockey-scale, 1) * 13vmin);
-  --clock-d: calc(var(--hockey-scale, 1) * 17.2vmin);
-  --gap: calc(var(--hockey-scale, 1) * 0.65vmin);
+  /* scale: clock-d @1080p ≈ 15.37vmin (166px); --hockey-scale from data.style */
+  --clock-d: calc(var(--hockey-scale, 1) * 15.37vmin);
+  --bug-h: calc(var(--clock-d) * 0.452);
+  --gap: calc(var(--clock-d) * 0.114);
+  --arm-w: calc(var(--clock-d) * 1.536);
+  --mesh-pct: 67.8%;
+  --score-pct: 32.2%;
+  --fs-code: calc(var(--bug-h) * 0.733);
+  --fs-score: calc(var(--bug-h) * 0.733);
+  --fs-time: calc(var(--clock-d) * 0.331);
+  --fs-period: calc(var(--clock-d) * 0.295);
+  --pad-optical: calc(var(--clock-d) * 0.087); /* ≈ 0.75cqw @1920 */
+  --pad-score-cap: calc(var(--clock-d) * 0.093); /* ≈ 0.8cqw */
   --hockey-black: #000000;
   --hockey-text: #ffffff;
+  --home-color: #ff7621;
+  --away-color: #2f9a92;
   --hockey-type: 'Otypical Headline', var(--brand-font, system-ui, sans-serif);
   display: flex;
   align-items: center;
   gap: var(--gap);
   filter: drop-shadow(0 0.45vmin 1.6vmin rgba(0, 0, 0, 0.38));
   font-family: var(--hockey-type);
+  font-weight: 400;
+  color: var(--hockey-text);
+  -webkit-font-smoothing: antialiased;
   will-change: transform, opacity;
 }
 
@@ -24,45 +38,46 @@
   animation: overlay-drop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-.hockey-bug.is-entering .hockey-arm--home {
-  animation: hockey-arm-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+/* Enter: klok eerst, armen volgen (Claude Design stagger) */
+.hockey-bug.is-entering .hockey-clock {
+  animation: hockey-clock-in 360ms cubic-bezier(0.2, 0.8, 0.25, 1.15) both;
 }
 
-.hockey-bug.is-entering .hockey-clock {
-  animation: hockey-clock-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both;
+.hockey-bug.is-entering .hockey-arm--home {
+  animation: hockey-arm-in 420ms 60ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 .hockey-bug.is-entering .hockey-arm--away {
-  animation: hockey-arm-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+  animation: hockey-arm-in 420ms 60ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 .hockey-bug.is-leaving {
-  animation: overlay-drop-out 0.35s ease forwards;
+  animation: overlay-drop-out 300ms cubic-bezier(0.5, 0, 0.75, 0.5) forwards;
 }
 
 @keyframes hockey-arm-in {
   from {
     opacity: 0;
-    transform: translateX(var(--hockey-arm-from, -12px)) scale(0.96);
+    transform: translateX(var(--hockey-arm-from, -18%));
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateX(0);
   }
 }
 
 .hockey-arm--home {
-  --hockey-arm-from: -14px;
+  --hockey-arm-from: -18%;
 }
 
 .hockey-arm--away {
-  --hockey-arm-from: 14px;
+  --hockey-arm-from: 18%;
 }
 
 @keyframes hockey-clock-in {
   from {
     opacity: 0;
-    transform: scale(0.86);
+    transform: scale(0.6);
   }
   to {
     opacity: 1;
@@ -74,49 +89,44 @@
   display: flex;
   align-items: stretch;
   height: var(--bug-h);
+  width: var(--arm-w);
+  flex: none;
   overflow: hidden;
   background: var(--hockey-black);
+  border-radius: 999px;
 }
 
-/* Buitenkant rond, binnenkant (naar klok) vlak — zoals PNG */
-.hockey-arm--home {
-  border-radius: 999px 0 0 999px;
-}
-
-.hockey-arm--away {
-  border-radius: 0 999px 999px 0;
-}
-
-/* Teamcode ≈ 58% · score ≈ 42%; zelfde lettergrootte */
+/* Teamcode ≈ 67.8% · score ≈ 32.2% (Claude Design / PNG-meting) */
 .hockey-code {
+  box-sizing: border-box;
   display: grid;
   place-items: center;
-  flex: 1.4 1 0;
-  min-width: calc(var(--hockey-scale, 1) * 13.5vmin);
-  padding: 0 calc(var(--hockey-scale, 1) * 2.4vmin);
+  flex: none;
+  width: var(--mesh-pct);
+  min-width: 0;
   color: var(--hockey-text);
   font-family: var(--hockey-type);
-  font-size: calc(var(--hockey-scale, 1) * 4.85vmin);
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-size: var(--fs-code);
+  font-weight: 400;
+  letter-spacing: 0.005em;
   line-height: 1;
+  background-color: var(--home-color);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   transition: opacity 180ms ease, transform 220ms ease;
 }
 
 .hockey-arm--home .hockey-code {
-  background:
-    radial-gradient(ellipse 95% 90% at 8% 18%, #ff7621 0%, #ff924e 28%, transparent 58%),
-    radial-gradient(ellipse 75% 70% at 55% 35%, #ff808c 0%, transparent 55%),
-    radial-gradient(ellipse 90% 85% at 92% 88%, #2f9a92 0%, #59afa8 40%, transparent 62%),
-    #ff7621;
+  padding-left: var(--pad-optical);
+  background-image: url('assets/hockey-glow-home.png');
+  background-color: var(--home-color);
 }
 
 .hockey-arm--away .hockey-code {
-  background:
-    radial-gradient(ellipse 95% 90% at 92% 18%, #2f9a92 0%, #59afa8 28%, transparent 58%),
-    radial-gradient(ellipse 75% 70% at 45% 40%, #ff808c 0%, transparent 55%),
-    radial-gradient(ellipse 90% 85% at 8% 88%, #ff7621 0%, #ffae7c 40%, transparent 62%),
-    #2f9a92;
+  padding-right: var(--pad-optical);
+  background-image: url('assets/hockey-glow-away.png');
+  background-color: var(--away-color);
 }
 
 .hockey-code.is-swap {
@@ -135,22 +145,32 @@
 }
 
 .hockey-score {
+  box-sizing: border-box;
   display: grid;
   place-items: center;
-  flex: 1 1 0;
-  width: calc(var(--hockey-scale, 1) * 9vmin);
-  min-width: calc(var(--hockey-scale, 1) * 8.2vmin);
+  flex: none;
+  width: var(--score-pct);
+  min-width: 0;
   background: var(--hockey-black);
   color: var(--hockey-text);
   font-family: var(--hockey-type);
-  font-size: calc(var(--hockey-scale, 1) * 4.85vmin);
-  font-weight: 700;
+  font-size: var(--fs-score);
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   line-height: 1;
   overflow: hidden;
 }
 
+.hockey-arm--home .hockey-score {
+  padding-right: var(--pad-score-cap);
+}
+
+.hockey-arm--away .hockey-score {
+  padding-left: var(--pad-score-cap);
+}
+
+/* Klokschijf: solide zwart, géén progress-ring */
 .hockey-clock {
   position: relative;
   width: var(--clock-d);
@@ -162,36 +182,33 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--hockey-scale, 1) * 0.35vmin);
-  /* Meer lucht in de cirkel; tijd niet te groot */
-  padding: calc(var(--hockey-scale, 1) * 2.1vmin) calc(var(--hockey-scale, 1) * 1.5vmin)
-    calc(var(--hockey-scale, 1) * 2.3vmin);
+  gap: calc(var(--clock-d) * 0.064);
   box-sizing: border-box;
 }
 
 .hockey-clock__time {
   color: var(--hockey-text);
   font-family: var(--hockey-type);
-  font-size: calc(var(--hockey-scale, 1) * 4.4vmin);
-  font-weight: 700;
+  font-size: var(--fs-time);
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.05em;
-  line-height: 0.95;
+  letter-spacing: -0.07em;
+  line-height: 1;
   transition: opacity 160ms ease;
 }
 
 .hockey-clock__period {
   color: var(--hockey-text);
   font-family: var(--hockey-type);
-  font-size: calc(var(--hockey-scale, 1) * 1.95vmin);
+  font-size: var(--fs-period);
   font-weight: 400;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.005em;
   line-height: 1;
   transition: opacity 200ms ease, transform 220ms ease;
 }
 
 .hockey-clock__period.is-swap {
-  animation: hockey-code-swap 320ms ease;
+  animation: hockey-code-swap 240ms ease;
 }
 
 .hockey-bug--break .hockey-clock {
