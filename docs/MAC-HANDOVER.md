@@ -65,7 +65,8 @@ xattr -cr /Applications/ProVerlay.app
 - De app start een **lokale server op poort 2014**
 - Gebruikersdata wordt opgeslagen in:  
   **`~/Library/Application Support/ProVerlay/data`**
-- Eerste run kopieert een **leeg seed-project** (geen Odido-demo in productie-app)
+- Eerste run kopieert het **Odido-demoproject** (fonts, scorebalk, ticker, editor-referentie) + blanco project
+- **Tijdelijk** — later weer blank-only seed; zie `server/projectSeed.js`
 - Venster sluiten **stopt de server niet** — gebruik menubar → Stop of Cmd+Q
 
 ---
@@ -153,6 +154,8 @@ Check in dashboard: overlay **Ticker** moet **Combined** (live) aan staan. Zonde
 
 **v0.6.7+:** Mac-app start met **Odido-demoproject** (Ticker + Hockey scorebug standaard aan).
 
+**v0.6.8+:** Seed bevat **alle Odido-projectassets** (PNG score/ticker, Otypical fonts, editor-referentie) + brand preset `odido.json`. Hockey Glow-mesh zit in de app (`public/render/assets/`).
+
 **Bestaande installatie (vóór 0.6.7):** importeer `Odido.proverlay` uit de release, of wis data en herinstalleer:
 
 ```bash
@@ -175,8 +178,9 @@ rm -rf ~/Library/Application\ Support/ProVerlay/data
 
 | Omgeving | Data-pad |
 |----------|----------|
-| **Mac .app (v0.6.7+)** | `~/Library/Application Support/ProVerlay/data` — bevat **Odido-demoproject** |
-| **Mac .app (oud)** | Alleen blanco project — import `Odido.proverlay` |
+| **Mac .app (v0.6.8+)** | `~/Library/Application Support/ProVerlay/data` — Odido demo + alle assets + brand |
+| **Mac .app (v0.6.7)** | Zelfde pad — Odido demo (beperkte asset-set) |
+| **Mac .app (oud)** | Alleen blanco — import `Odido.proverlay` |
 | **Dev (git clone)** | `./data/` in de repo |
 
 ### 6.3 Fonts & branding
@@ -232,6 +236,7 @@ Build-details: `docs/APP.md`
 
 | Versie | Hoogtepunten |
 |--------|----------------|
+| **0.6.8** | Volledige Odido asset-bundle in seed + `Odido.proverlay` (fonts, PNG’s, editor-ref, brand) |
 | **0.6.7** | Odido demoproject in Mac-app; Ticker + assets standaard; `Odido.proverlay` import |
 | **0.6.6** | Hockey typografie per categorie in Edit settings (live) |
 | **0.6.5** | Hockey klok-layout/type tuning |

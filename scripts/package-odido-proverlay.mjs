@@ -8,15 +8,10 @@ import { fileURLToPath } from 'url'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const odidoDir = path.join(root, 'data', 'projects', 'odido')
+const odidoAssets = path.join(odidoDir, 'assets')
 const outPath = path.join(root, 'dist', 'Odido.proverlay')
 
-const ASSETS = [
-  'ODIDO_SCOREBALK_BASIS.png',
-  'ODIDO_TICKERBALK_BASIS_BALK.png',
-  'OtypicalHeadline-Bold.ttf',
-  'OtypicalHeadline-Regular.ttf',
-  'OtypicalText-Regular.ttf'
-]
+const SKIP_ASSETS = new Set(['test21.png', '.DS_Store', '.gitkeep'])
 
 async function main() {
   const { ZipArchive } = await import('archiver')
@@ -32,8 +27,12 @@ async function main() {
     { name: 'manifest.json' }
   )
   archive.file(path.join(odidoDir, 'project.json'), { name: 'project.json' })
-  for (const file of ASSETS) {
-    archive.file(path.join(odidoDir, 'assets', file), { name: `assets/${file}` })
+
+  for (const file of fs.readdirSync(odidoAssets)) {
+    if (SKIP_ASSETS.has(file)) continue
+    const src = path.join(odidoAssets, file)
+    if (!fs.statSync(src).isFile()) continue
+    archive.file(src, { name: `assets/${file}` })
   }
 
   await archive.finalize()

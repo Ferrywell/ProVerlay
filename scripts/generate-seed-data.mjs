@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Genereert seed-data/ voor de Electron-app.
- * Bevat het Odido-demoproject (PNG scorebalk + ticker + fonts) als standaard first-run.
+ * TEMPORARY: Odido-demoproject als standaard first-run (later terug naar blank-only).
  */
 import fs from 'fs'
 import path from 'path'
@@ -11,57 +11,37 @@ import { BLANK_PROJECT, SEED_REGISTRY } from '../server/projectSeed.js'
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const seedRoot = path.join(root, 'seed-data')
 const repoOdido = path.join(root, 'data', 'projects', 'odido')
+const repoOdidoAssets = path.join(repoOdido, 'assets')
 const seedOdido = path.join(seedRoot, 'projects', 'odido')
 const seedOdidoAssets = path.join(seedOdido, 'assets')
 const seedBlankAssets = path.join(seedRoot, 'projects', 'blank', 'assets')
+const repoBrands = path.join(root, 'data', 'brands')
 
-/** Assets mee in app-bundle (geen 6MB editor-referentie). */
-const ODIDO_ASSETS = [
-  'ODIDO_SCOREBALK_BASIS.png',
-  'ODIDO_TICKERBALK_BASIS_BALK.png',
-  'OtypicalHeadline-Bold.ttf',
-  'OtypicalHeadline-Regular.ttf',
-  'OtypicalText-Regular.ttf'
-]
+/** Dev/testbestanden niet mee in consumer-bundle. */
+const SKIP_ASSETS = new Set(['test21.png', '.DS_Store', '.gitkeep'])
+
+function copyOdidoAssets() {
+  fs.mkdirSync(seedOdidoAssets, { recursive: true })
+  for (const file of fs.readdirSync(repoOdidoAssets)) {
+    if (SKIP_ASSETS.has(file)) continue
+    const src = path.join(repoOdidoAssets, file)
+    if (!fs.statSync(src).isFile()) continue
+    fs.copyFileSync(src, path.join(seedOdidoAssets, file))
+  }
+}
 
 function prepareOdidoProject() {
   const raw = JSON.parse(fs.readFileSync(path.join(repoOdido, 'project.json'), 'utf8'))
-  raw.brandId = 'odido'
-  raw.client = {
-    name: 'ODIDO',
-    notes:
-      'Odido live: zet Ticker aan (logo + oranje balk). Voetbal: Match score aan. Hockey: Hockey scorebug + Ticker.'
-  }
-  raw.brand = {
-    name: 'Odido',
-    fontFamily: "'Otypical Headline', 'Otypical Text', sans-serif",
-    fontUrl: '/projects/odido/assets/OtypicalHeadline-Bold.ttf',
-    colors: {
-      primary: '#FF7621',
-      secondary: '#7066FF',
-      text: '#FFFFFF',
-      background: 'rgba(0, 0, 0, 0.85)',
-      accent: '#2F9A92'
+  for (const g of raw.graphics || []) {
+    if (g.data?.clock && typeof g.data.clock === 'object') {
+      g.data.clock.running = false
+      g.data.clock.runningSince = null
     }
-  }
-  for (const g of raw.graphics) {
-    if (g.id === 'ticker-main') g.visible = true
-    if (g.id === 'hockey-scorebug-main') {
-      g.visible = true
-      g.data.clock = {
-        period: 'q1',
-        remainingMs: 900000,
-        quarterMs: 900000,
-        running: false,
-        runningSince: null
-      }
+    if (g.id === 'hockey-scorebug-main' && g.data?.clock) {
+      g.data.clock.period = 'q1'
+      g.data.clock.remainingMs = 900000
+      g.data.clock.quarterMs = 900000
     }
-    if (g.id === 'score-main') {
-      g.visible = false
-      if (g.data?.layout) g.data.layout.backgroundVisible = true
-    }
-    if (g.type === 'f1Timing') g.visible = false
-    if (g.type === 'streamCountdown') g.visible = false
   }
   return raw
 }
@@ -74,12 +54,17 @@ fs.writeFileSync(
   JSON.stringify(BLANK_PROJECT, null, 2)
 )
 
-fs.mkdirSync(seedOdidoAssets, { recursive: true })
-for (const file of ODIDO_ASSETS) {
-  fs.copyFileSync(path.join(repoOdido, 'assets', file), path.join(seedOdidoAssets, file))
-}
+copyOdidoAssets()
 fs.writeFileSync(path.join(seedOdido, 'project.json'), JSON.stringify(prepareOdidoProject(), null, 2))
+
+fs.mkdirSync(path.join(seedRoot, 'brands'), { recursive: true })
+fs.copyFileSync(path.join(repoBrands, 'odido.json'), path.join(seedRoot, 'brands', 'odido.json'))
 
 fs.writeFileSync(path.join(seedRoot, 'registry.json'), JSON.stringify(SEED_REGISTRY, null, 2))
 
-console.log('generate-seed-data: wrote', seedRoot, '(blank + odido demo, active:', SEED_REGISTRY.activeProjectId + ')')
+const assetCount = fs.readdirSync(seedOdidoAssets).length
+console.log(
+  'generate-seed-data: wrote',
+  seedRoot,
+  `(blank + odido demo, ${assetCount} assets, active: ${SEED_REGISTRY.activeProjectId})`
+)

@@ -1,6 +1,9 @@
 /**
  * Canonical blank project + registry voor nieuwe installaties.
  * Wordt gebruikt door server (ensureProjectsLayout) én door scripts/generate-seed-data.mjs.
+ *
+ * TEMPORARY (v0.6.7+): SEED_REGISTRY activeert Odido als demoproject in de Mac-app.
+ * Later terugzetten naar blank-only (activeProjectId: 'blank', alleen blank in projects).
  */
 
 export const BLANK_PROJECT = {
