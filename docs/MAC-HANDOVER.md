@@ -132,6 +132,35 @@ Per overlay een **eigen OBS-laag**:
 - URL: `http://localhost:2014/render?graphic=hockey-scorebug-main`
 - Of via dashboard: kopieer **solo URL** op de overlay-kaart
 
+### 5.4 Odido huisstijl — logo + oranje balk
+
+**Geen apart logo-widget.** Logo en oranje tickerbalk zitten in **PNG-assets**, gekoppeld aan widgets:
+
+| Wat je ziet | Widget | PNG-asset |
+|-------------|--------|-----------|
+| **Oranje balk + Odido-logo onderin** | **Ticker** (`ticker-main`) | `ODIDO_TICKERBALK_BASIS_BALK.png` |
+| **Scorebalk bovenin (voetbal)** | **Match score** (`score-main`) | `ODIDO_SCOREBALK_BASIS.png` |
+| **Hockey scorebug bovenin** | **Hockey scorebug** | CSS (geen logo in widget zelf) |
+
+**Typische setups:**
+
+| Format | Bovenin | Onderin |
+|--------|---------|---------|
+| **Hockey** | Hockey scorebug **aan** | Ticker **aan** ← logo + oranje balk |
+| **Voetbal** | Match score **aan** | Ticker **aan** |
+
+Check in dashboard: overlay **Ticker** moet **Combined** (live) aan staan. Zonder ticker zie je geen logo/oranje balk.
+
+**v0.6.7+:** Mac-app start met **Odido-demoproject** (Ticker + Hockey scorebug standaard aan).
+
+**Bestaande installatie (vóór 0.6.7):** importeer `Odido.proverlay` uit de release, of wis data en herinstalleer:
+
+```bash
+# Optioneel — verse Odido seed (let op: wist lokale projecten)
+rm -rf ~/Library/Application\ Support/ProVerlay/data
+# Start app opnieuw
+```
+
 ---
 
 ## 6. Projecten & data
@@ -146,10 +175,9 @@ Per overlay een **eigen OBS-laag**:
 
 | Omgeving | Data-pad |
 |----------|----------|
-| **Mac .app** | `~/Library/Application Support/ProVerlay/data` |
+| **Mac .app (v0.6.7+)** | `~/Library/Application Support/ProVerlay/data` — bevat **Odido-demoproject** |
+| **Mac .app (oud)** | Alleen blanco project — import `Odido.proverlay` |
 | **Dev (git clone)** | `./data/` in de repo |
-
-Odido-devproject in git (`data/projects/odido/`) is **alleen voor ontwikkelaars** — niet meegeleverd in de consumer `.app`.
 
 ### 6.3 Fonts & branding
 
@@ -204,6 +232,7 @@ Build-details: `docs/APP.md`
 
 | Versie | Hoogtepunten |
 |--------|----------------|
+| **0.6.7** | Odido demoproject in Mac-app; Ticker + assets standaard; `Odido.proverlay` import |
 | **0.6.6** | Hockey typografie per categorie in Edit settings (live) |
 | **0.6.5** | Hockey klok-layout/type tuning |
 | **0.6.4** | Hockey Odido PNG-proporties + Glow-mesh slices |

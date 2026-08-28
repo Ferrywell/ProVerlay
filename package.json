@@ -1,6 +1,6 @@
 {
   "name": "proverlay",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "Simple live broadcast graphics with Companion support",
   "type": "module",
   "main": "electron/main.js",
@@ -9,7 +9,7 @@
     "dev": "node --watch server/index.js",
     "app": "electron .",
     "generate:seed": "node scripts/generate-seed-data.mjs",
-    "dist:mac": "node scripts/generate-seed-data.mjs && electron-builder --mac dir --arm64 && node scripts/package-mac-app.mjs arm64"
+    "dist:mac": "node scripts/generate-seed-data.mjs && electron-builder --mac dir --arm64 && node scripts/package-mac-app.mjs arm64 && node scripts/package-odido-proverlay.mjs"
   },
   "engines": {
     "node": ">=18"

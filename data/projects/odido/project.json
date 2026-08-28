@@ -2,19 +2,19 @@
   "version": 4,
   "client": {
     "name": "ODIDO",
-    "notes": ""
+    "notes": "Odido huisstijl: zet Ticker aan voor logo + oranje balk onderin. Voetbal: Match score aan (PNG-balk bovenin). Hockey: Hockey scorebug bovenin + Ticker onderin."
   },
-  "brandId": null,
+  "brandId": "odido",
   "brand": {
-    "name": "",
+    "name": "Odido",
     "fontFamily": "'Otypical Headline', 'Otypical Text', sans-serif",
     "fontUrl": "/projects/odido/assets/OtypicalHeadline-Bold.ttf",
     "colors": {
-      "primary": "#007AFF",
-      "secondary": "#5856D6",
-      "text": "#1D1D1F",
-      "background": "rgba(255, 255, 255, 0.78)",
-      "accent": "#34C759"
+      "primary": "#FF7621",
+      "secondary": "#7066FF",
+      "text": "#FFFFFF",
+      "background": "rgba(0, 0, 0, 0.85)",
+      "accent": "#2F9A92"
     }
   },
   "settings": {
@@ -96,7 +96,7 @@
             "gapPx": 12,
             "anchor": "right"
           },
-          "backgroundVisible": false
+          "backgroundVisible": true
         },
         "elements": [
           {
@@ -188,7 +188,7 @@
       "id": "ticker-main",
       "type": "customTicker",
       "name": "Ticker",
-      "visible": false,
+      "visible": true,
       "position": "bottom-full",
       "operator": true,
       "data": {
@@ -677,10 +677,10 @@
         "awayColor": "#2F9A92",
         "clock": {
           "period": "q1",
-          "remainingMs": 0,
+          "remainingMs": 900000,
           "quarterMs": 900000,
-          "running": true,
-          "runningSince": "2026-08-24T19:40:04.411Z"
+          "running": false,
+          "runningSince": null
         },
         "animation": {
           "enabled": true,

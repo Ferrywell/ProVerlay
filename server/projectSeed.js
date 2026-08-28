@@ -33,8 +33,14 @@ export const BLANK_PROJECT = {
 }
 
 export const SEED_REGISTRY = {
-  activeProjectId: 'blank',
+  activeProjectId: 'odido',
   projects: [
+    {
+      id: 'odido',
+      name: 'Odido',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z'
+    },
     {
       id: 'blank',
       name: 'New client',
