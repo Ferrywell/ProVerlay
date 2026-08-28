@@ -2,7 +2,7 @@
 
 Live broadcast overlays met eigen identiteit — minimalistisch, Apple Tahoe UI, mobiel operator-paneel en Companion/Stream Deck.
 
-**Huidige versie:** [v0.6.6](https://github.com/Ferrywell/ProVerlay/releases/tag/v0.6.6)
+**Huidige versie:** [v0.6.7](https://github.com/Ferrywell/ProVerlay/releases/tag/v0.6.7)
 
 📘 **[Mac installatie & gebruik (overdracht)](docs/MAC-HANDOVER.md)** — uitgebreide handleiding voor collega's, klanten en Cloud-agents.
 
@@ -64,7 +64,24 @@ Op mobiel opent `/` automatisch het operator-paneel.
 
 ---
 
-## Hockey scorebug — typografie (v0.6.6)
+## Client huisstijl (logo + oranje balk)
+
+Logo en oranje tickerbalk zitten **niet** in de hockey scorebug — die zitten in de **Ticker**-widget (PNG met Client-logo links).
+
+| Widget | Wat |
+|--------|-----|
+| **Ticker** | Oranje balk + logo onderin — **altijd aanzetten** voor Client-look |
+| **Match score** | Voetbal scorebalk bovenin (PNG) |
+| **Hockey scorebug** | CSS overlay bovenin (combineer met Ticker) |
+
+Mac-app **v0.6.7+** start met Client-demoproject (Ticker + Hockey aan).  
+Bestaande installatie: import **`Client.proverlay`** van de release.
+
+Zie [`docs/MAC-HANDOVER.md` §5.4](docs/MAC-HANDOVER.md)
+
+---
+
+## Hockey scorebug — typografie (v0.6.6+)
 
 **Operate** (dashboard / operator): scores, klok, kleuren, periode.
 
@@ -89,6 +106,12 @@ npm run dist:mac  # → dist/ProVerlay-mac-arm64.zip
 ---
 
 ## Changelog (recent)
+
+### v0.6.7
+
+- **Client out-of-the-box:** demoproject in Mac-app (Ticker + PNG assets + fonts)
+- Import **`Client.proverlay`** voor bestaande installaties
+- Brand preset `data/brands/client.json`
 
 ### v0.6.6
 
