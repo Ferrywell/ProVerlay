@@ -1,8 +1,31 @@
-# ProVerlay
+<p align="center">
+  <a href="https://ferrywell.github.io/ProVerlay/"><img src="site/assets/icon-256.png" width="96" height="96" alt="ProVerlay"></a>
+</p>
 
-Live broadcast overlays met eigen identiteit — minimalistisch, Apple Tahoe UI, mobiel operator-paneel en Companion/Stream Deck.
+<h1 align="center">ProVerlay</h1>
 
-**Huidige versie:** [v0.6.7](https://github.com/Ferrywell/ProVerlay/releases/tag/v0.6.7)
+<p align="center">
+  <strong>Live broadcast graphics voor OBS en vMix.</strong><br>
+  Overlays bouwen op je Mac, bedienen vanaf iPad of Stream Deck, uitspelen via één Browser Source.
+</p>
+
+<p align="center">
+  <a href="https://ferrywell.github.io/ProVerlay/"><b>Website</b></a> ·
+  <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip"><b>Download voor Mac</b></a> ·
+  <a href="https://github.com/Ferrywell/ProVerlay/releases">Releases</a> ·
+  <a href="docs/MAC-HANDOVER.md">Handleiding</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Ferrywell/ProVerlay/releases/latest"><img src="https://img.shields.io/github/v/release/Ferrywell/ProVerlay?label=release&color=378add" alt="Laatste release"></a>
+  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon-1d1d1f?logo=apple" alt="macOS Apple Silicon">
+  <img src="https://img.shields.io/badge/output-OBS%20%C2%B7%20vMix-3b6d11" alt="OBS en vMix">
+  <img src="https://img.shields.io/badge/Stream%20Deck-Companion-6e6e73" alt="Bitfocus Companion">
+</p>
+
+<p align="center">
+  <a href="https://ferrywell.github.io/ProVerlay/"><img src="site/assets/screen-dashboard.webp" alt="Het ProVerlay-dashboard" width="860"></a>
+</p>
 
 📘 **[Mac installatie & gebruik (overdracht)](docs/MAC-HANDOVER.md)** — uitgebreide handleiding voor collega's, klanten en Cloud-agents.
 
@@ -106,6 +129,11 @@ npm run dist:mac  # → dist/ProVerlay-mac-arm64.zip
 ---
 
 ## Changelog (recent)
+
+### v0.6.8
+
+- Volledige show-bundle in de Mac-app (alle project-assets en fonts)
+- Productwebsite: [ferrywell.github.io/ProVerlay](https://ferrywell.github.io/ProVerlay/)
 
 ### v0.6.7
 
