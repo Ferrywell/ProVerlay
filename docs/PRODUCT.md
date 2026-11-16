@@ -11,7 +11,7 @@ ProVerlay is **geen Holographics-kloon**. Het is een eigen product met:
 - Output naar **OBS en vMix** via browser input (CEF)
 - Doel: **standalone app** Mac + Windows (roadmap F3)
 
-**Volledige planning:** [PRODUCT-ROADMAP.md](./PRODUCT-ROADMAP.md)
+**Planning:** zie de [GitHub issues](https://github.com/Ferrywell/ProVerlay/issues)
 
 ## Kernbelofte
 

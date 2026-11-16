@@ -80,7 +80,7 @@ vMix Web Browser volgt de **project frame rate** (25p, 50i, 60p, enz.).
 | Ticker hapert | Verlaag `speed`; vermijd zware effecten |
 | Score-animatie te lang | Pas `animation.durationMs` aan in widget data |
 
-ProVerlay gebruikt bewust lichte CSS-animaties en `transform` voor ticker-scroll — zie [PRODUCT-ROADMAP.md](./PRODUCT-ROADMAP.md#render-performance-cef-regels).
+ProVerlay gebruikt bewust lichte CSS-animaties en `transform` voor ticker-scroll.
 
 ---
 
@@ -176,6 +176,5 @@ ProVerlay toont score en klok op de stream; kijkers kijken wedstrijd apart (bijv
 
 ## Gerelateerd
 
-- [PRODUCT-ROADMAP.md](./PRODUCT-ROADMAP.md) — productfases & performance
 - [COMPANION.md](./COMPANION.md) — Stream Deck (werkt naast vMix)
 - [ux/TICKER-COUNTDOWN-SPEC.md](./ux/TICKER-COUNTDOWN-SPEC.md) — ticker & countdown voor vMix-lagen

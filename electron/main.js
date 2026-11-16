@@ -24,7 +24,7 @@ function userDataDir() {
 }
 
 function seedDataDir() {
-  // In de gepackagede app staat de seed in Resources/seed-data, in dev gewoon ./data
+  // Packaged app: Resources/seed-data. Dev: ./data if it exists (it is gitignored).
   return app.isPackaged
     ? path.join(process.resourcesPath, 'seed-data')
     : path.join(__dirname, '..', 'data')
@@ -33,7 +33,8 @@ function seedDataDir() {
 function ensureDataDir() {
   const target = userDataDir()
   // Alleen bij eerste installatie seed kopiëren. Updates overschrijven bestaande projecten niet.
-  if (!fs.existsSync(path.join(target, 'registry.json'))) {
+  // Without a seed dir the server creates a blank project itself (ensureProjectsLayout).
+  if (!fs.existsSync(path.join(target, 'registry.json')) && fs.existsSync(seedDataDir())) {
     fs.cpSync(seedDataDir(), target, { recursive: true })
   }
   process.env.PROVERLAY_DATA_DIR = target

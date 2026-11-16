@@ -9,7 +9,7 @@
     "dev": "node --watch server/index.js",
     "app": "electron .",
     "generate:seed": "node scripts/generate-seed-data.mjs",
-    "dist:mac": "node scripts/generate-seed-data.mjs && electron-builder --mac dir --arm64 && node scripts/package-mac-app.mjs arm64 && node scripts/package-client-proverlay.mjs"
+    "dist:mac": "node scripts/generate-seed-data.mjs && electron-builder --mac dir --arm64 && node scripts/package-mac-app.mjs arm64"
   },
   "engines": {
     "node": ">=18"

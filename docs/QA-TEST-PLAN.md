@@ -2,7 +2,7 @@
 
 ## Jouw opdracht
 
-Schrijf en voer een gestructureerd testplan uit voor ProVerlay MVP v0.1.0. Documenteer alles in `docs/qa/`.
+Schrijf en voer een gestructureerd testplan uit voor ProVerlay MVP v0.1.0. Documenteer alles in `docs/qa/` (lokaal, niet in git).
 
 ## Testomgeving
 
@@ -114,4 +114,4 @@ Test ook of ProVerlay dezelfde **workflow** ondersteunt:
 3. Companion trigger → ✅/❌ (later)
 4. Multi-graphic → ✅/❌
 
-Noteer verschillen in `docs/qa/HOLOGRAPHICS-PARITY.md`
+Noteer verschillen in een lokaal pariteitsdocument

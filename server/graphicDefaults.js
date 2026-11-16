@@ -7,8 +7,8 @@ export function defaultHockeyScorebugData() {
     awayCode: 'SPA',
     homeScore: 0,
     awayScore: 0,
-    homeColor: '#FF7621',
-    awayColor: '#2F9A92',
+    homeColor: '#E5484D',
+    awayColor: '#3E63DD',
     clock: {
       period: 'q2',
       remainingMs: 775000,
@@ -23,9 +23,9 @@ export function defaultHockeyScorebugData() {
     style: {
       scale: 1,
       typography: {
-        code: { size: 1, weight: 400 },
-        score: { size: 1, weight: 400 },
-        time: { size: 1, weight: 400 },
+        code: { size: 1, weight: 700 },
+        score: { size: 1, weight: 700 },
+        time: { size: 1, weight: 700 },
         period: { size: 1, weight: 400 }
       }
     }

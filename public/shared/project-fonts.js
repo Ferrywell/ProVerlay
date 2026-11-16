@@ -9,32 +9,64 @@ function fontFormat(filename = '') {
   return 'truetype'
 }
 
-const PROJECT_FONT_REGISTRY = [
-  { test: /^BrandFontHeadline-Bold\.ttf$/i, family: 'BrandFont Headline', weight: 700 },
-  { test: /^BrandFontHeadline-Regular\.ttf$/i, family: 'BrandFont Headline', weight: 400 },
-  { test: /^BrandFontText-Regular\.ttf$/i, family: 'BrandFont Text', weight: 400 }
-]
+const WEIGHT_NAMES = {
+  thin: 100,
+  hairline: 100,
+  extralight: 200,
+  ultralight: 200,
+  light: 300,
+  regular: 400,
+  book: 400,
+  normal: 400,
+  medium: 500,
+  semibold: 600,
+  demibold: 600,
+  bold: 700,
+  extrabold: 800,
+  ultrabold: 800,
+  heavy: 900,
+  black: 900
+}
+const WEIGHT_SUFFIX = new RegExp(`^(.+?)[-_ ]+(${Object.keys(WEIGHT_NAMES).join('|')})(italic)?$`, 'i')
 
-const FONT_FAMILY_ALIASES = {
-  'BrandFontHeadline Regular': "'BrandFont Headline', sans-serif",
-  'BrandFontHeadline Bold': "'BrandFont Headline', sans-serif",
-  'BrandFontText Regular': "'BrandFont Text', sans-serif"
+/** "BrandHeadline" → "Brand Headline" (split CamelCase family names from font files). */
+function splitCamelCase(name) {
+  return name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ').trim()
 }
 
+/**
+ * Parse a font file name like "BrandHeadline-Bold.ttf" into
+ * { family: 'Brand Headline', weight: 700, style: 'normal' }.
+ */
+function parseFontName(base) {
+  const m = base.match(WEIGHT_SUFFIX)
+  if (!m) return null
+  return {
+    family: splitCamelCase(m[1]),
+    weight: WEIGHT_NAMES[m[2].toLowerCase()],
+    style: m[3] ? 'italic' : 'normal'
+  }
+}
+
+/**
+ * Font family strings saved from older projects can be a file-style name
+ * ("BrandHeadline Bold"); map those to the CSS family that injectProjectFontFaces registers.
+ */
 export function resolveRenderFontFamily(fontFamily = '') {
   const trimmed = String(fontFamily || '').trim()
   if (!trimmed) return ''
-  if (FONT_FAMILY_ALIASES[trimmed.replace(/^['"]|['"]$/g, '')]) {
-    return FONT_FAMILY_ALIASES[trimmed.replace(/^['"]|['"]$/g, '')]
+  const bare = trimmed.replace(/^['"]|['"]$/g, '')
+  if (!/[,'"]/.test(bare)) {
+    const parsed = parseFontName(bare)
+    if (parsed) return `'${parsed.family}', sans-serif`
   }
   return trimmed
 }
 
 function resolveFontFaceMeta(filename = '', url = '') {
-  const entry = PROJECT_FONT_REGISTRY.find((r) => r.test.test(filename))
-  if (entry) {
-    return { family: entry.family, weight: entry.weight, style: 'normal', url }
-  }
+  const base = filename.replace(/\.(ttf|otf|woff2?)$/i, '')
+  const parsed = parseFontName(base)
+  if (parsed) return { ...parsed, url }
   return {
     family: fontFamilyFromFilename(filename),
     weight: /bold|heavy|black/i.test(filename) ? 700 : 400,

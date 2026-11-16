@@ -725,7 +725,7 @@ html[data-preview-window] .score-canvas--no-bg {
 }
 
 /* ── F1 timing tower ─────────────────────────────────────────────────────
-   Pill-rijen in Client-stijl. Rijen zijn absoluut gepositioneerd en
+   Pill-rijen (pill style). Rijen zijn absoluut gepositioneerd en
    verschuiven via transform zodat positiewissels vloeiend animeren.
    Vaste px-maten: de rendercanvas is zelf al px-gebaseerd (vMix-safe). */
 
@@ -1047,7 +1047,7 @@ html[data-preview-window] .score-canvas--no-bg {
   }
 }
 
-/* Focusrijder (bv. VER): Client-gradient pill met donkere tekst */
+/* Focus driver (e.g. VER): gradient pill with dark text */
 .f1-row--focus {
   background: var(--f1-focus-bg, linear-gradient(100deg, #f2917c 0%, #eec2b3 45%, #74c3bb 100%));
   color: var(--f1-focus-color, #1d1d1f);

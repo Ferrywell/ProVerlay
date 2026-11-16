@@ -5,13 +5,25 @@ companion/node_modules/
 .env
 dist/
 coverage/
-data/show.local.json
-data/projects/*/assets/*
-!data/projects/blank/assets/.gitkeep
+
+# Runtime data (projects, registry, brand presets you add). Created on first start;
+# the Electron app keeps it in its user-data folder instead.
+data/
+# Build output of scripts/generate-seed-data.mjs
+seed-data/
+
+# Internal working material — kept locally, not part of the public repo
+docs/ux/
+docs/qa/
+docs/superpowers/
+docs/brand/
+docs/HANDOFF-NEXT-SESSION.md
+docs/DESIGN-AGENT-CSS-OVERLAY.md
+.cursor/
+.tmp-hockey-crops/
+designfiles_claude/
 
 # Local reference / vendor trees (not part of ProVerlay source)
 Holographics/
-WerkbestandenVoorbeeldenCLIENT/
-
-# Cursor debug logs only (keep .cursor/skills for agents)
-.cursor/*.log
+docs/MAC-HANDOVER.md
+docs/PRODUCT-ROADMAP.md

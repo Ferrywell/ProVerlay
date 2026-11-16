@@ -156,5 +156,5 @@ Mirror Holographics pattern:
 | `public/render/render.css` | UX designer |
 | `themes/` | UX designer |
 | `companion/` | Lead developer |
-| `docs/ux/` | UX designer |
-| `docs/qa/` | Beta tester |
+| `docs/ux/` (local, not in git) | UX designer |
+| `docs/qa/` (local, not in git) | Beta tester |

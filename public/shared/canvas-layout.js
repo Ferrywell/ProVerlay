@@ -18,11 +18,11 @@ export function resolveFrameSize(layout = {}, settings = {}) {
 export function isStripLayout(layout = {}) {
   const h = layout.refHeight || 1080
   const w = layout.refWidth || 1920
-  // Horizontal scorebar PNG (e.g. CLIENT 3197×335) — aspect ratio, not absolute height cap
+  // Horizontal scorebar PNG (e.g. 3197×335) — aspect ratio, not absolute height cap
   return h / w < 0.25
 }
 
-/** Min visible strip height (px) for full-frame ticker PNGs at 2160p — CLIENT reference bar */
+/** Min visible strip height (px) for full-frame ticker PNGs at 2160p — reference ticker bar */
 export const TICKER_FULLFRAME_BAR_MIN = 230
 const TICKER_FULLFRAME_BAR_RATIO = TICKER_FULLFRAME_BAR_MIN / 2160
 

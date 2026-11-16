@@ -96,7 +96,7 @@ export async function handleHockeyFieldChange(graphic, field, value) {
   }
 
   if (field === 'homeColor' || field === 'awayColor') {
-    const fallback = field === 'homeColor' ? '#FF7621' : '#74ACDF'
+    const fallback = field === 'homeColor' ? '#E5484D' : '#3E63DD'
     data[field] = safeTeamColor(value, fallback)
     optimisticData.set(graphic.id, data)
     await patchGraphic(graphic.id, { data })

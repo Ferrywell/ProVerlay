@@ -1,7 +1,8 @@
 /* ---------------------------------------------------------------------------
-   Hockey scorebug — Claude Design tokens (pad B), measured from
-   CLIENT_SCOREBALK_HOCKEY_BASIS. No progress ring. Glow-mesh on codes only.
-   1080p ref: clock 166 · arm-h 75 · mesh 173 · score 82 · gap 19 · type 55/49
+   Hockey scorebug — two team arms (code + score) around a round clock.
+   Team colours come from data.homeColor / data.awayColor, type from the
+   project brand font (--brand-font).
+   1080p ref: clock 166 · arm-h 75 · code 173 · score 82 · gap 19
    --------------------------------------------------------------------------- */
 
 .hockey-bug {
@@ -23,9 +24,10 @@
   --pad-score-cap: calc(var(--clock-d) * 0.093); /* ≈ 0.8cqw */
   --hockey-black: #000000;
   --hockey-text: #ffffff;
-  --home-color: #ff7621;
-  --away-color: #2f9a92;
-  --hockey-type: 'BrandFont Headline', var(--brand-font, system-ui, sans-serif);
+  --home-color: #e5484d;
+  --away-color: #3e63dd;
+  --hockey-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.14) 100%);
+  --hockey-type: var(--brand-font, system-ui, sans-serif);
   display: flex;
   align-items: center;
   gap: var(--gap);
@@ -41,7 +43,7 @@
   animation: overlay-drop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* Enter: klok eerst, armen volgen (Claude Design stagger) */
+/* Enter: clock first, arms follow */
 .hockey-bug.is-entering .hockey-clock {
   animation: hockey-clock-in 360ms cubic-bezier(0.2, 0.8, 0.25, 1.15) both;
 }
@@ -99,7 +101,7 @@
   border-radius: 999px;
 }
 
-/* Teamcode ≈ 67.8% · score ≈ 32.2% (Claude Design / PNG-meting) */
+/* Team code ≈ 67.8% · score ≈ 32.2% of the arm */
 .hockey-code {
   box-sizing: border-box;
   display: grid;
@@ -122,13 +124,13 @@
 
 .hockey-arm--home .hockey-code {
   padding-left: var(--pad-optical);
-  background-image: url('assets/hockey-glow-home.png');
+  background-image: var(--hockey-sheen);
   background-color: var(--home-color);
 }
 
 .hockey-arm--away .hockey-code {
   padding-right: var(--pad-optical);
-  background-image: url('assets/hockey-glow-away.png');
+  background-image: var(--hockey-sheen);
   background-color: var(--away-color);
 }
 
@@ -173,7 +175,7 @@
   padding-left: var(--pad-score-cap);
 }
 
-/* Klokschijf: solide zwart, géén progress-ring */
+/* Clock disc: solid black, no progress ring */
 .hockey-clock {
   position: relative;
   width: var(--clock-d);
@@ -201,7 +203,7 @@
   text-align: center;
   width: 100%;
   box-sizing: border-box;
-  /* BrandFont + tabular + tight tracking: optisch naar links corrigeren */
+  /* tabular figures + tight tracking: optical correction to the left */
   padding-left: 0.07em;
   transition: opacity 160ms ease;
 }

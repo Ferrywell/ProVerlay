@@ -111,6 +111,8 @@ Environment (browser, OS)
 
 ## Workflow
 
+> `docs/ux/`, `docs/qa/` en `.cursor/` zijn lokale werkmappen: ze staan in `.gitignore` en gaan niet mee naar GitHub. Klantmateriaal hoort nooit in de repo.
+
 ```
 1. Lead bouwt MVP skeleton          ✅
 2. Frontend Design — tahoe polish   → dashboard/operator/editor/project
@@ -140,7 +142,7 @@ Environment (browser, OS)
 | Operator / Companion | ✅ Score bediening |
 | Design hub | ✅ `/design` — setup checklist |
 | F1 timing tower | ✅ `f1Timing` widget — MultiViewer live + manual (`docs/F1-TIMING.md`) |
-| Hockey scorebug | ✅ `hockeyScorebug` — Client PNG-basis (geen ring; Glow in codes) |
+| Hockey scorebug | ✅ `hockeyScorebug` — teamkleuren + projectfont (geen ring) |
 | QA project tests | 🟡 Beta agent — her-test na API |
 
 ## Poorten
@@ -151,8 +153,7 @@ Environment (browser, OS)
 ## Productrichting (juni 2026)
 
 - Eigen identiteit — Apple Tahoe UI, geen Holographics-clone
-- Klant **Client**: volg `docs/brand/CLIENT.md` + `docs/brand/client-tokens.css` (Glow 2/4, BrandFont, identity levels)
 - `/control` = desktop dashboard, `/operator` = iPad/iPhone bediening
 - Device detectie op `/` → mobiel naar operator
-- Klant branding via `data/brands/` + live editor
+- Klant branding via brand presets (`templates/brands/`, eigen presets in `data/brands/`) + live editor
 - Custom overlays via JSON (voetbalscore als referentie)

@@ -33,7 +33,7 @@ Niet verwarren met Intel: een M1 Pro Mac gebruikt dezelfde arm64-build.
 
 - **Gebruikersdata:** `~/Library/Application Support/ProVerlay/data` (schrijfbaar). Blijft bestaan bij app-updates.
 - **Eerste installatie:** kopieert alleen `seed-data/` uit de app-bundle (leeg project, geen voorbeelden).
-- **Ontwikkeling:** repo-map `data/` bevat werkprojecten (Client, tests) — wordt **niet** verpakt.
+- **Ontwikkeling:** repo-map `data/` bevat je lokale werkprojecten (niet in git) — wordt **niet** verpakt.
 - Seed genereren: `npm run generate:seed` → schrijft naar `seed-data/`.
 - De server leest `PROVERLAY_DATA_DIR` (zie `server/paths.js`); dev zonder Electron gebruikt repo-`data/`.
 

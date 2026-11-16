@@ -1,5 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import {
   ensureProjectsLayout,
   getActiveProjectId,
@@ -14,7 +15,10 @@ import {
 import { penaltiesFeatureEnabled } from '../public/shared/match-utils.js'
 import { enqueueWrite, writeJsonAtomic } from './writeQueue.js'
 
+/** User brand presets (data dir) override the presets bundled in templates/brands. */
 const BRANDS_DIR = path.join(DATA_DIR, 'brands')
+const BUNDLED_BRANDS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'brands')
+const BRAND_ID = /^[a-z0-9][a-z0-9-]*$/
 const LEGACY_SHOW = path.join(DATA_DIR, 'show.json')
 
 let state = null
@@ -154,13 +158,16 @@ export function migratePenaltiesDisabled(state) {
   return changed ? { ...state, graphics } : state
 }
 
-export async function listBrands() {
+async function readBrandDir(dir) {
   try {
-    const files = await fs.readdir(BRANDS_DIR)
+    const files = await fs.readdir(dir)
     const brands = []
     for (const file of files.filter((f) => f.endsWith('.json'))) {
-      const raw = await fs.readFile(path.join(BRANDS_DIR, file), 'utf8')
-      brands.push(JSON.parse(raw))
+      try {
+        brands.push(JSON.parse(await fs.readFile(path.join(dir, file), 'utf8')))
+      } catch (err) {
+        console.warn(`Skipping unreadable brand preset ${file}: ${err.message}`)
+      }
     }
     return brands
   } catch {
@@ -168,8 +175,21 @@ export async function listBrands() {
   }
 }
 
+export async function listBrands() {
+  const byId = new Map()
+  for (const brand of await readBrandDir(BUNDLED_BRANDS_DIR)) byId.set(brand.id, brand)
+  for (const brand of await readBrandDir(BRANDS_DIR)) byId.set(brand.id, brand)
+  return [...byId.values()]
+}
+
 export async function applyBrand(brandId) {
-  const raw = await fs.readFile(path.join(BRANDS_DIR, `${brandId}.json`), 'utf8')
+  if (!BRAND_ID.test(String(brandId || ''))) throw new Error('Invalid brand id')
+  let raw
+  try {
+    raw = await fs.readFile(path.join(BRANDS_DIR, `${brandId}.json`), 'utf8')
+  } catch {
+    raw = await fs.readFile(path.join(BUNDLED_BRANDS_DIR, `${brandId}.json`), 'utf8')
+  }
   const brand = JSON.parse(raw)
   return patchState({
     brandId: brand.id,

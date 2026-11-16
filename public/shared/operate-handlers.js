@@ -273,8 +273,8 @@ export function hockeyOperateHtml(graphic, { embedded = false } = {}) {
   const second = remSec % 60
   const quarterMin = Math.round(live.quarterMs / 60000)
   const embeddedClass = embedded ? ' match-operate--embedded' : ''
-  const homeColor = escapeHtml(d.homeColor || '#FF7621')
-  const awayColor = escapeHtml(d.awayColor || '#74ACDF')
+  const homeColor = escapeHtml(d.homeColor || '#E5484D')
+  const awayColor = escapeHtml(d.awayColor || '#3E63DD')
 
   return `
     <div class="match-operate hockey-operate${embeddedClass}">
@@ -393,8 +393,8 @@ function updateHockeyOperateMount(mount, graphic) {
   for (const [field, val] of [
     ['homeCode', d.homeCode || ''],
     ['awayCode', d.awayCode || ''],
-    ['homeColor', d.homeColor || '#FF7621'],
-    ['awayColor', d.awayColor || '#74ACDF']
+    ['homeColor', d.homeColor || '#E5484D'],
+    ['awayColor', d.awayColor || '#3E63DD']
   ]) {
     const input = mount.querySelector(`[data-field="${field}"]`)
     if (input && document.activeElement !== input) input.value = val

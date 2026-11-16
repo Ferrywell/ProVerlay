@@ -526,7 +526,7 @@ function hockeyCardTemplate(graphic) {
       <div class="score-teams">
         <div class="team-block">
           <input class="team-code-input" type="text" maxlength="3" data-field="homeCode" value="${escapeHtml(d.homeCode || '')}" aria-label="Home team code" spellcheck="false" />
-          <input type="color" data-field="homeColor" value="${escapeHtml(d.homeColor || '#FF7621')}" aria-label="Home colour" />
+          <input type="color" data-field="homeColor" value="${escapeHtml(d.homeColor || '#E5484D')}" aria-label="Home colour" />
           <div class="score-value" data-bind="homeScore">${d.homeScore ?? 0}</div>
           <div class="score-actions">
             <button class="button button--gray touch-btn touch-btn--score" data-action="home-minus">−</button>
@@ -539,7 +539,7 @@ function hockeyCardTemplate(graphic) {
         </div>
         <div class="team-block">
           <input class="team-code-input" type="text" maxlength="3" data-field="awayCode" value="${escapeHtml(d.awayCode || '')}" aria-label="Away team code" spellcheck="false" />
-          <input type="color" data-field="awayColor" value="${escapeHtml(d.awayColor || '#74ACDF')}" aria-label="Away colour" />
+          <input type="color" data-field="awayColor" value="${escapeHtml(d.awayColor || '#3E63DD')}" aria-label="Away colour" />
           <div class="score-value" data-bind="awayScore">${d.awayScore ?? 0}</div>
           <div class="score-actions">
             <button class="button button--gray touch-btn touch-btn--score" data-action="away-minus">−</button>
@@ -627,8 +627,8 @@ function updateHockeyCard(card, graphic) {
   for (const [field, val] of [
     ['homeCode', d.homeCode || ''],
     ['awayCode', d.awayCode || ''],
-    ['homeColor', d.homeColor || '#FF7621'],
-    ['awayColor', d.awayColor || '#74ACDF']
+    ['homeColor', d.homeColor || '#E5484D'],
+    ['awayColor', d.awayColor || '#3E63DD']
   ]) {
     const input = card.querySelector(`[data-field="${field}"]`)
     if (input && document.activeElement !== input) input.value = val

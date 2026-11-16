@@ -13,7 +13,7 @@
   <a href="https://ferrywell.github.io/ProVerlay/"><b>Website</b></a> ·
   <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip"><b>Download voor Mac</b></a> ·
   <a href="https://github.com/Ferrywell/ProVerlay/releases">Releases</a> ·
-  <a href="docs/MAC-HANDOVER.md">Handleiding</a>
+  <a href="docs/APP.md">Docs</a>
 </p>
 
 <p align="center">
@@ -26,8 +26,6 @@
 <p align="center">
   <a href="https://ferrywell.github.io/ProVerlay/"><img src="site/assets/screen-dashboard.webp" alt="Het ProVerlay-dashboard" width="860"></a>
 </p>
-
-📘 **[Mac installatie & gebruik (overdracht)](docs/MAC-HANDOVER.md)** — uitgebreide handleiding voor collega's, klanten en Cloud-agents.
 
 ---
 
@@ -45,7 +43,7 @@ Download: **[ProVerlay-mac-arm64.zip](https://github.com/Ferrywell/ProVerlay/rel
 
 Gebruikersdata: `~/Library/Application Support/ProVerlay/data`
 
-Meer detail: [`docs/MAC-HANDOVER.md`](docs/MAC-HANDOVER.md) · [`docs/APP.md`](docs/APP.md)
+Meer detail: [`docs/APP.md`](docs/APP.md) · [`docs/VMIX.md`](docs/VMIX.md) · [`docs/COMPANION.md`](docs/COMPANION.md)
 
 ---
 
@@ -79,28 +77,11 @@ Op mobiel opent `/` automatisch het operator-paneel.
 ## Highlights
 
 - **Eigen look** — licht, glass, Apple-achtig (geen template-SaaS)
-- **Hockey scorebug** — Client PNG-basis, Glow-mesh teamcodes, Q1–Q4 klok, typografie per categorie
+- **Hockey scorebug** — Q1–Q4 klok, teamkleuren, typografie per categorie
 - **F1 timing tower** — MultiViewer live of handmatig, tyres, track status
 - **Voetbalscore** — PNG-strip + WYSIWYG editor
 - **Klant branding** — projectfonts, kleuren, assets per project
 - **Project export** — `.proverlay` zip voor overdracht naar andere Mac
-
----
-
-## Client huisstijl (logo + oranje balk)
-
-Logo en oranje tickerbalk zitten **niet** in de hockey scorebug — die zitten in de **Ticker**-widget (PNG met Client-logo links).
-
-| Widget | Wat |
-|--------|-----|
-| **Ticker** | Oranje balk + logo onderin — **altijd aanzetten** voor Client-look |
-| **Match score** | Voetbal scorebalk bovenin (PNG) |
-| **Hockey scorebug** | CSS overlay bovenin (combineer met Ticker) |
-
-Mac-app **v0.6.7+** start met Client-demoproject (Ticker + Hockey aan).  
-Bestaande installatie: import **`Client.proverlay`** van de release.
-
-Zie [`docs/MAC-HANDOVER.md` §5.4](docs/MAC-HANDOVER.md)
 
 ---
 
@@ -112,7 +93,7 @@ Zie [`docs/MAC-HANDOVER.md` §5.4](docs/MAC-HANDOVER.md)
 
 - Team code · Score · Clock time · Clock period (Q1)
 
-Layout-proporties blijven zoals de goedgekeurde Client PNG; alleen tekst schaalt.
+Layout-proporties blijven vast; alleen tekst schaalt.
 
 ---
 
@@ -130,16 +111,12 @@ npm run dist:mac  # → dist/ProVerlay-mac-arm64.zip
 
 ## Changelog (recent)
 
-### v0.6.8
+### Unreleased
 
-- Volledige show-bundle in de Mac-app (alle project-assets en fonts)
+- Open-source opschoning: klantmateriaal verwijderd, nieuwe installaties starten met een blanco project
+- Hockey scorebug in generieke stijl (teamkleuren + projectfont)
+- Brand presets meegeleverd in `templates/brands/`; `data/` staat niet meer in git
 - Productwebsite: [ferrywell.github.io/ProVerlay](https://ferrywell.github.io/ProVerlay/)
-
-### v0.6.7
-
-- **Client out-of-the-box:** demoproject in Mac-app (Ticker + PNG assets + fonts)
-- Import **`Client.proverlay`** voor bestaande installaties
-- Brand preset `data/brands/client.json`
 
 ### v0.6.6
 
@@ -151,7 +128,7 @@ npm run dist:mac  # → dist/ProVerlay-mac-arm64.zip
 
 ### v0.6.4
 
-- Hockey Client PNG-proporties, Glow-mesh slices, Claude Design tokens
+- Hockey scorebug proporties en design tokens
 
 ### v0.6.0
 
@@ -170,8 +147,9 @@ ProVerlay/
 ├── public/operator/           # Touch operator
 ├── public/render/             # OBS overlay output
 ├── public/editor/             # WYSIWYG scorebord
-├── data/projects/{id}/        # Dev-projecten (repo only)
-├── docs/MAC-HANDOVER.md       # Install + gebruik + Cloud prompt
+├── templates/brands/          # Meegeleverde brand presets
+├── data/                      # Lokale projecten (gitignored, ontstaat bij eerste start)
+├── docs/                      # Architectuur, Companion, vMix, F1
 └── companion/                 # Bitfocus Companion module
 ```
 
@@ -179,7 +157,7 @@ ProVerlay/
 
 ## Projecten
 
-- Start in **Blanco project** (Mac-app) of dev-map `data/`
+- Start in een **blanco project**; lokaal in `data/` (niet in git), in de Mac-app in de app-datamap
 - CRUD, activeren, **export/import** `.proverlay`
 - Assets per project: `data/projects/{id}/assets/`
 
@@ -197,11 +175,10 @@ Zie [`docs/COMPANION.md`](docs/COMPANION.md)
 
 ---
 
-## Agents & docs
+## Docs
 
 | Document | Inhoud |
 |----------|--------|
-| [`docs/MAC-HANDOVER.md`](docs/MAC-HANDOVER.md) | **Mac install, OBS, operator, troubleshooting, Cloud prompt** |
 | [`docs/APP.md`](docs/APP.md) | Electron, data-paden, build |
 | [`AGENTS.md`](AGENTS.md) | Agent-rollen (dev, UX, QA) |
 | [`docs/PRODUCT.md`](docs/PRODUCT.md) | Productvisie |

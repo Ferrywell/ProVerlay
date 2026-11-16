@@ -1,6 +1,6 @@
 # F1 Timing Tower
 
-Live F1-positietoren in Client pill-stijl. Toont de top N (standaard 5) plus de
+Live F1-positietoren in pill-stijl. Toont de top N (standaard 5) plus de
 focusrijder (standaard VER) als aparte rij eronder wanneer hij buiten de top N
 rijdt.
 
@@ -81,7 +81,7 @@ benadrukt dat **Live Timing** / **Replay Live Timing** aan moet staan.
 
 Styling via `data.style` (widthPx, rowHeightPx, rowGapPx, borderRadiusPx,
 fontSize, background, focusBackground, focusColor). De focusrij gebruikt
-standaard de Client-gradient. Positie via Overlay layout (vrije plaatsing,
+standaard een kleurverloop (gradient). Positie via Overlay layout (vrije plaatsing,
 `data.placementFree`).
 
 ## Techniek

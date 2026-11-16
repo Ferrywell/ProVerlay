@@ -1,9 +1,6 @@
 /**
- * Canonical blank project + registry voor nieuwe installaties.
- * Wordt gebruikt door server (ensureProjectsLayout) én door scripts/generate-seed-data.mjs.
- *
- * TEMPORARY (v0.6.7+): SEED_REGISTRY activeert Client als demoproject in de Mac-app.
- * Later terugzetten naar blank-only (activeProjectId: 'blank', alleen blank in projects).
+ * Canonical blank project + registry for new installations.
+ * Used by the server (ensureProjectsLayout) and by scripts/generate-seed-data.mjs.
  */
 
 export const BLANK_PROJECT = {
@@ -36,14 +33,8 @@ export const BLANK_PROJECT = {
 }
 
 export const SEED_REGISTRY = {
-  activeProjectId: 'client',
+  activeProjectId: 'blank',
   projects: [
-    {
-      id: 'client',
-      name: 'Client',
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z'
-    },
     {
       id: 'blank',
       name: 'New client',

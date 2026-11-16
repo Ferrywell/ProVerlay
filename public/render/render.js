@@ -407,8 +407,8 @@ function buildHockeyScorebug(data, graphicId) {
   const timeText = formatHockeyClock(data.clock || {})
   const periodText = hockeyPeriodLabel(live.period)
   const breakClass = live.period === 'break' ? ' hockey-bug--break' : ''
-  const homeColor = safeCssColor(data.homeColor, '#FF7621')
-  const awayColor = safeCssColor(data.awayColor, '#2F9A92')
+  const homeColor = safeCssColor(data.homeColor, '#E5484D')
+  const awayColor = safeCssColor(data.awayColor, '#3E63DD')
   const vars = [
     `--hockey-scale:${scale}`,
     `--home-color:${homeColor}`,
@@ -453,8 +453,8 @@ function updateHockeyScorebug(layer, graphic) {
   const anim = d.animation || { enabled: true, durationMs: 420 }
 
   bug.style.setProperty('--hockey-scale', String(Number(d.style?.scale) || 1))
-  bug.style.setProperty('--home-color', safeCssColor(d.homeColor, '#FF7621'))
-  bug.style.setProperty('--away-color', safeCssColor(d.awayColor, '#2F9A92'))
+  bug.style.setProperty('--home-color', safeCssColor(d.homeColor, '#E5484D'))
+  bug.style.setProperty('--away-color', safeCssColor(d.awayColor, '#3E63DD'))
   applyHockeyTypographyVars(bug, d.style)
   bug.classList.toggle('hockey-bug--break', live.period === 'break')
 

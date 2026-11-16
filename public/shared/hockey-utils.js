@@ -15,9 +15,9 @@ export const HOCKEY_TYPE_CATEGORIES = ['code', 'score', 'time', 'period']
 
 export function defaultHockeyTypography() {
   return {
-    code: { size: 1, weight: 400 },
-    score: { size: 1, weight: 400 },
-    time: { size: 1, weight: 400 },
+    code: { size: 1, weight: 700 },
+    score: { size: 1, weight: 700 },
+    time: { size: 1, weight: 700 },
     period: { size: 1, weight: 400 }
   }
 }
@@ -33,7 +33,7 @@ export function resolveHockeyTypography(style = {}) {
     const weight = Number(item.weight)
     out[key] = {
       size: Number.isFinite(size) ? Math.min(2, Math.max(0.25, size)) : base[key].size,
-      weight: weight === 700 ? 700 : 400
+      weight: weight === 700 || weight === 400 ? weight : base[key].weight
     }
   }
   return out
@@ -53,8 +53,8 @@ export function defaultHockeyScorebugData() {
     awayCode: 'SPA',
     homeScore: 0,
     awayScore: 0,
-    homeColor: '#FF7621',
-    awayColor: '#2F9A92',
+    homeColor: '#E5484D',
+    awayColor: '#3E63DD',
     clock: {
       period: 'q2',
       remainingMs: 775000,

@@ -94,7 +94,7 @@ Per-project `brand.fontFamily`, `brand.colors`, and per-element `fontFamily` / `
 
 - Binds: `homeCode`, `awayCode`, `homeScore`, `awayScore`, `clock`, optional `penalties`
 - Clock: count-up, stoppage (`45+`), halves + extra time
-- Strip PNG + CSS clock pill (Client)
+- Strip PNG + CSS clock pill
 
 ### Basketball (next)
 
@@ -115,7 +115,7 @@ Two viable paths:
 
 Esports-specific binds (future): `mapScore`, `round`, `bombTimer`, `teamEconomy` — registered in preset element packs, resolved via extended `resolveBindText`.
 
-## Migration: Client football
+## Migration: football scorebar (PNG strip)
 
 | Before | After |
 |--------|-------|
@@ -148,7 +148,7 @@ Existing projects without `clockPlate` continue using PNG crop if `clockPlateWid
 | Match data/bindings | `public/shared/match-utils.js`, `public/shared/operate-match.js` |
 | Operate UI | `public/shared/operate-handlers.js`, `public/operator/operator.js` |
 | Defaults | `server/matchClock.js` |
-| Reference project | `data/projects/client/project.json` |
+| Reference project | a football project with a PNG score strip |
 
 ## Related docs
 
