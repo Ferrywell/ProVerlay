@@ -1,9 +1,7 @@
 import { combineRgb, splitRgb } from '@companion-module/base'
 
-const SCORE_TYPES = new Set(['footballScore', 'matchScoreboard'])
-
 function isScoreGraphic(graphic) {
-  return graphic && SCORE_TYPES.has(graphic.type)
+  return graphic?.type === 'matchScoreboard'
 }
 
 export default {
@@ -289,7 +287,7 @@ export default {
             id: 'graphic',
             label: 'Speaker roster',
             default: lowerThirdShows[0]?.id,
-            choices: lowerThirdShows.length ? lowerThirdShows : [{ id: '', label: 'Geen roster' }]
+            choices: lowerThirdShows.length ? lowerThirdShows : [{ id: '', label: 'No roster' }]
           }
         ],
         callback: async (action) => {
@@ -310,7 +308,9 @@ export default {
         ],
         callback: async (action) => {
           const { r, g, b } = splitRgb(action.options.color)
-          await this.patchState({ colors: { primary: `rgba(${r}, ${g}, ${b}, 1)` } })
+          const hex = (n) => n.toString(16).padStart(2, '0')
+          // The render reads brand colours from state.brand.colors (see public/render/render.js)
+          await this.patchState({ brand: { colors: { primary: `#${hex(r)}${hex(g)}${hex(b)}` } } })
         }
       }
     }

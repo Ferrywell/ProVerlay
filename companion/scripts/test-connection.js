@@ -1,4 +1,4 @@
-const { io } = require('socket.io-client')
+import { io } from 'socket.io-client'
 
 const host = process.env.PROVERLAY_HOST || '127.0.0.1'
 const port = process.env.PROVERLAY_PORT || '2014'
