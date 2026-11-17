@@ -5,8 +5,9 @@ name: Release
 #
 # - push of a tag vX.Y.Z      → build, verify, publish (create or update the release)
 # - workflow_dispatch (tag)    → rebuild an existing tag; dry_run builds without publishing
-# - pull_request (build files) → build + verify (+ Windows install smoke test) only;
-#                                the zips and the installer are kept as workflow artifacts
+# - pull_request (build files) → Windows build + verify + install smoke test only (no Mac
+#                                build: macOS runners are often out of capacity); the
+#                                installer is kept as a workflow artifact
 #
 # See docs/RELEASING.md.
 
@@ -109,6 +110,10 @@ jobs:
   build:
     name: build (macOS arm64 + x64)
     needs: meta
+    # Not on pull requests: macOS runners are often out of capacity and a job that is
+    # never picked up turns into a "failed" run and an email. Tags and manual runs
+    # (workflow_dispatch, dry_run for a check) always build the Mac app.
+    if: github.event_name != 'pull_request'
     # One macos-latest (Apple Silicon) runner builds both zips one after the other.
     # GitHub's hosted macOS runners are often capacity-constrained; needing a single
     # runner instead of two makes a release far less likely to be cancelled in the
@@ -335,9 +340,12 @@ jobs:
   assemble:
     name: checksums + release notes
     needs: [meta, build, build-windows]
-    # build-windows is skipped (not failed) only for tags that predate it.
+    # build-windows is skipped (not failed) only for tags that predate it; the Mac
+    # build is skipped on pull requests.
     if: >-
-      !cancelled() && needs.build.result == 'success' &&
+      !cancelled() &&
+      (needs.build.result == 'success' ||
+       (needs.build.result == 'skipped' && github.event_name == 'pull_request')) &&
       (needs.build-windows.result == 'success' ||
        (needs.build-windows.result == 'skipped' && needs.meta.outputs.windows != 'true'))
     runs-on: ubuntu-latest
