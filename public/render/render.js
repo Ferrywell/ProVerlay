@@ -19,7 +19,7 @@ import { buildTickerBoardHtml, tickerAssetUrl } from '/public/shared/ticker-boar
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
 import { persistAutoStoppageIfNeeded } from '/public/shared/operate-match.js'
 import { canvasAspectRatio, elementBoxStyle, isStripLayout, layoutBackgroundVisible, placementStyle, fontSizeStyle, resolveContainerWidthPx, projectCanvas, supportsContainerQueries, clockPillStyles } from '/public/shared/canvas-layout.js'
-import { injectProjectFontFaces, fetchProjectFontAssets, injectBrandFontFace, resolveRenderFontFamily } from '/public/shared/project-fonts.js'
+import { DEFAULT_BRAND_FONT, injectProjectFontFaces, fetchProjectFontAssets, injectBrandFontFace, resolveRenderFontFamily } from '/public/shared/project-fonts.js'
 import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows, resolveF1Animation, resolveF1Decimals, f1TyreInfo, f1TrackFlag } from '/public/shared/f1-timing.js'
 import {
   formatHockeyClock,
@@ -168,7 +168,7 @@ function applyBrand(state) {
   document.documentElement.style.setProperty('--background', colors.background || 'rgba(255,255,255,0.78)')
   document.documentElement.style.setProperty('--font-size', `${state.settings?.fontSize ?? 2.2}vmin`)
   document.documentElement.style.setProperty('--padding', `${state.settings?.padding ?? 2.5}vmin`)
-  document.documentElement.style.setProperty('--brand-font', brand.fontFamily || 'system-ui, sans-serif')
+  document.documentElement.style.setProperty('--brand-font', brand.fontFamily || DEFAULT_BRAND_FONT)
   document.body.style.background = state.settings?.canvasBackground || 'transparent'
 
   injectBrandFontFace(brand)

@@ -11,6 +11,33 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+### Added
+
+- Bundled **Inter** 4.1 font (SIL Open Font License 1.1, Latin + Latin Extended variable
+  subset, 137 KB) in `public/shared/fonts/`, loaded by `/render`, the scoreboard editor
+  and the dashboard previews. The font menus offer it as "Inter (bundled)".
+- Windows documentation: installing with `ProVerlay-win-x64-setup.exe` (SmartScreen,
+  per-user install, firewall prompt), data folder `%APPDATA%\ProVerlay\data`, uninstall,
+  port in use and Hyper-V/WSL reserved port ranges, OBS on Windows and vMix notes
+  (README, user guide, OBS/vMix guide, desktop app guide, manual test plan).
+- Website: Windows (beta) download and install steps.
+
+### Changed
+
+- New projects and the bundled `demo-club` preset use `'Inter', system-ui, sans-serif`
+  as the brand font instead of the OS UI font (SF Pro on a Mac, Segoe UI or Arial on
+  Windows), so the same overlay looks identical in OBS/vMix on every machine. Existing
+  projects keep their stored font.
+- Running clocks in custom scoreboards and the clock pill use tabular figures; the
+  stream countdown digits are tracked slightly wider so heavy digits never touch.
+
+### Fixed
+
+- **Open MultiViewer** on Windows: the app was reported as opened even when MultiViewer
+  was not installed, because `start multiviewer://` always succeeds. ProVerlay now
+  checks the `multiviewer:` protocol registration first and offers the download page
+  when it is missing.
+
 ## [0.8.0] - 2026-11-17
 
 One operator panel everywhere, project management, dark mode, a complete Companion

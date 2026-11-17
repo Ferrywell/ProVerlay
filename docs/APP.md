@@ -1,9 +1,18 @@
 # ProVerlay desktop app (Electron)
 
 The desktop app wraps the same Node server and browser UIs you get with `npm start`
-in an Electron shell with a menu-bar icon. Today it is built for **macOS**, with
-separate downloads for Apple Silicon (`ProVerlay-mac-arm64.zip`) and Intel
-(`ProVerlay-mac-x64.zip`).
+in an Electron shell with a menu-bar (macOS) or notification-area (Windows) icon.
+Downloads on the [releases page](https://github.com/Ferrywell/ProVerlay/releases):
+
+| Platform | Download |
+|----------|----------|
+| macOS, Apple Silicon (M1 and later) | `ProVerlay-mac-arm64.zip` |
+| macOS, Intel | `ProVerlay-mac-x64.zip` |
+| Windows 10/11, x64 — **beta** | `ProVerlay-win-x64-setup.exe` |
+
+`SHA256SUMS.txt` on the same page lists the checksum of every download. The Windows
+app is in **beta** until it has been tested on more real hardware; please report
+problems in the [issues](https://github.com/Ferrywell/ProVerlay/issues).
 
 ## Install (macOS)
 
@@ -22,26 +31,73 @@ The build is **ad-hoc signed** and not notarized with an Apple Developer ID, so
 Gatekeeper blocks it after download. This happens on every Mac, Apple Silicon or
 Intel; it is not an architecture problem.
 
+## Install (Windows, beta)
+
+1. Download `ProVerlay-win-x64-setup.exe` and run it.
+2. The installer is **not code-signed** yet, so Windows Defender SmartScreen shows
+   *"Windows protected your PC"*. Click **More info → Run anyway**. Edge or Chrome may
+   also call the download uncommon; choose **Keep**.
+3. Keep the default **Only for me**: ProVerlay installs into
+   `%LOCALAPPDATA%\Programs\ProVerlay` without administrator rights and adds
+   **ProVerlay** shortcuts to the Start menu and the desktop. *Anyone who uses this
+   computer* installs into `C:\Program Files\ProVerlay` and asks for admin rights.
+4. On first start ProVerlay explains the firewall prompt that follows. When **Windows
+   Defender Firewall** asks, allow ProVerlay on **Private networks** (leave *Public*
+   unticked). That lets an iPad, phone or Companion on your network connect. OBS or
+   vMix on the same PC work either way, because traffic to `127.0.0.1` is not
+   firewalled. If you clicked *Cancel*, see
+   [USER-GUIDE.md → Windows Firewall](USER-GUIDE.md#windows-firewall-blocks-the-ipad-or-companion).
+
+Updating: run the new `ProVerlay-win-x64-setup.exe`; it replaces the program and keeps
+your projects. Uninstalling (**Settings → Apps → Installed apps → ProVerlay →
+Uninstall**) removes the program and shortcuts but **keeps your projects** in
+`%APPDATA%\ProVerlay\data`. Delete that folder yourself for a clean removal.
+
+For deployment, `ProVerlay-win-x64-setup.exe /S` installs silently for the current
+user. Checksums: `Get-FileHash .\ProVerlay-win-x64-setup.exe -Algorithm SHA256` in
+PowerShell, compared with `SHA256SUMS.txt`.
+
 ## Behaviour
 
-- The app starts the ProVerlay server internally on port **2014**. If a ProVerlay
-  server is already running on that port (for example `npm run dev`), it connects to
-  that one instead of starting a second server.
-- The main window shows the dashboard (`/control`). The menu-bar icon offers: open
-  dashboard, open the operator in your browser, copy the render URL for OBS/vMix, and
-  stop ProVerlay.
-- Closing the window only hides it; the server keeps running so OBS/vMix keep their
-  overlay. Quit with **Cmd+Q** or **Stop ProVerlay** in the menu-bar menu.
+- The app starts the ProVerlay server internally on port **2014** (changeable in
+  Preferences, see below). If a ProVerlay server is already running on that port (for
+  example `npm run dev`), it connects to that one instead of starting a second server.
+- The main window shows the dashboard (`/control`).
+- **macOS:** the menu-bar icon opens a menu to open the dashboard, copy the operator and
+  render URLs, open Preferences and quit. Closing the window only hides it; quit with
+  **Cmd+Q** or from the menu-bar menu.
+- **Windows:** the ProVerlay icon sits in the notification area (system tray; it may be
+  under the **^** overflow arrow — drag it onto the taskbar to keep it visible). Click it
+  to open the dashboard; right-click for the same menu as on macOS. Closing the window
+  only hides it; quit from the tray menu.
+- While the app runs, the server keeps running too, so OBS/vMix keep their overlay with
+  the window closed.
+
+### Preferences
+
+Open **Preferences…** from the menu-bar/tray menu (on macOS also **Cmd+,**):
+
+- **Port** — the port the server listens on (1024–65535, default 2014). After a change,
+  use the new port in every URL: OBS/vMix inputs, the operator bookmark and the
+  Companion connection.
+- **Open the dashboard when ProVerlay starts.**
+- **Start ProVerlay when you log in** — handy on a dedicated streaming PC, so the
+  overlay is available as soon as OBS or vMix starts.
+
+If the port is taken when ProVerlay starts, it shows an error with a button to choose
+another port. Running from source, set the `PORT` environment variable instead.
 
 ## Data
 
 | Situation | Location |
 |-----------|----------|
 | Mac app | `~/Library/Application Support/ProVerlay/data` |
+| Windows app | `%APPDATA%\ProVerlay\data` (e.g. `C:\Users\<you>\AppData\Roaming\ProVerlay\data`) |
 | Running from source | `data/` in the repository (gitignored) |
 | Custom | set `PROVERLAY_DATA_DIR` (read by `server/paths.js`) |
 
-- Data survives app updates; an update never overwrites existing projects.
+- Data survives app updates; an update never overwrites existing projects. On Windows
+  an uninstall keeps it too.
 - On first launch the app copies `seed-data/` from the app bundle if present
   (a blank project). Without seed data the server creates a blank project itself.
 - The repository `data/` folder is **never** packaged into the app.
@@ -54,16 +110,16 @@ nvm use 22            # Electron tooling needs Node 22
 npm ci
 npm run app           # run the Electron app against your working copy
 npm run dist:mac      # build, ad-hoc sign and zip → dist/ProVerlay-mac-arm64.zip
+npm run dist:win      # build the Windows installer → dist/ProVerlay-win-x64-setup.exe
 ```
 
 `npm run dist:mac` generates the seed data, runs electron-builder and then signs and
 zips the app in one step (`scripts/package-mac-app.mjs`). Without the signing step
 macOS refuses to open the app.
 
-## Windows
+`npm run dist:win` builds the unsigned NSIS installer; it cross-builds on macOS and
+Linux too, but running and testing it needs Windows. Release builds, verification and
+signing are described in [RELEASING.md](RELEASING.md).
 
-The server itself is plain Node and runs on Windows (`npm start`), and the browser
-UIs work in any modern browser. A packaged Windows desktop app is **planned but not
-built yet**: `electron-builder.yml` already contains a `win` target (NSIS, x64).
-`server/paths.js` is platform-independent; the packaged Windows app would keep its
-data under `%APPDATA%/ProVerlay/data`.
+The server alone also runs on Windows from source (`npm start` with Node 22), and the
+browser UIs work in any modern browser.

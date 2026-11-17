@@ -218,8 +218,12 @@ html[data-preview-window] .score-canvas--no-bg {
   visibility: hidden;
 }
 
+/* Tabular figures: running clocks and scores keep a fixed width as digits change */
 .score-el--homeScore,
-.score-el--awayScore {
+.score-el--awayScore,
+.score-el--clock,
+.score-el--minute,
+.clock-pill__text {
   font-variant-numeric: tabular-nums;
 }
 
@@ -1169,7 +1173,7 @@ html[data-preview-window] .score-canvas--no-bg {
   display: flex;
   align-items: center;
   gap: calc(var(--mb-h) * 0.2);
-  font-family: var(--brand-font, system-ui, sans-serif);
+  font-family: var(--brand-font, 'Inter', system-ui, sans-serif);
   color: #ffffff;
   white-space: nowrap;
   filter: drop-shadow(0 0.45vmin 1.6vmin rgba(0, 0, 0, 0.38));
@@ -1347,7 +1351,7 @@ html[data-preview-window] .score-canvas--no-bg {
   background: rgba(28, 28, 30, 0.72);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.72);
-  font: 500 24px/1.45 -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  font: 500 24px/1.45 'Inter', system-ui, sans-serif;
   text-align: center;
   pointer-events: none;
 }

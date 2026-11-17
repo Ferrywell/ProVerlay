@@ -1,7 +1,8 @@
 # ProVerlay user guide
 
-This guide walks you through a first show: starting ProVerlay, setting up a project,
-adding widgets, getting them into OBS or vMix and controlling them from an iPad.
+This guide walks you through a first show: starting ProVerlay on a Mac or Windows PC,
+setting up a project, adding widgets, getting them into OBS or vMix and controlling
+them from an iPad.
 
 - [1. First start](#1-first-start)
 - [2. The screens](#2-the-screens)
@@ -25,6 +26,26 @@ for Apple Silicon, `ProVerlay-mac-x64.zip` for Intel Macs), unzip it, move
 time (see [Gatekeeper](#macos-says-the-app-cant-be-opened) if that fails). The
 dashboard opens in the app window and a ProVerlay icon appears in the menu bar.
 
+**Windows app (beta).** Download `ProVerlay-win-x64-setup.exe` from the same releases
+page and run it (Windows 10 or 11, x64):
+
+1. The installer is not code-signed yet, so SmartScreen says *"Windows protected your
+   PC"*. Click **More info → Run anyway** (see
+   [SmartScreen](#windows-smartscreen-blocks-the-installer)).
+2. Keep **Only for me**: no administrator rights needed. ProVerlay gets a Start menu
+   and a desktop shortcut.
+3. When **Windows Defender Firewall** asks whether ProVerlay may communicate on
+   networks, tick **Private networks**, leave *Public networks* unticked and click
+   **Allow access**. This is only needed for an iPad, phone or Stream Deck on another
+   device; OBS or vMix on the same PC work without it.
+
+The dashboard opens in the app window and a ProVerlay icon appears in the notification
+area (bottom right, possibly under the **^** arrow). Click it to reopen the dashboard
+after closing the window; right-click it to quit. Installing a newer version keeps your
+projects, and so does uninstalling (**Settings → Apps → Installed apps → ProVerlay**).
+The Windows app is in beta: please report problems in the
+[issues](https://github.com/Ferrywell/ProVerlay/issues). More in [APP.md](APP.md).
+
 **From source (any OS with Node 22).**
 
 ```bash
@@ -43,6 +64,7 @@ widgets. Your data is stored in:
 | How you run it | Data folder |
 |----------------|-------------|
 | Mac app | `~/Library/Application Support/ProVerlay/data` |
+| Windows app | `%APPDATA%\ProVerlay\data` — paste it in the File Explorer address bar |
 | From source | `data/` in the repository (not tracked by git) |
 
 ## 2. The screens
@@ -77,6 +99,13 @@ A project holds everything for one show or client: widgets, branding and assets
    - pick a **client preset** or set colours, font family and an optional web-font URL;
    - upload **assets** (PNG logos, backgrounds, `.ttf/.otf/.woff/.woff2` fonts);
    - upload **design references** for the scoreboard editor.
+
+New projects use **Inter** as their font. It ships with ProVerlay, so the render looks
+the same in OBS or vMix on a Mac and on a Windows PC. A font that is only *installed*
+on one computer (for example SF Pro on a Mac or Segoe UI on Windows) looks different —
+or is missing — on another; upload the client's font files as project assets instead,
+so they travel with the project and its `.proverlay` export. Existing projects keep
+the font they already have.
 
 You can also just keep working in the default **New client** project; projects are
 only a way to keep shows apart.
@@ -262,19 +291,62 @@ See [OBS-VMIX.md → Transparency](OBS-VMIX.md#transparency).
 - When macOS asks whether ProVerlay (or `node`) may accept incoming network
   connections, click **Allow**. If you clicked Deny, change it in **System Settings →
   Network → Firewall → Options**.
+- On Windows, see [Windows Firewall](#windows-firewall-blocks-the-ipad-or-companion).
 - Check from the device's browser that `http://<computer-ip>:2014/api/state`
   returns text.
 
+### Windows Firewall blocks the iPad or Companion
+
+OBS and vMix on the same PC always reach ProVerlay (`127.0.0.1` is not firewalled), but
+other devices only do when Windows Defender Firewall allows it.
+
+- The first time ProVerlay starts, Windows asks whether it may communicate on
+  networks: tick **Private networks** and click **Allow access**. Allowing it may need
+  an administrator account.
+- Make sure the network you are on is set to **Private** (**Settings → Network &
+  internet → Wi-Fi or Ethernet → your network → Network profile type → Private
+  network**). On a *Public* network the rule for private networks does not apply.
+- Clicked *Cancel*, or need to change it later? Open **Windows Security → Firewall &
+  network protection → Allow an app through firewall → Change settings**, find
+  **ProVerlay** (running from source: **Node.js JavaScript Runtime**) and tick
+  **Private**.
+
+### Windows SmartScreen blocks the installer
+
+The Windows installer is not code-signed yet, so SmartScreen shows *"Windows protected
+your PC"*. Click **More info**, check that the app is `ProVerlay-win-x64-setup.exe`,
+then **Run anyway**. Your browser may also warn that the file is not commonly
+downloaded; choose **Keep**. To check the download, compare
+`Get-FileHash .\ProVerlay-win-x64-setup.exe -Algorithm SHA256` (PowerShell) with
+`SHA256SUMS.txt` on the release page.
+
 ### Port 2014 is already in use
 
-The server stops with *"ProVerlay could not bind to port 2014 (already in use)"*.
+ProVerlay cannot start its server: the app shows an error (with a button to choose
+another port), and `npm start` stops with *"ProVerlay could not bind to port 2014
+(already in use)"*.
 
-- Another ProVerlay is probably still running (the Mac app in the menu bar, or an
-  `npm start` in another terminal). Quit it, or let the Mac app use it — the app
-  connects to an existing ProVerlay server instead of starting a second one.
-- Find what is using the port: `lsof -nP -iTCP:2014 -sTCP:LISTEN`.
-- When running from source you can use another port: `PORT=2015 npm start` (then use
-  that port in every URL and in Companion). The Mac app uses port 2014.
+- Another ProVerlay is probably still running (the app in the menu bar or notification
+  area, or an `npm start` in another terminal). Quit it, or let the app use it — the
+  app connects to an existing ProVerlay server instead of starting a second one.
+- Find what is using the port. macOS: `lsof -nP -iTCP:2014 -sTCP:LISTEN`. Windows
+  (Command Prompt): `netstat -ano | findstr :2014`, then
+  `tasklist /FI "PID eq <pid>"` with the number from the last column.
+- Choose another port: in the app under **Preferences… → Port**, or from source with
+  `PORT=2015 npm start` (Windows PowerShell: `$env:PORT=2015; npm start`). Then use that
+  port in every URL — OBS/vMix, the operator — and in Companion.
+
+**Windows: port reserved by Hyper-V, WSL or Docker.** On PCs with Hyper-V, WSL 2 or
+Docker Desktop, Windows reserves blocks of ports for itself. If 2014 falls in such a
+block, ProVerlay cannot use it although nothing shows up in `netstat` (from source the
+error says *permission denied*). List the reserved ranges:
+
+```bat
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+If 2014 is inside one of the ranges, pick a port outside all of them in
+**Preferences… → Port** (or with `PORT`). The ranges can change after a reboot.
 
 ### macOS says the app can't be opened
 
