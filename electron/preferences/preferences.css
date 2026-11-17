@@ -210,3 +210,8 @@ body {
 [hidden] {
   display: none !important;
 }
+
+/* Hidden but still taking its space (the port-change note). */
+.is-invisible {
+  visibility: hidden;
+}

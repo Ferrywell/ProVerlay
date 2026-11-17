@@ -41,7 +41,9 @@
 
   function syncPortNote() {
     var value = portInput.value.trim()
-    portNote.hidden = !(initialPort !== null && value !== '' && value !== String(initialPort))
+    // visibility, not hidden: the note keeps its space, so the Save button
+    // does not jump down while the user is about to click it.
+    portNote.classList.toggle('is-invisible', !(initialPort !== null && value !== '' && value !== String(initialPort)))
   }
 
   function setBusy(on, message) {
