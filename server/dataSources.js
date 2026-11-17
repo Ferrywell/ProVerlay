@@ -25,6 +25,7 @@ import { parseDataFile } from './dataParse.js'
 import { fetchDataUrl, normalizeHostPattern, sheetCsvUrl } from './dataFetch.js'
 import { BINDABLE_TYPES, applyTableToGraphic, isBindableType, variablesFromTable } from './dataBindings.js'
 import { DATA_DIR_NAME } from './dataFiles.js'
+import { debugLog } from './debugLog.js'
 
 export const POLL_DEFAULT_MS = 30_000
 export const POLL_MIN_MS = 5_000
@@ -130,6 +131,13 @@ async function readSourceBytes(source) {
   throw new Error('Unknown source type')
 }
 
+/** Where a source reads from, for the Debug console. */
+export function sourceWhere(source) {
+  if (source.origin === 'url') return source.url || 'a link'
+  if (source.origin === 'file') return source.path || 'a linked file'
+  return `uploaded file ${source.file || ''}`.trim()
+}
+
 /** Re-read one source now. Resolves to its status. Concurrent calls share one read. */
 export function refreshSource(id) {
   if (inFlight.has(id)) return inFlight.get(id)
@@ -137,6 +145,8 @@ export function refreshSource(id) {
     const forProject = projectId
     const source = sourcesOf(getState()).find((s) => s.id === id)
     if (!source) throw fail(404, 'Data source not found')
+    const before = status.get(id) || {}
+    const startedAt = Date.now()
     setStatus(id, { state: 'loading' })
     try {
       const bytes = await readSourceBytes(source)
@@ -161,10 +171,19 @@ export function refreshSource(id) {
         sheet: table.sheet,
         error: ''
       })
+      if (before.state !== 'ok' || before.rowCount !== table.rows.length) {
+        debugLog('data', `"${source.name}": read ${table.rows.length} rows from ${sourceWhere(source)} (${Date.now() - startedAt} ms)`)
+      }
       await applySource(id)
     } catch (err) {
       const message = err?.expose || err instanceof HttpError ? err.message : err?.message || 'Could not read the source'
-      setStatus(id, { state: tables.has(id) ? 'cached' : 'error', error: message, lastError: new Date().toISOString() })
+      const cached = tables.has(id)
+      setStatus(id, { state: cached ? 'cached' : 'error', error: message, lastError: new Date().toISOString() })
+      if (before.error !== message) {
+        debugLog('data', `"${source.name}": could not read ${sourceWhere(source)}: ${message}${cached ? ' (showing the last good copy)' : ''}`, {
+          level: cached ? 'warn' : 'error'
+        })
+      }
     }
     return status.get(id)
   })().finally(() => inFlight.delete(id))
@@ -176,20 +195,30 @@ export function refreshSource(id) {
 async function applySource(sourceId) {
   const table = tables.get(sourceId)
   if (!table) return
+  const updatedNames = []
+  const heldNames = []
+  let sourceName = sourceId
   await updateState((current) => {
+    updatedNames.length = 0
+    heldNames.length = 0
     let changed = false
+    const source = sourcesOf(current).find((s) => s.id === sourceId)
+    sourceName = source?.name || sourceId
     const graphics = current.graphics.map((g) => {
       if (g?.data?.dataBinding?.sourceId !== sourceId) return g
-      const source = sourcesOf(current).find((s) => s.id === sourceId)
       if (source?.holdWhileOnAir && g.visible) {
         const next = applyTableToGraphic(g, table)
-        if (next) held.set(g.id, sourceId)
+        if (next) {
+          if (held.get(g.id) !== sourceId) heldNames.push(g.name || g.id)
+          held.set(g.id, sourceId)
+        }
         return g
       }
       held.delete(g.id)
       const next = applyTableToGraphic(g, table)
       if (!next) return g
       changed = true
+      updatedNames.push(g.name || g.id)
       return next
     })
     let sourceVariables = current.sourceVariables
@@ -203,6 +232,10 @@ async function applySource(sourceId) {
     }
     return changed ? { ...current, graphics, sourceVariables } : null
   })
+  if (updatedNames.length) debugLog('data', `"${sourceName}" updated ${updatedNames.map((n) => `"${n}"`).join(', ')}`)
+  if (heldNames.length) {
+    debugLog('data', `"${sourceName}" changed, held back while on air: ${heldNames.map((n) => `"${n}"`).join(', ')}`)
+  }
   emitStatus()
 }
 

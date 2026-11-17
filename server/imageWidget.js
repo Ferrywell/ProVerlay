@@ -6,6 +6,7 @@
 import crypto from 'crypto'
 import { getGraphic, getState, onStateChange, updateGraphic } from './state.js'
 import { badRequest, cleanImageSrc } from './validation.js'
+import { debugLog } from './debugLog.js'
 import {
   MAX_IMAGES,
   activeImage,
@@ -167,6 +168,7 @@ function reconcile(state) {
     if (hideMs && !keepHide) {
       entry.hide = setTimeout(() => {
         clearImageTimers(g.id)
+        debugLog('image', `"${g.name || g.id}": auto-hide after ${Math.round(hideMs / 1000)} s`, { graphicId: g.id })
         updateImageGraphic(g.id, (graphic) => (graphic.visible ? { ...graphic, visible: false } : null)).catch(
           (err) => console.warn(`[image] auto-hide of ${g.id} failed: ${err.message}`)
         )
@@ -180,6 +182,8 @@ function reconcile(state) {
           if (!nextId || nextId === graphic.data?.activeImageId) return null
           const t = timers.get(g.id)
           if (t) t.carouselTo = nextId
+          const img = images.find((x) => x.id === nextId)
+          debugLog('image', `"${graphic.name || graphic.id}": carousel shows "${img?.name || nextId}"`, { graphicId: g.id })
           return { ...graphic, data: { ...graphic.data, activeImageId: nextId } }
         }).catch((err) => console.warn(`[image] carousel of ${g.id} failed: ${err.message}`))
       }, rotateMs)

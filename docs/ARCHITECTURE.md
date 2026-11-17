@@ -152,6 +152,7 @@ Existing widgets keep their stored position.
 | `/operate` | Single-widget operate view (`?graphic=<id>` or `/operate/<id>`) |
 | `/editor` | WYSIWYG editor (`?graphic=<id>`; `/editor/<id>` redirects to query form) |
 | `/render` | OBS browser source (`?graphic=<id>` solo layer; uses `soloVisible`, not `visible`) |
+| `/debug` | Debug console: live server log, connected outputs, where each graphic's content comes from (data loaded from `GET /api/debug`, **loopback only**) |
 
 Graphics have two visibility flags: `visible` (combined `/render`) and `soloVisible` (`/render?graphic=<id>`).
 
@@ -230,6 +231,17 @@ the `dataSourcesStatus` socket event (same body as `GET /api/data-sources`).
 `dataSources`, `dataSettings`, `variableSource` and `sourceVariables` are managed by
 these routes only and ignored in a `PATCH /api/state` body. `variables` may also be
 patched there.
+
+### REST — debug
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/debug` | Snapshot for the Debug console (**loopback only**): server (version, port, uptime, data dir, experimental flags), connected pages, graphics with `origin` (typed in / data source / MultiViewer, variables used), data-source and F1 connector status, and the log. `?log=0` leaves the log out. |
+
+The log (`server/debugLog.js`) is an in-memory ring buffer of 1000 lines, areas
+`state`, `api`, `render`, `data`, `f1`, `image`, `server`. Connectors log transitions
+(connected, error changed), not every poll. Every API write (`POST`/`PUT`/`PATCH`/`DELETE`)
+is logged with its result and the client that sent it (Referer page, or Companion/script).
 
 ### REST — projects and assets
 
@@ -345,6 +357,10 @@ Read-only. All writes use REST.
 | `projectsChanged` | server → client | project list (as `GET /api/projects`) after create, rename, duplicate, delete, import or activate |
 | `getState` | client → server | ack(state) |
 | `f1TimingUpdate` | server → client | `{ graphicId, rows, session, status }` |
+| `debug:hello` | client → server | `{ page, width, height, obs?, obsVersion?, filter? }`: a page describes itself for the Debug console (render, dashboard, operator) |
+| `debug:renderError` | client → server | `{ graphicId?, phase, message, stack? }`: a render output could not draw a graphic or load an image (max 20 per output per minute) |
+| `debug:subscribe` | client → server | ack(`{ entries }`) and join the `debug` room; refused for non-loopback clients |
+| `debug:log` | server → `debug` room | one new log line `{ seq, at, area, level, message, detail?, graphicId? }` |
 
 ### LAN security model
 

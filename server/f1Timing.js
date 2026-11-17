@@ -17,6 +17,7 @@ import dns from 'dns/promises'
 import net from 'net'
 import { getState, onStateChange, patchGraphic } from './state.js'
 import { isPrivateIp, isTrustedHostname } from './netSecurity.js'
+import { debugLog } from './debugLog.js'
 
 const POLL_MS_DEFAULT = 1000
 const POLL_MS_MIN = 250
@@ -84,6 +85,16 @@ async function fetchTopic(cfg, topic) {
   })
   if (!res.ok) throw new Error(`${topic} → HTTP ${res.status}`)
   return res.json()
+}
+
+/** Readable reason instead of undici's bare "fetch failed". */
+function describeFetchError(err) {
+  if (err?.name === 'TimeoutError') return 'MultiViewer not reachable (timeout)'
+  const code = err?.cause?.code
+  if (code === 'ECONNREFUSED') return 'MultiViewer is not running, or its live timing API is off (connection refused)'
+  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') return 'MultiViewer computer not reachable on the network'
+  if (code) return `${err.message} (${code})`
+  return err?.message || 'Unknown error'
 }
 
 function gapValue(raw) {
@@ -175,18 +186,46 @@ async function pollOnce(graphicId, cfg) {
     while (entry.buffer.length && entry.buffer[0].at < now - BUFFER_MAX_MS) {
       entry.buffer.shift()
     }
+    const before = entry.status
     entry.status = { connected: rows.length > 0, lastError: null, lastUpdateAt: now }
+    entry.lastRowCount = rows.length
+    entry.lastSession = session
+    logF1Transition(graphicId, cfg, before, entry.status, rows.length, !entry.polled)
+    entry.polled = true
   } catch (err) {
     if (!pollers.has(graphicId)) return
+    const before = entry.status
     entry.status = {
       connected: false,
-      lastError: err.name === 'TimeoutError' ? 'MultiViewer not reachable (timeout)' : err.message,
+      lastError: describeFetchError(err),
       lastUpdateAt: entry.status?.lastUpdateAt || null
     }
+    logF1Transition(graphicId, cfg, before, entry.status, 0, !entry.polled)
+    entry.polled = true
   } finally {
     entry.inFlight = false
   }
   if (pollers.has(graphicId)) broadcast(graphicId, cfg)
+}
+
+function graphicName(graphicId) {
+  const g = (getState().graphics || []).find((x) => x.id === graphicId)
+  return g ? `"${g.name || g.id}"` : graphicId
+}
+
+/** Log only when the connection state or the error changes, not every poll. */
+function logF1Transition(graphicId, cfg, before, after, rowCount, first) {
+  const where = `MultiViewer ${cfg.host}:${cfg.port}`
+  const name = graphicName(graphicId)
+  if (after.connected) {
+    if (first || !before?.connected) debugLog('f1', `${name}: receiving live timing from ${where} (${rowCount} cars)`, { graphicId })
+  } else if (after.lastError) {
+    if (first || after.lastError !== before?.lastError) {
+      debugLog('f1', `${name}: no data from ${where}: ${after.lastError}`, { level: 'warn', graphicId })
+    }
+  } else if (first || before?.connected || before?.lastError) {
+    debugLog('f1', `${name}: ${where} answers, but sends no timing rows (is Live Timing running?)`, { level: 'warn', graphicId })
+  }
 }
 
 /** Snapshot at (now − delay); the newest one when the buffer is shorter than the delay. */
@@ -240,6 +279,7 @@ function stopPoller(graphicId) {
   if (!entry) return
   clearInterval(entry.timer)
   pollers.delete(graphicId)
+  debugLog('f1', `${graphicName(graphicId)}: stopped polling MultiViewer`, { graphicId })
 }
 
 // delayMs is not part of the key: adjusting the delay live must not drop the
@@ -262,6 +302,11 @@ function startPoller(graphicId, cfg) {
     cfgKey: pollerKey(cfg)
   }
   pollers.set(graphicId, entry)
+  debugLog(
+    'f1',
+    `${graphicName(graphicId)}: polling MultiViewer at ${baseUrl(cfg)} every ${cfg.pollMs} ms (delay ${cfg.delayMs} ms)`,
+    { graphicId }
+  )
   entry.timer = setInterval(() => {
     const live = f1ConfigLive(graphicId)
     if (live) pollOnce(graphicId, live)
@@ -318,6 +363,9 @@ export async function importDriversOnce(graphicId) {
       }
     }
     await patchGraphic(graphicId, { data: { drivers: rows } })
+    debugLog('f1', `${graphicLabelFor(graphic)}: imported ${rows.length} drivers from MultiViewer ${cfg.host}:${cfg.port}`, {
+      graphicId
+    })
     return { status: 200, body: { imported: rows.length } }
   } catch (err) {
     return {
@@ -330,6 +378,48 @@ export async function importDriversOnce(graphicId) {
       }
     }
   }
+}
+
+function graphicLabelFor(graphic) {
+  return `"${graphic.name || graphic.id}"`
+}
+
+/**
+ * Where each F1 tower gets its rows from, for the Debug console: manual list
+ * or MultiViewer (address, poll/delay settings, connection, buffer).
+ */
+export function f1DebugStatus() {
+  const out = []
+  for (const g of getState().graphics || []) {
+    if (g.type !== 'f1Timing') continue
+    const cfg = f1Config(g)
+    const source = g.data?.source === 'multiviewer' ? 'multiviewer' : 'manual'
+    const entry = pollers.get(g.id)
+    out.push({
+      graphicId: g.id,
+      name: g.name || g.id,
+      visible: Boolean(g.visible),
+      source,
+      manualRows: Array.isArray(g.data?.drivers) ? g.data.drivers.length : 0,
+      multiviewer:
+        source === 'multiviewer'
+          ? {
+              url: baseUrl(cfg),
+              pollMs: cfg.pollMs,
+              delayMs: cfg.delayMs,
+              polling: Boolean(entry),
+              status: entry?.status || null,
+              rows: entry?.lastRowCount ?? 0,
+              session: entry?.lastSession || null,
+              bufferSnapshots: entry?.buffer.length || 0,
+              bufferSeconds: entry?.buffer.length
+                ? Math.round((entry.buffer[entry.buffer.length - 1].at - entry.buffer[0].at) / 1000)
+                : 0
+            }
+          : null
+    })
+  }
+  return out
 }
 
 export function initF1Timing(io) {

@@ -42,6 +42,7 @@ import { CUSTOM_CSS_MAX_BYTES, customCssVersion } from './customCss.js'
 import { analyzeImageBuffer, buildGraphicDataFromCompose } from './composeAnalyze.js'
 import { createGraphicFromType } from './graphicDefaults.js'
 import { getLiveSnapshot, importDriversOnce } from './f1Timing.js'
+import { buildDebugSnapshot } from './debugSnapshot.js'
 import {
   addLowerThirdEntry,
   updateLowerThirdEntry,
@@ -172,8 +173,18 @@ function requireGraphic(id) {
   return graphic
 }
 
-export function createApiRouter({ getPort = () => Number(process.env.PORT || 2014) } = {}) {
+export function createApiRouter({ getPort = () => Number(process.env.PORT || 2014), getDebugClients = () => [] } = {}) {
   const router = asyncRouter()
+
+  // Debug console snapshot (/debug). Loopback only: it lists file paths,
+  // data-source links and the devices that are connected.
+  router.get('/debug', (req, res) => {
+    if (!isLocalRequest(req)) {
+      throw new HttpError(403, 'The Debug console only works on the ProVerlay computer itself')
+    }
+    res.set('Cache-Control', 'no-store')
+    res.json(buildDebugSnapshot({ port: getPort(), clients: getDebugClients(), includeLog: req.query.log !== '0' }))
+  })
 
   router.get('/device', (req, res) => {
     const device = detectDevice(req.headers['user-agent'] || '')

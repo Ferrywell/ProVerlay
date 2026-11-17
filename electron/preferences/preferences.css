@@ -207,6 +207,54 @@ body {
   opacity: 0.55;
 }
 
+/* Updates */
+.prefs__update {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--button);
+}
+
+.prefs__update-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.prefs__update.is-error .prefs__update-title {
+  color: var(--danger);
+}
+
+.prefs__progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--accent-fill);
+}
+
+.prefs__update-actions {
+  justify-content: flex-end;
+}
+
+.prefs__link {
+  margin-right: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.prefs__link:hover {
+  text-decoration: underline;
+}
+
+.prefs__link:focus-visible {
+  outline: 3px solid var(--accent-ring);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
 [hidden] {
   display: none !important;
 }

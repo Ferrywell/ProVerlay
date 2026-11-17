@@ -54,6 +54,34 @@
         <p class="prefs__hint" id="login-hint" hidden></p>
       </section>
 
+      <section class="prefs__group" aria-labelledby="updates-heading">
+        <h2 class="prefs__heading" id="updates-heading">Updates</h2>
+        <div class="prefs__row prefs__row--field">
+          <span class="prefs__label" id="update-version">ProVerlay</span>
+          <button type="button" class="prefs__button" id="update-check">Check for Updates</button>
+        </div>
+        <div class="prefs__update" id="update-panel" role="status" aria-live="polite" hidden>
+          <p class="prefs__update-title" id="update-title"></p>
+          <p class="prefs__hint" id="update-detail"></p>
+          <progress class="prefs__progress" id="update-progress" max="1" value="0" hidden></progress>
+          <div class="prefs__row prefs__update-actions" id="update-actions">
+            <button type="button" class="prefs__link" id="update-notes" hidden>Release notes</button>
+            <button type="button" class="prefs__button" id="update-cancel" hidden>Cancel</button>
+            <button type="button" class="prefs__button" id="update-action" hidden></button>
+          </div>
+        </div>
+        <p class="prefs__hint">ProVerlay never updates by itself. Installing quits and restarts the app: OBS and vMix lose the graphics for a few seconds.</p>
+      </section>
+
+      <section class="prefs__group" aria-labelledby="debug-heading">
+        <h2 class="prefs__heading" id="debug-heading">Troubleshooting</h2>
+        <div class="prefs__row prefs__row--field">
+          <span class="prefs__label">Debug console</span>
+          <button type="button" class="prefs__button" id="open-debug">Open</button>
+        </div>
+        <p class="prefs__hint" id="debug-hint">A live log of the server, the render outputs and the data connectors: what is on air, where each graphic gets its content (typed in, a data source, MultiViewer) and errors from OBS or vMix.</p>
+      </section>
+
       <div class="prefs__actions">
         <span class="prefs__status" id="prefs-status" role="status" aria-live="polite"></span>
         <button type="button" class="prefs__button" id="cancel">Cancel</button>

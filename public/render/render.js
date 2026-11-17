@@ -1370,7 +1370,10 @@ function loadImage(url) {
     const img = new Image()
     const done = new Promise((resolve) => {
       img.onload = () => resolve(img)
-      img.onerror = () => resolve(null)
+      img.onerror = () => {
+        sendDebug('debug:renderError', { phase: 'image did not load', message: url })
+        resolve(null)
+      }
     })
     img.src = url
     const decoded = done.then((loaded) => (loaded && loaded.decode ? loaded.decode().then(() => loaded, () => loaded) : loaded))
@@ -1568,6 +1571,35 @@ function reportGraphicError(graphic, phase, err) {
     `[ProVerlay render] Skipping graphic "${id}" (${graphic?.type || 'unknown type'}) — ${phase} failed:`,
     err
   )
+  sendDebug('debug:renderError', {
+    graphicId: graphic?.id || '',
+    phase: `${phase} failed`,
+    message: String(err?.message || err),
+    stack: String(err?.stack || '').slice(0, 2000)
+  })
+}
+
+/**
+ * Debug console reports (server logs them; see server/app.js). Never throws:
+ * the socket may not exist yet, and debugging must not break the output.
+ */
+function sendDebug(event, payload) {
+  try {
+    if (socket?.connected) socket.emit(event, payload)
+  } catch {
+    // no socket yet
+  }
+}
+
+function sendDebugHello() {
+  sendDebug('debug:hello', {
+    page: 'render',
+    obs: typeof window.obsstudio !== 'undefined',
+    obsVersion: window.obsstudio?.pluginVersion || '',
+    width: window.innerWidth,
+    height: window.innerHeight,
+    filter: urlParams.get('graphic') || ''
+  })
 }
 
 function clearGraphicError(id) {
@@ -1922,6 +1954,12 @@ setupPreviewWindow()
 setInterval(refreshLiveVariables, 1000)
 
 const socket = reconnectAfterServerDisconnect(io())
+socket.on('connect', sendDebugHello)
+let helloResizeTimer = null
+window.addEventListener('resize', () => {
+  clearTimeout(helloResizeTimer)
+  helloResizeTimer = setTimeout(sendDebugHello, 500)
+})
 socket.on('stateChanged', applyState)
 socket.on('f1TimingUpdate', (payload) => {
   if (!payload?.graphicId) return

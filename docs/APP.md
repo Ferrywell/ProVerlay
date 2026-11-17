@@ -83,9 +83,65 @@ Open **Preferences…** from the menu-bar/tray menu (on macOS also **Cmd+,**):
 - **Open the dashboard when ProVerlay starts.**
 - **Start ProVerlay when you log in** — handy on a dedicated streaming PC, so the
   overlay is available as soon as OBS or vMix starts.
+- **Updates** — *Check for Updates* asks GitHub for the latest release (see
+  [Updates](#updates)).
+- **Troubleshooting** — *Open* starts the Debug console (see [Debug console](#debug-console)).
 
 If the port is taken when ProVerlay starts, it shows an error with a button to choose
 another port. Running from source, set the `PORT` environment variable instead.
+
+### Updates
+
+ProVerlay never updates by itself and does not check in the background. In
+**Preferences → Updates** (or **ProVerlay → Check for Updates…** on macOS, **Check for
+Updates…** in the tray menu):
+
+1. **Check for Updates** asks GitHub for the latest release of
+   [Ferrywell/ProVerlay](https://github.com/Ferrywell/ProVerlay/releases). Pre-releases
+   are skipped.
+2. **Download** fetches the file for this computer (`ProVerlay-mac-arm64.zip`,
+   `ProVerlay-mac-x64.zip` or `ProVerlay-win-x64-setup.exe`) and checks its size and its
+   SHA-256 against `SHA256SUMS.txt` from the same release. On macOS the app inside the
+   zip is unpacked and checked as well: valid signature, ProVerlay's bundle id and the
+   expected version.
+3. **Install and Restart** (macOS) / **Quit and Install** (Windows) asks for
+   confirmation first and warns when graphics are on air. ProVerlay quits, so OBS, vMix
+   and operators lose the connection for a few seconds; they reconnect by themselves and
+   graphics that were on air are on air again.
+   - **macOS:** a small helper waits until ProVerlay has quit, swaps
+     `ProVerlay.app` for the new one (the old app is put back if that fails) and starts
+     it. ProVerlay has to be in a folder you can write to, normally Applications; a copy
+     started from a disk image or Downloads (App Translocation) cannot update itself.
+   - **Windows:** the installer starts and finds the existing installation (for you or
+     for everyone on the computer). Follow its steps.
+
+Projects and settings are not touched by an update. Running from source, *Download* is
+not available; use `git pull`.
+
+### Debug console
+
+**Preferences → Troubleshooting → Open** (or **Debug Console** in the menu-bar/tray
+menu) opens a window with what the server is doing right now:
+
+- **Outputs and pages** — every connected render output (an OBS browser source is
+  recognised as such; vMix and browsers show as *Render page*), with its size, how long
+  it has been connected and the last error it reported, plus open dashboards and
+  operator pages.
+- **Connectors** — data sources (where they read from, rows, last update, errors, held
+  changes) and F1 timing towers (manual list or MultiViewer: address, poll and delay
+  settings, connection, cars, snapshot buffer).
+- **Graphics and where their content comes from** — per graphic: on air or not, and
+  whether its content is typed in, comes from a data source, from MultiViewer, and which
+  `{{variables}}` it uses.
+- **Log** — a live log of state changes (on/off air, edits), API writes with who sent
+  them (dashboard, operator, Companion or a script), data refreshes, MultiViewer
+  connects and errors, image auto-hide/carousel steps, and graphics a render output
+  could not draw (with the error). Filter by area, level or text; *Copy report* puts the
+  snapshot and the last 300 log lines on the clipboard for a bug report.
+
+The log lives in memory (the last 1000 lines) and is gone after a restart. The console
+also works in a browser on the ProVerlay computer at `http://localhost:2014/debug`; from
+other devices it is refused, because it shows file paths and data-source links.
 
 ## Data
 

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProVerlay — Debug console</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="/public/shared/app-shell.js"></script>
+    <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/public/shared/tahoe.css" />
+    <link rel="stylesheet" href="/public/shared/form-controls.css" />
+    <link rel="stylesheet" href="/public/debug/debug.css" />
+  </head>
+  <body class="debug-page">
+    <header class="dbg-head">
+      <div class="dbg-head__title">
+        <h1>Debug console</h1>
+        <p id="dbg-summary" class="dbg-summary">Connecting…</p>
+      </div>
+      <div class="dbg-head__actions">
+        <button type="button" class="button button--secondary button--compact" id="dbg-copy">Copy report</button>
+      </div>
+    </header>
+
+    <p class="dbg-blocked" id="dbg-blocked" role="alert" hidden></p>
+
+    <main class="dbg-main" id="dbg-main">
+      <section class="dbg-card" aria-labelledby="dbg-outputs-h">
+        <h2 id="dbg-outputs-h">Outputs and pages</h2>
+        <p class="dbg-note">Render outputs (OBS, vMix, browsers) and open dashboards, as they report themselves.</p>
+        <ul class="dbg-list" id="dbg-clients"></ul>
+      </section>
+
+      <section class="dbg-card" aria-labelledby="dbg-connectors-h">
+        <h2 id="dbg-connectors-h">Connectors</h2>
+        <p class="dbg-note">Data sources and F1 live timing: where they read from and their last result.</p>
+        <ul class="dbg-list" id="dbg-connectors"></ul>
+      </section>
+
+      <section class="dbg-card dbg-card--wide" aria-labelledby="dbg-graphics-h">
+        <h2 id="dbg-graphics-h">Graphics and where their content comes from</h2>
+        <div class="dbg-table-wrap">
+          <table class="dbg-table">
+            <thead>
+              <tr><th scope="col">Graphic</th><th scope="col">Type</th><th scope="col">On air</th><th scope="col">Content from</th></tr>
+            </thead>
+            <tbody id="dbg-graphics"></tbody>
+          </table>
+        </div>
+      </section>
+
+
+      <section class="dbg-card dbg-card--log" aria-labelledby="dbg-log-h">
+        <div class="dbg-log-head">
+          <h2 id="dbg-log-h">Log</h2>
+          <div class="dbg-filters" role="group" aria-label="Show areas" id="dbg-areas"></div>
+          <label class="dbg-filter-field">
+            <span class="visually-hidden">Level</span>
+            <select id="dbg-level">
+              <option value="info">All levels</option>
+              <option value="warn">Warnings and errors</option>
+              <option value="error">Errors only</option>
+            </select>
+          </label>
+          <label class="dbg-filter-field">
+            <span class="visually-hidden">Search</span>
+            <input type="search" id="dbg-search" placeholder="Search" />
+          </label>
+          <button type="button" class="button button--secondary button--compact" id="dbg-pause" aria-pressed="false">Pause</button>
+          <button type="button" class="button button--secondary button--compact" id="dbg-clear">Clear</button>
+        </div>
+        <ol class="dbg-log" id="dbg-log" role="log" aria-live="off"></ol>
+        <p class="dbg-note" id="dbg-log-note"></p>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/public/debug/debug.js"></script>
+  </body>
+</html>

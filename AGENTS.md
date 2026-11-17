@@ -132,7 +132,7 @@ Environment (browser, OS)
 - Beta tester blokkeert op ontbrekende features → noteer in `docs/qa/BLOCKERS.md`
 - Reddit/design filosofie: `.cursor/skills/frontend-design/REFERENCE.md`
 
-## Huidige status (v0.6.3)
+## Huidige status (v0.11.0)
 
 | Component | Status |
 |-----------|--------|
@@ -145,6 +145,8 @@ Environment (browser, OS)
 | Design hub | ✅ `/design` — setup checklist |
 | F1 timing tower | 🧪 experimenteel — alleen met `PROVERLAY_EXPERIMENTAL=f1` (`docs/F1-TIMING.md`) |
 | Hockey scorebug | ✅ `hockeyScorebug` — teamkleuren + projectfont (geen ring) |
+| In-app updates | ✅ Preferences → Updates (handmatig, `electron/updater.js`) |
+| Debug console | ✅ `/debug` + Preferences → Troubleshooting (`server/debugLog.js`) |
 | QA project tests | 🟡 Beta agent — her-test na API |
 
 ## Poorten

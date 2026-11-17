@@ -32,6 +32,7 @@ import {
 } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
+import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { loadSettings, saveSettings, applySettingsPatch, publicSettings, validatePort } from './settings.js'
 import {
@@ -50,6 +51,15 @@ import {
   wasStartedHidden,
   saveDialogOptionsFor
 } from './helpers.js'
+import {
+  RELEASES_PAGE,
+  checkForUpdate,
+  downloadUpdate,
+  isReleasePageUrl,
+  macAppBundle,
+  macSwapScript,
+  prepareMacUpdate
+} from './updater.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const IS_MAC = process.platform === 'darwin'
@@ -104,6 +114,7 @@ let restarting = false
 
 let mainWindow = null
 let prefsWindow = null
+let debugWindow = null
 let tray = null
 let quitting = false
 let shuttingDown = false
@@ -499,6 +510,219 @@ ipcMain.on('desktop:set-theme', (event, theme) => {
 
 nativeTheme.on('updated', updateWindowTheme)
 
+/* --------------------------------------------------------- debug console */
+
+/** Debug console (/debug): live server log, outputs and data origins. */
+function openDebugConsole() {
+  if (!isServerRunning()) return
+  if (debugWindow && !debugWindow.isDestroyed()) {
+    debugWindow.show()
+    debugWindow.focus()
+    return
+  }
+  const size = clampWindowSize(
+    { width: 1120, height: 820, minWidth: 640, minHeight: 480 },
+    screen.getPrimaryDisplay().workAreaSize
+  )
+  const win = new BrowserWindow({ ...appWindowOptions(), ...size, title: 'ProVerlay Debug Console', show: false })
+  win.once('ready-to-show', () => win.show())
+  win.loadURL(`${baseUrl()}/debug`)
+  win.on('closed', () => {
+    if (debugWindow === win) debugWindow = null
+  })
+  debugWindow = win
+}
+
+ipcMain.on('prefs:open-debug', (event) => {
+  if (isFromPrefs(event)) openDebugConsole()
+})
+
+/* ---------------------------------------------------------------- updates */
+
+// Manual only: check, download and install each start from a click in
+// Preferences (or the "Check for Updates…" menu items). See updater.js.
+// PROVERLAY_UPDATE_PRETEND_VERSION makes this build act as an older version,
+// to test the whole flow against the latest real release.
+let update = { phase: 'idle' }
+let downloadAbort = null
+
+function appVersionForUpdates() {
+  return process.env.PROVERLAY_UPDATE_PRETEND_VERSION || app.getVersion()
+}
+
+function updateDir(version) {
+  return path.join(app.getPath('temp'), `ProVerlay-update-${version}`)
+}
+
+/** Can this copy of ProVerlay replace itself? */
+function installSupport() {
+  if (IS_MAC) {
+    const bundle = macAppBundle(process.execPath, { isPackaged: app.isPackaged })
+    return bundle.ok ? { ok: true, bundle: bundle.bundle } : { ok: false, reason: bundle.reason }
+  }
+  if (IS_WINDOWS) {
+    return app.isPackaged ? { ok: true } : { ok: false, reason: 'Updating works in the installed app. When running from source, use git pull.' }
+  }
+  return { ok: false, reason: 'Download the new version from the releases page.' }
+}
+
+function publicUpdate() {
+  const support = installSupport()
+  return {
+    phase: update.phase,
+    currentVersion: appVersionForUpdates(),
+    platform: process.platform,
+    version: update.version || null,
+    size: update.asset?.size || 0,
+    progress: update.progress || null,
+    error: update.error || null,
+    during: update.during || null,
+    reason: update.reason || null,
+    canInstall: support.ok,
+    installNote: support.ok ? null : support.reason
+  }
+}
+
+let lastProgressSent = 0
+function setUpdate(next, { throttle = false } = {}) {
+  update = next
+  const now = Date.now()
+  if (throttle && now - lastProgressSent < 150) return publicUpdate()
+  lastProgressSent = now
+  const info = publicUpdate()
+  if (prefsWindow && !prefsWindow.isDestroyed()) prefsWindow.webContents.send('update:changed', info)
+  return info
+}
+
+async function startUpdateCheck() {
+  if (['checking', 'downloading', 'installing', 'ready'].includes(update.phase)) return publicUpdate()
+  setUpdate({ phase: 'checking' })
+  try {
+    const result = await checkForUpdate({ currentVersion: appVersionForUpdates() })
+    return setUpdate({ ...result, phase: result.status })
+  } catch (err) {
+    return setUpdate({ phase: 'error', during: 'check', error: err.message })
+  }
+}
+
+async function startUpdateDownload() {
+  if (update.phase !== 'available' || !installSupport().ok) return publicUpdate()
+  const target = update
+  const dir = updateDir(target.version)
+  fs.rmSync(dir, { recursive: true, force: true })
+  downloadAbort = new AbortController()
+  setUpdate({ ...target, phase: 'downloading', progress: { received: 0, total: target.asset.size } })
+  try {
+    const file = await downloadUpdate(target, {
+      dir,
+      signal: downloadAbort.signal,
+      onProgress: (received, total) => setUpdate({ ...target, phase: 'downloading', progress: { received, total } }, { throttle: true })
+    })
+    let installFrom = file
+    if (IS_MAC) installFrom = await prepareMacUpdate(file, { dir, bundleId: APP_ID, version: target.version })
+    return setUpdate({ ...target, phase: 'ready', dir, installFrom })
+  } catch (err) {
+    fs.rmSync(dir, { recursive: true, force: true })
+    if (downloadAbort?.signal.aborted) return setUpdate({ ...target, phase: 'available' })
+    return setUpdate({ ...target, phase: 'error', during: 'download', error: err.message })
+  } finally {
+    downloadAbort = null
+  }
+}
+
+/** Graphics on air right now (for the warning before restarting). */
+async function graphicsOnAir() {
+  try {
+    const res = await fetch(`${localUrlForPort(currentPort())}/api/state`, { signal: AbortSignal.timeout(1500) })
+    const state = await res.json()
+    return (state.graphics || []).filter((g) => g.visible).map((g) => g.name || g.id)
+  } catch {
+    return []
+  }
+}
+
+async function installUpdate() {
+  if (update.phase !== 'ready') return publicUpdate()
+  const support = installSupport()
+  if (!support.ok) return setUpdate({ ...update, phase: 'error', during: 'install', error: support.reason })
+  const onAir = await graphicsOnAir()
+  const { response } = await dialog.showMessageBox(prefsWindow && !prefsWindow.isDestroyed() ? prefsWindow : undefined, {
+    type: onAir.length ? 'warning' : 'question',
+    title: 'Install update',
+    message: `Install ProVerlay ${update.version} now?`,
+    detail:
+      (onAir.length
+        ? `${onAir.length} ${onAir.length === 1 ? 'graphic is' : 'graphics are'} on air (${onAir.slice(0, 3).join(', ')}${onAir.length > 3 ? ', …' : ''}). `
+        : '') +
+      'ProVerlay quits, so OBS, vMix and operators lose the connection until the new version has started. ' +
+      'They reconnect by themselves; graphics that were on air come back on air.',
+    buttons: [IS_WINDOWS ? 'Quit and Install' : 'Install and Restart', 'Cancel'],
+    defaultId: onAir.length ? 1 : 0,
+    cancelId: 1,
+    noLink: true
+  })
+  if (response !== 0) return publicUpdate()
+  const ready = update
+  try {
+    if (IS_MAC) {
+      const script = path.join(ready.dir, 'install-update.sh')
+      fs.writeFileSync(
+        script,
+        macSwapScript({
+          pid: process.pid,
+          newApp: ready.installFrom,
+          target: support.bundle,
+          backup: path.join(ready.dir, 'ProVerlay-previous.app'),
+          log: path.join(ready.dir, 'install-update.log')
+        }),
+        { mode: 0o755 }
+      )
+      spawn('/bin/sh', [script], { detached: true, stdio: 'ignore' }).unref()
+    } else {
+      // The NSIS installer finds the existing installation (per user or for
+      // everyone) and replaces it; ProVerlay has quit by then.
+      spawn(ready.installFrom, [], { detached: true, stdio: 'ignore' }).unref()
+    }
+  } catch (err) {
+    return setUpdate({ ...ready, phase: 'error', during: 'install', error: err.message })
+  }
+  const info = setUpdate({ ...ready, phase: 'installing' })
+  setTimeout(() => app.quit(), 300)
+  return info
+}
+
+function checkForUpdatesFromMenu() {
+  openPreferences()
+  startUpdateCheck()
+}
+
+ipcMain.handle('update:get', (event) => {
+  if (!isFromPrefs(event)) throw new Error('Not allowed')
+  return publicUpdate()
+})
+ipcMain.handle('update:check', (event) => {
+  if (!isFromPrefs(event)) throw new Error('Not allowed')
+  return startUpdateCheck()
+})
+ipcMain.handle('update:download', (event) => {
+  if (!isFromPrefs(event)) throw new Error('Not allowed')
+  return startUpdateDownload()
+})
+ipcMain.handle('update:cancel', (event) => {
+  if (!isFromPrefs(event)) throw new Error('Not allowed')
+  downloadAbort?.abort()
+  return publicUpdate()
+})
+ipcMain.handle('update:install', (event) => {
+  if (!isFromPrefs(event)) throw new Error('Not allowed')
+  return installUpdate()
+})
+ipcMain.on('update:open-page', (event) => {
+  if (!isFromPrefs(event)) return
+  const url = update.pageUrl && isReleasePageUrl(update.pageUrl) ? update.pageUrl : RELEASES_PAGE
+  openExternalSafely(url)
+})
+
 /* ---------------------------------------------------------------- tray */
 
 const MAC_TRAY_ICON =
@@ -547,6 +771,8 @@ function refreshTrayMenu() {
       },
       { type: 'separator' },
       { label: 'Preferences…', click: () => openPreferences() },
+      { label: 'Check for Updates…', click: () => checkForUpdatesFromMenu() },
+      { label: 'Debug Console', enabled: running, click: () => openDebugConsole() },
       { type: 'separator' },
       { label: 'Quit ProVerlay', click: () => app.quit() }
     ])
@@ -617,8 +843,10 @@ function buildAppMenu() {
         label: 'ProVerlay',
         submenu: [
           { role: 'about' },
+          { label: 'Check for Updates…', click: () => checkForUpdatesFromMenu() },
           { type: 'separator' },
           { label: 'Preferences…', accelerator: 'CommandOrControl+,', click: () => openPreferences() },
+          { label: 'Debug Console', click: () => openDebugConsole() },
           { type: 'separator' },
           { role: 'services' },
           { type: 'separator' },
