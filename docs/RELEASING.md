@@ -29,8 +29,11 @@ tag is pushed. Nobody needs to build or upload a Mac app by hand.
 4. The **Release** workflow then:
    1. checks that the tag (`v0.8.0`) matches `package.json` (`0.8.0`) — it stops
       otherwise;
-   2. runs `npm test`, then builds the Apple Silicon and Intel apps in parallel on a
-      macOS runner (`npm run dist:mac` and `npm run dist:mac:x64`);
+   2. runs `npm test`, then builds the Apple Silicon and Intel apps one after the other
+      on a single macOS runner (`npm run dist:mac` and `npm run dist:mac:x64`). GitHub's
+      hosted macOS runners are often busy; needing only one keeps a release from being
+      cancelled while it waits in the queue. If a run is cancelled anyway ("The job was not
+      acquired by Runner"), re-run it from the Actions tab or with `gh run rerun <id>`;
    3. verifies each zip (`scripts/verify-mac-zip.sh`): no AppleDouble `._` entries,
       `codesign --verify --deep --strict` passes after unzipping, the seed data
       (`Contents/Resources/seed-data/registry.json`) is bundled, the binary has the

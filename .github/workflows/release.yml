@@ -99,20 +99,14 @@ jobs:
           echo "Commit $(git rev-parse --short HEAD) · publish: $publish · prerelease: $prerelease" >> "$GITHUB_STEP_SUMMARY"
 
   build:
-    name: build (${{ matrix.arch }})
+    name: build (macOS arm64 + x64)
     needs: meta
-    # macos-latest is Apple Silicon; the x64 build cross-packages the Intel Electron
-    # binary (the app has no native modules, so nothing is compiled).
+    # One macos-latest (Apple Silicon) runner builds both zips one after the other.
+    # GitHub's hosted macOS runners are often capacity-constrained; needing a single
+    # runner instead of two makes a release far less likely to be cancelled in the
+    # queue. The x64 build cross-packages the Intel Electron binary (no native modules).
     runs-on: macos-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - arch: arm64
-            script: dist:mac
-          - arch: x64
-            script: dist:mac:x64
+    timeout-minutes: 45
     env:
       # electron-builder downloads its own Electron zip; the npm postinstall copy is unused.
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
@@ -132,20 +126,23 @@ jobs:
 
       - run: npm test
 
-      - name: Cache Electron download
+      - name: Cache Electron downloads
         uses: actions/cache@v5
         with:
           path: ~/Library/Caches/electron
-          key: electron-${{ matrix.arch }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: electron-${{ matrix.arch }}-
+          key: electron-${{ hashFiles('package-lock.json') }}
+          restore-keys: electron-
 
-      - name: Build (ad-hoc signed)
-        run: npm run ${{ matrix.script }}
+      - name: Build arm64 (ad-hoc signed)
+        run: npm run dist:mac
+
+      - name: Build x64 (ad-hoc signed)
+        run: npm run dist:mac:x64
 
       # ── Developer ID signing + notarization ─────────────────────────────────
       # Skipped until the secrets in docs/RELEASING.md are configured. Never runs on
       # pull requests. Re-signs the unsigned electron-builder output in dist/ and
-      # overwrites the ad-hoc zip.
+      # overwrites the ad-hoc zips.
       - name: Import Developer ID certificate
         if: env.HAS_SIGNING == 'true' && github.event_name != 'pull_request'
         env:
@@ -173,23 +170,34 @@ jobs:
           MAC_NOTARIZE_APPLE_ID: ${{ secrets.APPLE_ID }}
           MAC_NOTARIZE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           MAC_NOTARIZE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: node scripts/package-mac-app.mjs ${{ matrix.arch }}
+        run: |
+          node scripts/package-mac-app.mjs arm64
+          node scripts/package-mac-app.mjs x64
 
       - name: Remove signing keychain
         if: always() && env.MAC_CODESIGN_KEYCHAIN != ''
         run: security delete-keychain "$MAC_CODESIGN_KEYCHAIN" || true
       # ────────────────────────────────────────────────────────────────────────
 
-      - name: Verify zip
+      - name: Verify zips
         env:
-          ARCH: ${{ matrix.arch }}
           VERSION: ${{ needs.meta.outputs.version }}
-        run: bash scripts/verify-mac-zip.sh "dist/ProVerlay-mac-$ARCH.zip" "$ARCH" "$VERSION"
+        run: |
+          bash scripts/verify-mac-zip.sh dist/ProVerlay-mac-arm64.zip arm64 "$VERSION"
+          bash scripts/verify-mac-zip.sh dist/ProVerlay-mac-x64.zip x64 "$VERSION"
 
       - uses: actions/upload-artifact@v6
         with:
-          name: ProVerlay-mac-${{ matrix.arch }}
-          path: dist/ProVerlay-mac-${{ matrix.arch }}.zip
+          name: ProVerlay-mac-arm64
+          path: dist/ProVerlay-mac-arm64.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: ${{ github.event_name == 'pull_request' && 5 || 14 }}
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ProVerlay-mac-x64
+          path: dist/ProVerlay-mac-x64.zip
           if-no-files-found: error
           compression-level: 0
           retention-days: ${{ github.event_name == 'pull_request' && 5 || 14 }}
