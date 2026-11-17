@@ -146,3 +146,30 @@ test('the last remaining project cannot be deleted', async () => {
     await srv.close()
   }
 })
+
+test('saved score widgets keep their own period, clock and team codes on load', async () => {
+  const saved = {
+    graphics: [
+      {
+        id: 'm1',
+        type: 'matchScoreboard',
+        data: { homeCode: 'AJA', awayCode: 'PSV', clock: { period: 'second_half', minute: 67, second: 12, running: false } }
+      },
+      {
+        id: 'h1',
+        type: 'hockeyScorebug',
+        data: { homeCode: 'NED', awayCode: 'SPA', clock: { period: 'q2', remainingMs: 775000, quarterMs: 900000, running: false } }
+      }
+    ]
+  }
+  const srv = await startTestServer({ prepare: (dir) => plantProject(dir, JSON.stringify(saved)) })
+  try {
+    const { graphics } = (await srv.get('/api/state')).json
+    const match = graphics.find((g) => g.id === 'm1').data
+    const hockey = graphics.find((g) => g.id === 'h1').data
+    assert.deepEqual([match.homeCode, match.awayCode, match.clock.period, match.clock.minute], ['AJA', 'PSV', 'second_half', 67])
+    assert.deepEqual([hockey.homeCode, hockey.awayCode, hockey.clock.period, hockey.clock.remainingMs], ['NED', 'SPA', 'q2', 775000])
+  } finally {
+    await srv.close()
+  }
+})

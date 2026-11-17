@@ -761,8 +761,17 @@ function updateBindOptions() {
   if (options.some(([value]) => value === current)) propBind.value = current
 }
 
+/** Page title follows the overlay being edited (lower third vs. scoreboard). */
+function updateEditorTitle(g) {
+  const title = !g ? 'Design editor' : isLowerThird(g) ? 'Lower third editor' : 'Scoreboard editor'
+  const heading = document.getElementById('editor-title')
+  if (heading) heading.textContent = title
+  document.title = `ProVerlay — ${title}`
+}
+
 function loadFromGraphic(g) {
   graphic = g
+  updateEditorTitle(g)
   updateBindOptions()
   const data = editableData(g)
   const storedLayout = data.layout && typeof data.layout === 'object' ? data.layout : {}
@@ -1256,6 +1265,7 @@ socket.on('stateChanged', async (next) => {
     updatePreviewLink()
   } else {
     graphic = null
+    updateEditorTitle(null)
     updateEmptyState()
   }
 })

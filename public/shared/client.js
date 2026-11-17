@@ -1,8 +1,8 @@
 import { showErrorToast } from '/public/shared/toast.js'
+import { reconnectAfterServerDisconnect } from '/public/shared/reconnect.js'
 
 export function connectProVerlay() {
-  const socket = io()
-  return socket
+  return reconnectAfterServerDisconnect(io())
 }
 
 export function hexFromColor(value = '#007aff') {

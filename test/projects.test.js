@@ -53,8 +53,9 @@ test('create → activate → export → import round trip', async () => {
 
   const imp = await srv.post('/api/projects/import', fileForm(zip, 'export.proverlay'))
   assert.equal(imp.status, 201, imp.text)
-  assert.equal(imp.json.name, 'Round Trip')
-  assert.equal(imp.json.id, 'round-trip')
+  // "Round Trip" still exists, so the copy gets a distinguishable name.
+  assert.equal(imp.json.name, 'Round Trip (imported)')
+  assert.equal(imp.json.id, 'round-trip-imported')
   assert.equal(await activeId(), 'acme-fc', 'import does not activate')
 
   const act2 = await srv.post(`/api/projects/${imp.json.id}/activate`)
@@ -142,6 +143,25 @@ test('import ignores path tricks and non-allow-listed asset types', async () => 
   assert.ok(files.includes('ok.png'))
   await assert.rejects(fs.access(path.join(srv.dir, 'escape.png')))
   await assert.rejects(fs.access(path.join(srv.dir, 'projects', 'escape.png')))
+})
+
+test('importing a project whose name is taken appends " (imported)" and a number', async () => {
+  const zipNamed = (name) => buildZip({ 'manifest.json': JSON.stringify({ name }), 'project.json': JSON.stringify({ graphics: [] }) })
+  const importNamed = async (name) => {
+    const res = await srv.post('/api/projects/import', fileForm(await zipNamed(name), 'x.proverlay'))
+    assert.equal(res.status, 201, res.text)
+    return res.json.name
+  }
+
+  assert.equal(await importNamed('Clash Show'), 'Clash Show', 'free name is kept as is')
+  assert.equal(await importNamed('Clash Show'), 'Clash Show (imported)')
+  assert.equal(await importNamed('clash show '), 'clash show (imported 2)', 'case and spacing do not count')
+  assert.equal(await importNamed('Clash Show'), 'Clash Show (imported 3)')
+  // The seed project "New client" (the beta test case).
+  assert.equal(await importNamed('New client'), 'New client (imported)')
+
+  const names = (await srv.get('/api/projects')).json.map((p) => p.name.toLowerCase())
+  assert.equal(new Set(names).size, names.length, `duplicate names: ${names.join(', ')}`)
 })
 
 test('activating a damaged project fails cleanly and keeps the current one', async () => {

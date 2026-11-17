@@ -30,7 +30,7 @@ export const MATCH_PERIODS = [
   { id: 'extra_second', label: 'Extra time 2' },
 ]
 
-/** Hockey periods; `break` is shown as "RUST" on air. */
+/** Hockey periods; `break` is shown as "BREAK" on air. */
 export const HOCKEY_PERIODS = [
   { id: 'q1', label: 'Q1' },
   { id: 'q2', label: 'Q2' },
@@ -196,9 +196,9 @@ export function matchPeriodLabel(period) {
   return MATCH_PERIODS.find((p) => p.id === period)?.label || String(period)
 }
 
-/** On-air label (the render shows "RUST" during a break). */
+/** On-air label (the render shows "BREAK" during a break). */
 export function hockeyPeriodLabel(period) {
-  if (period === 'break') return 'RUST'
+  if (period === 'break') return 'BREAK'
   const match = String(period || '').match(/^q([1-4])$/i)
   return match ? `Q${match[1]}` : 'Q1'
 }

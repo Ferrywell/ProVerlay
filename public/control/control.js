@@ -342,8 +342,9 @@ projectExport?.addEventListener('click', async () => {
     link.download = filename
     link.click()
     URL.revokeObjectURL(url)
-    setProjectStatus('Export complete', 'success')
-    setTimeout(() => setProjectStatus(''), 2000)
+    // The browser/app now asks where to save; the user may still cancel.
+    setProjectStatus('Export ready — choose where to save it', 'success')
+    setTimeout(() => setProjectStatus(''), 4000)
   } catch (err) {
     setProjectStatus(err.message || 'Export failed', 'error')
   } finally {
@@ -404,10 +405,16 @@ function hideAllInspectorPanels() {
 }
 
 function editSettingsUrl(graphic) {
-  if (graphic.type === 'matchScoreboard' || graphic.type === 'lowerThirdShow') {
-    return `/editor?graphic=${encodeURIComponent(graphic.id)}`
-  }
   return `/control?configure=${encodeURIComponent(graphic.id)}`
+}
+
+/** PNG design editor for a widget; linked from its Edit settings panel. */
+function designEditorUrl(graphic) {
+  return `/editor?graphic=${encodeURIComponent(graphic.id)}`
+}
+
+function pointDesignEditorLinks(panel, graphic) {
+  for (const link of panel.querySelectorAll('[data-design-editor]')) link.href = designEditorUrl(graphic)
 }
 
 function isConfigureMode(graphic) {
@@ -437,6 +444,7 @@ function showSettingsInspector(graphic) {
   if (graphic.type === 'matchScoreboard') {
     if (widgetPanel) {
       widgetPanel.hidden = false
+      pointDesignEditorLinks(widgetPanel, graphic)
       matchSession.sync(graphic)
     }
   } else if (graphic.type === 'customTicker') {
@@ -453,6 +461,7 @@ function showSettingsInspector(graphic) {
     if (opening) closeRosterForm()
     if (rosterPanel) {
       rosterPanel.hidden = false
+      pointDesignEditorLinks(rosterPanel, graphic)
       fillRosterPanel(graphic)
       rosterTemplateSession.sync(graphic)
     }
@@ -1182,7 +1191,7 @@ function fillWidgetForm(graphic = matchGraphic()) {
   widgetForm.showNames.checked = Boolean(d.showNames)
   widgetForm.clockMinute.value = clk.minute ?? 0
   widgetForm.clockSecond.value = clk.second ?? 0
-  widgetForm.clockPeriod.value = clk.period || 'second_half'
+  widgetForm.clockPeriod.value = clk.period || 'first_half'
   widgetForm.clockStoppage.checked = Boolean(clk.stoppageTime)
   widgetForm.animEnabled.checked = d.animation?.enabled !== false
   widgetForm.animDuration.value = d.animation?.durationMs ?? 420

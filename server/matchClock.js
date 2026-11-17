@@ -19,7 +19,7 @@ export function defaultMatchData() {
       penalties: false
     },
     clock: {
-      period: 'second_half',
+      period: 'first_half',
       minute: 0,
       second: 0,
       stoppageTime: false,

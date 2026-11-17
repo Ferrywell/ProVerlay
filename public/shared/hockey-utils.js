@@ -5,7 +5,7 @@ export const HOCKEY_PERIOD_OPTIONS = [
   { value: 'q2', label: 'Q2' },
   { value: 'q3', label: 'Q3' },
   { value: 'q4', label: 'Q4' },
-  { value: 'break', label: 'RUST' }
+  { value: 'break', label: 'BREAK' }
 ]
 
 export const HOCKEY_RING_R = 47.175
@@ -49,15 +49,15 @@ export function hockeyTypographyCssVars(style = {}) {
 
 export function defaultHockeyScorebugData() {
   return {
-    homeCode: 'NED',
-    awayCode: 'SPA',
+    homeCode: 'HOME',
+    awayCode: 'AWAY',
     homeScore: 0,
     awayScore: 0,
     homeColor: '#E5484D',
     awayColor: '#3E63DD',
     clock: {
-      period: 'q2',
-      remainingMs: 775000,
+      period: 'q1',
+      remainingMs: 900000,
       quarterMs: 900000,
       running: false,
       runningSince: null
@@ -74,7 +74,7 @@ export function defaultHockeyScorebugData() {
 }
 
 export function hockeyPeriodLabel(period) {
-  if (period === 'break') return 'RUST'
+  if (period === 'break') return 'BREAK'
   const match = String(period || '').match(/^q([1-4])$/i)
   return match ? `Q${match[1]}` : 'Q1'
 }

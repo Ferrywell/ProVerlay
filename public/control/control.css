@@ -723,6 +723,15 @@ code {
   font-size: 0.85rem;
 }
 
+.design-editor-row {
+  margin-bottom: var(--pv-space-md);
+}
+
+.design-editor-row__hint {
+  color: var(--pv-text-secondary);
+  font-size: 0.85em;
+}
+
 .roster-toolbar {
   display: flex;
   gap: var(--pv-space-sm);
