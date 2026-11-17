@@ -1153,3 +1153,207 @@ html[data-preview-window] .score-canvas--no-bg {
     opacity: 0;
   }
 }
+
+/* ── Match scoreboard: built-in score bug ─────────────────────────────────
+   Used when no PNG strip is uploaded (QA-106). Same language as the hockey
+   scorebug: black pills, team-colour chips with a soft sheen, brand font,
+   tabular figures. All sizes derive from --mb-h (vmin) so it scales with
+   the canvas. Team colours: data.homeColor/awayColor, else brand
+   primary/secondary. */
+.match-board.match-board--default {
+  --mb-h: 6.2vmin;
+  --mb-black: #000000;
+  --mb-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.14) 100%);
+  /* .match-board is a size container for PNG strips; this one sizes to content */
+  container-type: normal;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--mb-h) * 0.2);
+  font-family: var(--brand-font, system-ui, sans-serif);
+  color: #ffffff;
+  white-space: nowrap;
+  filter: drop-shadow(0 0.45vmin 1.6vmin rgba(0, 0, 0, 0.38));
+  -webkit-font-smoothing: antialiased;
+}
+
+.mb-bar {
+  display: flex;
+  align-items: stretch;
+  height: var(--mb-h);
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--mb-black);
+}
+
+.mb-team {
+  display: grid;
+  place-items: center;
+  min-width: calc(var(--mb-h) * 2.2);
+  padding: 0 calc(var(--mb-h) * 0.4);
+  background-image: var(--mb-sheen);
+  font-size: calc(var(--mb-h) * 0.48);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mb-team--home {
+  padding-left: calc(var(--mb-h) * 0.52);
+  background-color: var(--mb-home);
+}
+
+.mb-team--away {
+  padding-right: calc(var(--mb-h) * 0.52);
+  background-color: var(--mb-away);
+}
+
+.mb-score {
+  display: grid;
+  place-items: center;
+  min-width: calc(var(--mb-h) * 1.1);
+  padding: 0 calc(var(--mb-h) * 0.16);
+  font-size: calc(var(--mb-h) * 0.6);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.mb-bar > .mb-score:first-child {
+  padding-left: calc(var(--mb-h) * 0.4);
+}
+
+.mb-bar > .mb-score:last-child {
+  padding-right: calc(var(--mb-h) * 0.4);
+}
+
+.mb-sep {
+  align-self: center;
+  width: calc(var(--mb-h) * 0.16);
+  height: calc(var(--mb-h) * 0.05);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.mb-clock {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--mb-h) * 0.24);
+  height: var(--mb-h);
+  padding: 0 calc(var(--mb-h) * 0.42);
+  border-radius: 999px;
+  background: var(--mb-black);
+}
+
+.mb-clock__time {
+  font-size: calc(var(--mb-h) * 0.48);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.mb-clock__period {
+  padding-left: calc(var(--mb-h) * 0.24);
+  border-left: max(1px, 0.1vmin) solid rgba(255, 255, 255, 0.3);
+  font-size: calc(var(--mb-h) * 0.3);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+/* Full-frame PNG design: the score canvas covers the whole stage, exactly
+   like the /editor full-frame stage (strips use .match-board--placed). */
+.match-board--frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.match-board--frame .score-canvas--frame {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Ticker: built-in bar when no PNG is uploaded ──────────────────────── */
+.ticker-default .ticker-board {
+  background: linear-gradient(180deg, rgba(18, 18, 22, 0.9) 0%, rgba(6, 6, 9, 0.92) 100%);
+  box-shadow: inset 0 max(1px, 0.1vmin) 0 rgba(255, 255, 255, 0.08);
+}
+
+.ticker-default .ticker-board::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--ticker-tab-w, 16%) - 1.2%);
+  background-color: var(--primary, #007aff);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.14) 100%);
+  border-radius: 0 999px 999px 0;
+}
+
+.ticker-default {
+  position: relative;
+}
+
+.ticker-default__label {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: calc(var(--ticker-tab-w, 16%) - 1.2%);
+  padding: 0 1.4%;
+  transform: translateY(-50%);
+  overflow: hidden;
+  color: #ffffff;
+  font-family: var(--brand-font);
+  font-size: 2.6vmin;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── Stream countdown: built-in plate when no PNG is uploaded ─────────── */
+.countdown-board--plate {
+  border-radius: 999px;
+  filter: drop-shadow(0 0.45vmin 1.6vmin rgba(0, 0, 0, 0.3));
+}
+
+.countdown-board--plate-dark {
+  background-color: rgba(8, 8, 12, 0.86);
+  box-shadow: inset 0 0 0 max(1px, 0.1vmin) rgba(255, 255, 255, 0.1);
+}
+
+.countdown-board--plate-light {
+  background-color: var(--background, rgba(255, 255, 255, 0.78));
+  box-shadow: inset 0 0 0 max(1px, 0.1vmin) rgba(255, 255, 255, 0.55);
+}
+
+/* ── Empty-output hint (dashboard preview window only, never OBS/vMix) ── */
+.render-empty-hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 10px;
+  max-width: 900px;
+  padding: 28px 40px;
+  border-radius: 24px;
+  background: rgba(28, 28, 30, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.72);
+  font: 500 24px/1.45 -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+
+.render-empty-hint strong {
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 650;
+}

@@ -131,24 +131,44 @@ export function layoutBackgroundVisible(layout = {}) {
   return Boolean(layout.background) && layout.backgroundVisible !== false
 }
 
-function clockBindBoxCenterLeft(clockEl, layout = {}, options = {}) {
-  const minW = Number(clockEl.minWidthCqw) || 0
-  if (!minW) return null
+/**
+ * Clock plate ("pill") geometry. This is the ONLY place it is computed:
+ * /render (buildMatchScoreboard) and /editor (renderElements) both call
+ * clockPillStyles(), so the editor preview is exactly the render output.
+ *
+ * The pill hangs on the clock element's own anchor point (x/y in % of the
+ * score canvas), just like a plain text element does:
+ *   - el.anchor 'center-right' → right edge of the pill sits on x
+ *   - el.anchor 'center-left'  → left edge of the pill sits on x
+ *   - el.anchor 'center'       → pill is centred on x
+ * A wider clock text ("45+2:13") grows the pill away from that edge, so it
+ * never spills past it. An explicit layout.clockPlate.anchor overrides the
+ * element anchor: 'left' = right edge fixed (grows left), 'right' = left
+ * edge fixed (grows right), 'center' = centred.
+ */
+const PILL_ANCHOR_FROM_ELEMENT = {
+  'center-right': 'left',
+  'center-left': 'right',
+  center: 'center'
+}
 
-  const useCqw = options.useCqw ?? supportsContainerQueries()
-  const containerWidthPx = options.containerWidthPx ?? resolveContainerWidthPx(layout, options.settings)
-  const half = useCqw ? `${minW / 2}cqw` : `${scaledCqwPx(minW / 2, containerWidthPx)}px`
-  const anchor = clockEl.anchor || 'center'
+export function resolveClockPillAnchor(pillCfg = {}, clockEl = {}) {
+  if (pillCfg.anchor === 'left' || pillCfg.anchor === 'right' || pillCfg.anchor === 'center') {
+    return pillCfg.anchor
+  }
+  return PILL_ANCHOR_FROM_ELEMENT[clockEl.anchor || 'center'] || 'center'
+}
 
-  if (anchor === 'center-right') return `calc(${clockEl.x}% - ${half})`
-  if (anchor === 'center-left') return `calc(${clockEl.x}% + ${half})`
-  return `${clockEl.x}%`
+function finiteNumber(value, fallback) {
+  if (value === null || value === undefined || value === '') return fallback
+  const n = Number(value)
+  return Number.isFinite(n) ? n : fallback
 }
 
 /** Couple pill box metrics to clock fontSize so height and text scale together. */
 export function resolveClockPillMetrics(pillCfg = {}, clockEl = {}) {
   const fontDesignPx = Number(clockEl.fontSize) || 36
-  const padXDesign = Number(pillCfg.paddingXPx) ?? 24
+  const padXDesign = Math.max(0, finiteNumber(pillCfg.paddingXPx, 24))
   const configuredHeight = Number(pillCfg.heightPx) || 0
   const padYDesign =
     Number(pillCfg.paddingYPx) ||
@@ -172,69 +192,57 @@ export function clockPillTextStyle(el, layout = {}, options = {}, pillCfg = {}) 
     `font-size:${fontSizeStyle(metrics.fontDesignPx, rw, containerWidthPx, { useCqw })}`,
     `color:${el.color || '#ffffff'}`,
     `font-family:${ff}`,
+    'font-weight:700',
     'line-height:1',
     'white-space:nowrap',
     'font-variant-numeric:tabular-nums',
-    'text-align:center'
+    'text-align:center',
+    'display:block'
   ]
   if (el.letterSpacing) parts.push(`letter-spacing:${el.letterSpacing}`)
   return parts.join(';')
 }
 
-function clockZoneWidth(clockEl, pillCfg, layout = {}, options = {}) {
-  const rw = layout.refWidth || 1920
-  const containerWidthPx = options.containerWidthPx ?? resolveContainerWidthPx(layout, options.settings)
-  const useCqw = options.useCqw ?? supportsContainerQueries()
-  const dim = (px) => layoutDimStyle(px, rw, containerWidthPx, { useCqw })
-
-  if (clockEl.minWidthCqw) {
-    return useCqw
-      ? `${clockEl.minWidthCqw}cqw`
-      : `${scaledCqwPx(clockEl.minWidthCqw, containerWidthPx)}px`
-  }
-  if (pillCfg.minWidthPx) return dim(pillCfg.minWidthPx)
-  return '0px'
-}
-
-export function clockPillBoxStyle(pillCfg, clockEl, layout = {}, options = {}) {
+export function clockPillBoxStyle(pillCfg = {}, clockEl = {}, layout = {}, options = {}) {
   const rw = layout.refWidth || 1920
   const containerWidthPx = options.containerWidthPx ?? resolveContainerWidthPx(layout, options.settings)
   const useCqw = options.useCqw ?? supportsContainerQueries()
   const dim = (px) => layoutDimStyle(px, rw, containerWidthPx, { useCqw })
   const metrics = resolveClockPillMetrics(pillCfg, clockEl)
-  const anchor = pillCfg.anchor || 'right'
-  let left
-  let transform
+  const transform = {
+    left: 'translate(-100%, -50%)',
+    right: 'translate(0, -50%)',
+    center: 'translate(-50%, -50%)'
+  }[resolveClockPillAnchor(pillCfg, clockEl)]
 
-  if (anchor === 'center') {
-    const centerLeft = clockBindBoxCenterLeft(clockEl, layout, options)
-    left = centerLeft || `${clockEl.x}%`
-    transform = 'translate(-50%, -50%)'
-  } else if (anchor === 'right') {
-    // Left edge fixed (gap to score bar stays); pill grows wider to the right.
-    const zoneW = clockZoneWidth(clockEl, pillCfg, layout, options)
-    left = `calc(${clockEl.x}% - ${zoneW})`
-    transform = 'translate(0, -50%)'
-  } else {
-    // anchor 'left': right edge fixed; pill grows wider to the left.
-    const gap = pillCfg.gapPx ? dim(pillCfg.gapPx) : '0'
-    left = gap ? `calc(${clockEl.x}% - ${gap})` : `${clockEl.x}%`
-    transform = 'translate(-100%, -50%)'
-  }
-
+  // Layout-critical properties are inline (not in page CSS) so render and
+  // editor cannot drift apart. Height is fixed; flex centres the text.
   const parts = [
-    `left:${left}`,
-    `top:${clockEl.y}%`,
+    'position:absolute',
+    `left:${finiteNumber(clockEl.x, 50)}%`,
+    `top:${finiteNumber(clockEl.y, 50)}%`,
     `transform:${transform}`,
+    'display:inline-flex',
+    'align-items:center',
+    'justify-content:center',
     `height:${dim(metrics.effectiveHeightPx)}`,
-    `padding:${dim(metrics.padYDesign)} ${dim(metrics.padXDesign)}`,
+    `padding:0 ${dim(metrics.padXDesign)}`,
     `border-radius:${dim(metrics.borderRadiusPx)}`,
-    `background:${pillCfg.background}`,
+    `background:${pillCfg.background || 'rgba(0,0,0,0.85)'}`,
     'box-sizing:border-box',
-    'width:max-content'
+    'width:max-content',
+    'white-space:nowrap'
   ]
   if (pillCfg.minWidthPx) parts.push(`min-width:${dim(pillCfg.minWidthPx)}`)
   return parts.join(';')
+}
+
+/** Box + text style for the clock pill; shared by /render and /editor. */
+export function clockPillStyles(pillCfg = {}, clockEl = {}, layout = {}, options = {}) {
+  return {
+    box: clockPillBoxStyle(pillCfg, clockEl, layout, options),
+    text: clockPillTextStyle(clockEl, layout, options, pillCfg)
+  }
 }
 
 export function resolveContainerWidthPx(layout = {}, settings = {}) {

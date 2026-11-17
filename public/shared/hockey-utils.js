@@ -82,7 +82,8 @@ export function hockeyPeriodLabel(period) {
 export function formatHockeyClock(clock = {}) {
   const live = resolveLiveHockeyClock(clock)
   if (live.period === 'break') return '—:—'
-  const sec = Math.max(0, Math.round(live.remainingMs / 1000))
+  // Count-down clock → ceil (see the rounding rule in match-utils.js)
+  const sec = Math.max(0, Math.ceil(live.remainingMs / 1000))
   const m = Math.floor(sec / 60)
   const s = sec % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
@@ -97,6 +98,7 @@ export function formatHockeyStatusLine(clock = {}) {
 
 /** Live remaining + fill progress (0 empty → 1 full). */
 export function resolveLiveHockeyClock(clock = {}) {
+  if (!clock || typeof clock !== 'object') clock = {}
   const period = clock.period || 'q1'
   const quarterMs = Math.max(1000, Number(clock.quarterMs) || 900000)
   let remainingMs = Math.max(0, Number(clock.remainingMs) || 0)

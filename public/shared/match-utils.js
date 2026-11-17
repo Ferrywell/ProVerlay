@@ -1,6 +1,19 @@
 import { serverNowMs } from './server-time.js'
 
+/*
+ * Clock rounding rule (shared by every ProVerlay clock):
+ *   - count-UP clocks (football match clock) use Math.floor: "00:00" stays
+ *     on screen for the whole first second, like a stadium clock.
+ *   - count-DOWN clocks (hockey quarter, stream countdown) use Math.ceil:
+ *     "00:01" is shown until the very last millisecond and "00:00" only
+ *     appears when time is really up.
+ * Match: resolveLiveClock below. Hockey: formatHockeyClock (hockey-utils.js).
+ * Countdown: formatCountdown (countdown-utils.js).
+ */
+
+/** Count-up clock: elapsed whole seconds (floor). */
 export function resolveLiveClock(clock = {}) {
+  if (!clock || typeof clock !== 'object') clock = {}
   const minute = Number(clock.minute) || 0
   const second = Number(clock.second) || 0
   if (!clock.running || !clock.runningSince) {
@@ -50,6 +63,7 @@ export function startRunningClock(clock = {}) {
 }
 
 export function formatClock(clock = {}) {
+  if (!clock || typeof clock !== 'object') clock = {}
   const live = resolveLiveClock(clock)
   const minute = Number(live.minute) || 0
   const second = Number(live.second) || 0
@@ -104,7 +118,7 @@ const DEFAULT_WIDGETS = {
 
 export function widgetVisible(widgets, key) {
   if (key === 'penalties' && !MATCH_PENALTIES_ENABLED) return false
-  const map = { ...DEFAULT_WIDGETS, ...widgets }
+  const map = { ...DEFAULT_WIDGETS, ...(widgets && typeof widgets === 'object' ? widgets : {}) }
   return map[key] !== false
 }
 
@@ -115,13 +129,15 @@ export const DEFAULT_CLOCK_PLATE = {
   minWidthPx: 180,
   paddingXPx: 24,
   borderRadiusPx: 60,
-  background: 'rgba(0,0,0,0.85)',
-  gapPx: 12,
-  anchor: 'right'
+  background: 'rgba(0,0,0,0.85)'
+  // No default `anchor`: the pill follows the clock element's anchor
+  // (see resolveClockPillAnchor in canvas-layout.js). Set
+  // layout.clockPlate.anchor ('left' | 'right' | 'center') to override.
 }
 
 export function resolveClockPlate(layout = {}) {
-  return { ...DEFAULT_CLOCK_PLATE, ...(layout.clockPlate || {}) }
+  const custom = layout && typeof layout.clockPlate === 'object' ? layout.clockPlate : {}
+  return { ...DEFAULT_CLOCK_PLATE, ...custom }
 }
 
 export function clockPlateUsesPill(layout = {}) {
@@ -130,6 +146,7 @@ export function clockPlateUsesPill(layout = {}) {
 }
 
 export function resolveBindText(bind, data) {
+  if (!data || typeof data !== 'object') data = {}
   const widgets = data.widgets || {}
   switch (bind) {
     case 'homeCode':
@@ -168,7 +185,7 @@ export function resolveBindText(bind, data) {
 }
 
 export function buildPenaltyDots(kicks = []) {
-  return kicks
+  return (Array.isArray(kicks) ? kicks : [])
     .map((kick) => {
       if (kick === 'goal') return '<span class="pen-dot pen-dot--goal"></span>'
       if (kick === 'miss') return '<span class="pen-dot pen-dot--miss"></span>'
@@ -178,7 +195,7 @@ export function buildPenaltyDots(kicks = []) {
 }
 
 export function ensurePenaltySlots(kicks, min = 5) {
-  const list = [...kicks]
+  const list = Array.isArray(kicks) ? [...kicks] : []
   while (list.length < min) list.push(null)
   return list
 }

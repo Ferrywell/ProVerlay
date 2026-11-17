@@ -298,16 +298,88 @@
   container-type: inline-size;
 }
 
-.editor-canvas__stage.has-bg-hint::before {
-  content: 'Geen achtergrond — upload een PNG';
+/* Empty state: no PNG design yet (or no editable widget). The render shows
+   the built-in look in that case, so positioned fields are hidden here. */
+.editor-canvas.is-empty .editor-strip {
+  visibility: hidden;
+}
+
+.editor-empty {
   position: absolute;
   inset: 0;
+  z-index: 3;
   display: grid;
   place-items: center;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 0.9rem;
-  text-align: center;
-  padding: var(--pv-space-lg);
+  padding: clamp(0.75rem, 3vw, 2rem);
+}
+
+.editor-empty[hidden] {
+  display: none;
+}
+
+.editor-empty__card {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 30rem;
+  padding: clamp(1rem, 2.4vw, 1.6rem) clamp(1.1rem, 2.8vw, 1.9rem);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.72);
+  text-align: left;
+}
+
+.editor-empty__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.editor-empty__title {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.editor-empty__body {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.editor-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+
+.editor-empty__actions .button[hidden] {
+  display: none;
+}
+
+.editor-empty__drop {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.editor-empty__drop[hidden] {
+  display: none;
+}
+
+.editor-canvas.is-dragover .editor-frame {
+  outline: 2px dashed var(--pv-accent);
+  outline-offset: 3px;
+}
+
+/* Clock plate preview: geometry comes inline from clockPillStyles(), shared
+   with /render — only the selection affordance is editor-specific. */
+.editor-element--pill .clock-pill__text {
   pointer-events: none;
 }
 
@@ -395,6 +467,10 @@
   flex: none;
 }
 
+.editor-bg-eye[hidden] {
+  display: none;
+}
+
 .editor-bg-eye:hover {
   border-color: var(--pv-accent);
   color: var(--pv-accent);
@@ -451,6 +527,12 @@
 .inspector-form {
   display: grid;
   gap: 0.85rem;
+}
+
+/* `display: grid` above would otherwise override the hidden attribute and
+   show the layout and text-field inspectors at the same time */
+.inspector-form[hidden] {
+  display: none;
 }
 
 .inspector-form .field {
