@@ -95,6 +95,7 @@ h1{font-size:clamp(42px,7vw,80px);line-height:1.02;letter-spacing:-.035em;margin
 h1 .soft{color:var(--text-3)}
 .lede{max-width:680px;margin:0 auto;color:var(--text-2);font-size:clamp(17px,2vw,20px)}
 .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:30px 0 18px}
+.intel-link{margin:-6px 0 18px;font-size:14px;color:var(--text-2)}
 .checks{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;color:var(--text-2);font-size:14px;list-style:none;padding:0;margin:0}
 .checks li::before{content:"✓";color:var(--live);font-weight:700;margin-right:7px}
 
@@ -347,16 +348,17 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 <main id="top">
 <header class="hero">
   <div class="wrap">
-    <span class="pill"><span class="dot"></span>v0.7.0 · open source · Mac-app voor Apple Silicon</span>
+    <span class="pill"><span class="dot"></span>v0.8.0 · open source · Mac-app voor Apple Silicon en Intel</span>
     <h1>Graphics live.<br><span class="soft">Binnen 30 seconden.</span></h1>
     <p class="lede">ProVerlay is een lokale graphics-server voor live producties. Bouw je overlays op de Mac, bedien ze vanaf iPad of Stream Deck en speel ze uit via één Browser Source in OBS of vMix.</p>
     <div class="cta">
       <a class="btn btn-primary btn-lg" href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></svg>
-        <span>Download voor Mac<small>ProVerlay-mac-arm64.zip</small></span>
+        <span>Download voor Mac<small>Apple Silicon · ProVerlay-mac-arm64.zip</small></span>
       </a>
       <a class="btn btn-ghost btn-lg" href="https://github.com/Ferrywell/ProVerlay">Bekijk op GitHub</a>
     </div>
+    <p class="intel-link">Mac met Intel-processor? <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-x64.zip">Download de Intel-versie</a></p>
     <ul class="checks">
       <li>Werkt in OBS en vMix</li>
       <li>Bediening vanaf iPad of iPhone</li>
@@ -608,9 +610,9 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   <div class="wrap">
     <p class="eyebrow">Installeren</p>
     <h2>In een minuut draaien.</h2>
-    <p class="sub">De Mac-app bevat de server, alle schermen en een demo-project om meteen mee te oefenen.</p>
+    <p class="sub">De Mac-app bevat de server, alle schermen en een leeg startproject. Er is een versie voor Apple Silicon en een voor Intel-Macs.</p>
     <div class="install">
-      <div class="card"><span class="n">01</span><h3>Downloaden</h3><p>Haal <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">ProVerlay-mac-arm64.zip</a> uit de laatste release, pak hem uit en sleep <code>ProVerlay.app</code> naar Programma's.</p></div>
+      <div class="card"><span class="n">01</span><h3>Downloaden</h3><p>Haal <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">ProVerlay-mac-arm64.zip</a> (Apple Silicon) of <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-x64.zip">ProVerlay-mac-x64.zip</a> (Intel) uit de laatste release, pak hem uit en sleep <code>ProVerlay.app</code> naar Programma's.</p></div>
       <div class="card"><span class="n">02</span><h3>Eerste keer openen</h3><p>De app is niet door Apple genotariseerd. Klik daarom met rechts op de app, kies <b>Open</b> en bevestig met <b>Open</b>.</p></div>
       <div class="card"><span class="n">03</span><h3>Koppelen</h3><p>Voeg de render toe in OBS of vMix en open het operator-adres op je iPad. Het dashboard toont de juiste netwerkadressen.</p></div>
     </div>
@@ -647,7 +649,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <details><summary>De iPad kan de operator niet openen.</summary><p>Mac en iPad moeten op hetzelfde netwerk zitten. Gebruik het <code>http://</code>-adres met het IP van je Mac dat het dashboard toont (geen https). Sta inkomende verbindingen toe als de macOS-firewall erom vraagt.</p></details>
     <details><summary>Poort 2014 is al in gebruik.</summary><p>Er draait waarschijnlijk al een ProVerlay-instantie. Sluit die af, of start de server vanaf de broncode op een andere poort met de omgevingsvariabele <code>PORT</code>.</p></details>
     <details><summary>Eén render voor alles, of een bron per graphic?</summary><p>Gebruik waar het kan één gecombineerde <code>/render</code>: dat kost het minste geheugen. Wil je een graphic los positioneren of op een eigen laag zetten, kopieer dan de solo-URL via het link-icoon op de kaart (<code>/render?graphic=…</code>).</p></details>
-    <details><summary>Werkt ProVerlay op Windows?</summary><p>De server en alle schermen draaien op elk systeem met Node.js, dus ook op Windows via <code>npm start</code>. De kant-en-klare app is nu alleen voor Macs met Apple Silicon; een Windows-app staat op de roadmap.</p></details>
+    <details><summary>Werkt ProVerlay op Windows?</summary><p>De server en alle schermen draaien op elk systeem met Node.js, dus ook op Windows via <code>npm start</code>. De kant-en-klare app is er nu voor Macs met Apple Silicon en Intel; een Windows-app staat op de roadmap.</p></details>
     <details><summary>Heb ik internet nodig tijdens de show?</summary><p>Nee. Alles draait lokaal op je Mac en je eigen netwerk. Alleen de F1 timing tower in live-modus heeft MultiViewer nodig.</p></details>
     <details><summary>Kan ik een show meenemen naar een andere computer?</summary><p>Ja. Exporteer het actieve project als <code>.proverlay</code>-bestand en importeer het op de andere machine. Assets, fonts en instellingen gaan mee.</p></details>
     <details><summary>Kan ik mijn eigen ontwerp gebruiken?</summary><p>Ja. Exporteer je ontwerp als PNG, importeer het via <i>Create from design</i> en zet er met de editor live tekstvelden op voor score, namen of klok.</p></details>

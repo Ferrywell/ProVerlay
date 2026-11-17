@@ -68,7 +68,7 @@ on a phone or tablet redirects to `/operator`.
 ## Platform
 
 - Server: Node.js (`npm start`), browser UIs, port **2014**.
-- Desktop app: macOS on Apple Silicon ([APP.md](APP.md)). A Windows build is planned;
+- Desktop app: macOS on Apple Silicon and Intel ([APP.md](APP.md)). A Windows build is planned;
   the server already runs anywhere Node runs.
 - Output hosts: [OBS](https://obsproject.com) Browser Source and
   [vMix](https://www.vmix.com) Web Browser — see [OBS-VMIX.md](OBS-VMIX.md).
