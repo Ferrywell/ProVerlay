@@ -27,11 +27,7 @@ import {
   countdownTargetFromDuration,
   countdownShouldTick
 } from '/public/shared/countdown-utils.js'
-import {
-  operateShellHtml,
-  refreshOperateSection,
-  wireOperateSection
-} from '/public/shared/operate-handlers.js'
+import { operateCardHtml, refreshOperateCard, wireOperateRoot } from '/public/shared/operate-card.js'
 import { defaultHockeyTypography, resolveHockeyTypography } from '/public/shared/hockey-utils.js'
 import { showToast, showErrorToast, withPending, copyTextWithFallback } from '/public/shared/toast.js'
 import { wireConnectionState } from '/public/shared/connection.js'
@@ -453,14 +449,14 @@ function showOperateInspector(graphic) {
 
   if (!dashboardOperateRoot) return
 
-  let section = dashboardOperateRoot.querySelector(`[data-graphic-id="${graphic.id}"]`)
-  if (!section || section.dataset.type !== graphic.type) {
-    dashboardOperateRoot.innerHTML = operateShellHtml(graphic, { embedded: true })
-    section = dashboardOperateRoot.querySelector(`[data-graphic-id="${graphic.id}"]`)
-    wireOperateSection(dashboardOperateRoot, getGraphicById, { onWentLive: warnIfOverlapping })
+  wireOperateRoot(dashboardOperateRoot, getGraphicById, { onWentLive: warnIfOverlapping })
+  let card = dashboardOperateRoot.firstElementChild
+  if (card?.dataset.graphicId !== graphic.id || card.dataset.type !== graphic.type) {
+    // The panel heading already shows the widget name.
+    dashboardOperateRoot.innerHTML = operateCardHtml(graphic, { showTitle: false })
+    card = dashboardOperateRoot.firstElementChild
   }
-
-  refreshOperateSection(section, graphic)
+  refreshOperateCard(card, graphic)
 }
 
 function fillTransitionPanel(graphic) {
@@ -1335,10 +1331,8 @@ async function nudgeClock(seconds) {
     )
   }
   tickWidgetClockFields()
-  const section = dashboardOperateRoot?.querySelector(`[data-graphic-id="${graphic.id}"]`)
-  if (section) {
-    refreshOperateSection(section, { ...graphic, data: { ...graphic.data, clock: nextClock } })
-  }
+  const card = dashboardOperateRoot?.querySelector(`[data-graphic-id="${graphic.id}"]`)
+  if (card) refreshOperateCard(card, { ...graphic, data: { ...graphic.data, clock: nextClock } })
   await patchGraphic(graphic.id, { data: { clock: nextClock } })
   syncClockControlButtons({ ...graphic, data: { ...graphic.data, clock: nextClock } })
 }

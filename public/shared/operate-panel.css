@@ -1,24 +1,10 @@
-/** Shared operate UI — dashboard sidebar, /operate, operator cards */
+/**
+ * Shared operate card (public/shared/operate-card.js) — dashboard Operate
+ * panel, /operate/:id and /operator. Every control is at least 44px tall.
+ */
 
 .op-section {
   margin: 0;
-}
-
-.op-section-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--pv-space-md);
-  padding: var(--pv-space-md);
-}
-
-.op-section-head--compact {
-  padding-bottom: var(--pv-space-sm);
-}
-
-.op-section-head__text {
-  flex: 1;
-  min-width: 0;
 }
 
 .op-status {
@@ -28,33 +14,402 @@
   line-height: 1.4;
 }
 
-.op-toolbar {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+/* ── Header: name + status, ON AIR + Go live / Take off air ─────────── */
+
+.op-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--pv-space-sm);
+  padding: var(--pv-space-sm) var(--pv-space-md);
 }
 
-.op-toolbar--primary {
-  grid-template-columns: 1fr;
+.op-card__heading {
+  flex: 1;
+  min-width: 0;
 }
 
-.op-toolbar--primary .touch-btn,
-.op-toolbar--primary .button {
-  min-height: 48px;
-  width: 100%;
+.op-card__title {
+  margin: 0;
+  font-size: var(--pv-type-headline);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
+.op-card__title + .op-status {
+  margin-top: 0.15rem;
+}
+
+.op-card__live {
+  display: flex;
+  align-items: center;
+  gap: var(--pv-space-sm);
+  flex-shrink: 0;
+}
+
+.op-card__live-btn {
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Very narrow cards: live controls get their own row. */
+@container op-card (max-width: 320px) {
+  .op-card__head {
+    flex-wrap: wrap;
+  }
+
+  .op-card__live {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+.op-card {
+  container: op-card / inline-size;
+}
+
+/* Dashboard side panel: flat card with a hairline border. */
 .dashboard-operate-root .pv-group {
   box-shadow: none;
   border: 0.5px solid var(--pv-separator);
 }
 
-.dashboard-operate-root .op-section.is-live > .pv-group {
+.dashboard-operate-root .op-card.is-live > .pv-group {
   border-color: var(--pv-on-air);
   box-shadow: inset 0 0 0 1px var(--pv-on-air-ring);
 }
 
-/* Ticker message rows */
+/* ── "More controls" disclosure ─────────────────────────────────────── */
+
+.op-more {
+  border-top: 0.5px solid var(--pv-separator);
+}
+
+.op-more__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--pv-space-sm);
+  min-height: 44px;
+  padding: 0 var(--pv-space-md);
+  list-style: none;
+  cursor: pointer;
+  color: var(--pv-accent);
+  font-size: var(--pv-type-callout);
+  font-weight: 500;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.op-more__summary::-webkit-details-marker {
+  display: none;
+}
+
+.op-more__summary::before {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.op-more[open] > .op-more__summary::before {
+  transform: rotate(45deg);
+}
+
+.op-more__summary:focus-visible {
+  outline: 2px solid var(--pv-accent);
+  outline-offset: -2px;
+}
+
+/* ── Layout helpers ─────────────────────────────────────────────────── */
+
+.op-grid {
+  display: grid;
+  gap: var(--pv-space-sm);
+  align-items: end;
+}
+
+.op-grid--1 {
+  grid-template-columns: 1fr;
+}
+
+.op-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.op-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.op-grid--auto {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+/* Narrow cards: a row with a button becomes two fields + a full-width button. */
+@container op-card (max-width: 400px) {
+  .op-grid--3:has(> .button) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .op-grid--3 > .button {
+    grid-column: 1 / -1;
+  }
+}
+
+.op-grid > .button,
+.op-wide {
+  width: 100%;
+  min-height: 44px;
+}
+
+.op-card .button {
+  min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Fields keep visible chrome inside the grouped card. */
+.op-field {
+  min-width: 0;
+  margin: 0;
+}
+
+.op-field > span:first-child {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--pv-type-footnote);
+  color: var(--pv-text-secondary);
+}
+
+.op-card .op-field input[type='number'],
+.op-card .op-field input[type='text'],
+.op-card .op-field select,
+.op-card .op-score__code,
+.op-card .op-score__name {
+  width: 100%;
+  min-height: 44px;
+  border: 0.5px solid var(--pv-border-strong);
+  border-radius: var(--pv-radius-sm);
+  box-shadow: none;
+  background-color: var(--pv-bg-solid);
+  padding: 0.5rem 0.65rem;
+  font-size: 16px; /* no iOS zoom on focus */
+}
+
+.op-card .op-field select {
+  padding-right: 2rem;
+}
+
+.op-card .op-field input[type='number'] {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-field--color input[type='color'] {
+  width: 100%;
+  height: 44px;
+}
+
+.op-card .field--slider input[type='range'] {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--pv-accent);
+}
+
+/* ── Score row (match + hockey) ─────────────────────────────────────── */
+
+.op-score {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--pv-space-sm);
+  align-items: center;
+}
+
+.op-score__team {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+  min-width: 0;
+}
+
+/* Wide enough for 4 bold capitals (e.g. AJAX). */
+.op-card .op-score__code {
+  width: calc(4 * 0.9em + 1.4rem);
+  max-width: 100%;
+  padding: 0.35rem;
+  text-align: center;
+  font-weight: 650;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-card .op-score__name {
+  width: min(100%, 9rem);
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+  font-size: var(--pv-type-footnote);
+}
+
+@media (pointer: coarse) {
+  .op-card .op-score__name {
+    font-size: 16px;
+  }
+}
+
+.op-score__value {
+  font-size: clamp(2.2rem, 7vw, 3rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.op-score__buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pv-space-xs);
+  width: 100%;
+}
+
+.op-card .op-score__btn {
+  min-height: 52px;
+  min-width: 0;
+  padding: 0;
+  font-size: var(--pv-type-title3, 1.25rem);
+  font-weight: 600;
+  user-select: none;
+}
+
+.op-score__mid {
+  text-align: center;
+  padding: 0 var(--pv-space-xs);
+}
+
+.op-score__clock {
+  font-size: clamp(1.25rem, 5vw, 1.5rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.op-score__period {
+  color: var(--pv-text-secondary);
+  font-size: var(--pv-type-footnote);
+}
+
+/* Start/Pause + Period */
+.op-clock {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--pv-space-sm);
+  align-items: end;
+}
+
+.op-card .op-clock__toggle {
+  min-height: 52px;
+  font-size: var(--pv-type-headline);
+  font-weight: 600;
+}
+
+/* Fine clock adjust */
+.op-nudge {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--pv-space-xs);
+}
+
+@container op-card (max-width: 520px) {
+  .op-nudge {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.op-nudge__btn {
+  min-height: 44px;
+  padding: 0.35rem 0.25rem;
+  border: 0.5px solid var(--pv-separator);
+  border-radius: var(--pv-radius-control, var(--pv-radius-sm));
+  background: var(--pv-bg-solid);
+  color: var(--pv-text);
+  font: inherit;
+  font-size: var(--pv-type-footnote);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.op-nudge__btn:hover {
+  background: var(--pv-fill-secondary);
+}
+
+/* Penalty shootout (behind the penalties feature flag) */
+.op-penalties {
+  display: grid;
+  gap: var(--pv-space-sm);
+}
+
+.op-penalties__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pv-space-sm);
+}
+
+.op-penalties__head h3 {
+  margin: 0;
+  font-size: var(--pv-type-headline);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Pick grid (lower-thirds roster, quiz questions) ────────────────── */
+
+.op-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--pv-space-sm);
+}
+
+.op-pick-grid--wide {
+  grid-template-columns: 1fr;
+}
+
+.op-card .op-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 52px;
+  text-align: left;
+}
+
+.op-pick__name {
+  font-weight: 600;
+  font-size: var(--pv-type-subhead);
+  line-height: 1.2;
+}
+
+.op-pick__meta {
+  font-size: var(--pv-type-footnote);
+  opacity: 0.85;
+  line-height: 1.25;
+}
+
+/* ── Ticker messages ────────────────────────────────────────────────── */
+
+.op-cell--list {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .ticker-msg-list {
   margin: 0;
   padding: 0;
@@ -66,7 +421,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--pv-space-md);
-  padding: var(--pv-space-sm) var(--pv-space-md);
+  padding: var(--pv-space-xs) 0;
   border-top: 0.5px solid var(--pv-separator);
 }
 
@@ -103,6 +458,21 @@
   word-break: break-word;
 }
 
+.ticker-compose {
+  display: grid;
+  gap: var(--pv-space-sm);
+}
+
+.ticker-compose__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--pv-space-sm);
+}
+
+.ticker-compose__add {
+  min-width: 4.5rem;
+}
+
 /* Icon buttons stay a full 44px touch target. */
 .button--icon {
   min-height: 44px;
@@ -122,332 +492,11 @@
   background: var(--pv-danger-tint);
 }
 
-.ticker-compose {
+/* ── F1 timing ──────────────────────────────────────────────────────── */
+
+.f1-operate__mv {
   display: grid;
   gap: var(--pv-space-sm);
-}
-
-.ticker-compose__row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--pv-space-sm);
-  align-items: end;
-}
-
-.ticker-compose__row .field {
-  margin: 0;
-}
-
-.ticker-compose__add {
-  min-height: 44px;
-  min-width: 4.5rem;
-  align-self: end;
-}
-
-/* Operator — inherit dashboard ticker row layout */
-.operator .ticker-msg-list__item {
-  padding: var(--pv-space-sm) var(--pv-space-md);
-}
-
-.operator .ticker-compose .field input[type='text'] {
-  min-height: 44px;
-  font-size: 16px;
-}
-
-.operate-widget-mount .pv-group__cell {
-  padding: var(--pv-space-md);
-}
-
-.operate-widget-mount .pv-group__cell--flush {
-  padding-left: 0;
-  padding-right: 0;
-}
-
-/* Dashboard embed: keep inset from group border stripe */
-.dashboard-operate-root .operate-widget-mount .pv-group__cell--flush {
-  padding-left: var(--pv-space-md);
-  padding-right: var(--pv-space-md);
-}
-
-.dashboard-operate-root .operate-widget-mount .pv-group__cell--actions {
-  padding-left: var(--pv-space-md);
-  padding-right: var(--pv-space-md);
-}
-
-.operate-link-out {
-  margin: 0;
-  font-size: var(--pv-type-footnote);
-}
-
-.operate-link-out a {
-  font-weight: 500;
-}
-
-/* Match score operate */
-.match-operate {
-  display: grid;
-}
-
-.match-operate__teams {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: var(--pv-space-sm);
-  align-items: center;
-  padding: var(--pv-space-xs) 0 var(--pv-space-sm);
-}
-
-.match-operate--embedded .match-operate__teams {
-  padding-bottom: var(--pv-space-md);
-}
-
-.match-operate__team {
-  display: grid;
-  gap: 0.35rem;
-  justify-items: center;
-  min-width: 0;
-}
-
-.match-operate__team-name {
-  font-size: var(--pv-type-subhead);
-  font-weight: 650;
-  text-align: center;
-  line-height: 1.2;
-  word-break: break-word;
-}
-
-/* Wide enough for 4 bold capitals (e.g. AJAX) plus padding and border. */
-.match-operate__team-code {
-  width: calc(4 * 0.85em + 0.7rem + 2px);
-  max-width: 100%;
-  margin: 0 auto;
-  border: 0.5px solid var(--pv-border-strong);
-  border-radius: var(--pv-radius-sm);
-  box-shadow: none;
-  background: var(--pv-bg-solid);
-  padding: 0.35rem;
-  letter-spacing: 0;
-  text-align: center;
-  font-size: var(--pv-type-subhead);
-  font-weight: 650;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-
-.match-operate__color {
-  display: inline-flex;
-  margin: 0;
-}
-
-.match-operate__color input[type='color'] {
-  width: 3rem;
-  height: 2.25rem;
-}
-
-.match-operate__team-name-input {
-  width: min(100%, 8rem);
-  margin: 0 auto;
-  border: 0.5px solid var(--pv-border-strong);
-  border-radius: var(--pv-radius-sm);
-  box-shadow: none;
-  background: var(--pv-bg-solid);
-  padding: 0.3rem 0.5rem;
-  text-align: center;
-  font-size: var(--pv-type-footnote);
-  font-weight: 500;
-}
-
-.match-operate__score {
-  font-size: clamp(1.75rem, 6vw, 2.5rem);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.match-operate__mid {
-  text-align: center;
-  padding: 0 var(--pv-space-xs);
-}
-
-.match-operate__clock {
-  font-size: clamp(1.1rem, 4vw, 1.35rem);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--pv-text);
-  letter-spacing: 0.02em;
-}
-
-.match-operate__score-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--pv-space-sm);
-  width: 100%;
-}
-
-.match-operate__score-btn {
-  min-height: 48px;
-  min-width: 0;
-  font-size: var(--pv-type-headline);
-  font-weight: 600;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-
-.match-operate--embedded .match-operate__score-btn {
-  min-height: 40px;
-  font-size: var(--pv-type-callout);
-}
-
-.match-operate__clock-set {
-  padding-top: 0;
-}
-
-.match-operate__clock-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--pv-space-sm);
-}
-
-.match-operate__clock-field {
-  margin: 0;
-}
-
-.match-operate__clock-field span {
-  font-size: var(--pv-type-footnote);
-  color: var(--pv-text-secondary);
-}
-
-.pv-group .match-operate__clock-field input[type='number'] {
-  width: 100%;
-  min-height: 44px;
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  border: 0.5px solid var(--pv-border-strong);
-  border-radius: var(--pv-radius-sm);
-  box-shadow: none;
-  background: var(--pv-bg-solid);
-  padding: 0.5rem 0.65rem;
-}
-
-.match-operate--embedded .match-operate__clock-field input[type='number'] {
-  min-height: 40px;
-}
-
-.match-operate__nudge-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--pv-space-sm);
-  padding-bottom: var(--pv-space-2xs);
-}
-
-.match-operate--embedded .match-operate__nudge-grid {
-  padding-top: var(--pv-space-2xs);
-}
-
-.match-operate__nudge-btn {
-  min-height: 44px;
-  padding: 0.35rem 0.5rem;
-  border: 0.5px solid var(--pv-separator);
-  border-radius: var(--pv-radius-control);
-  background: var(--pv-bg-solid);
-  color: var(--pv-text);
-  font-size: var(--pv-type-footnote);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  cursor: pointer;
-}
-
-.match-operate__nudge-btn:hover {
-  background: var(--pv-fill-secondary);
-}
-
-.match-operate--embedded .match-operate__nudge-btn {
-  min-height: 36px;
-  font-size: var(--pv-type-caption);
-}
-
-.match-operate__controls {
-  display: grid;
-  gap: var(--pv-space-sm);
-}
-
-.match-operate__clock-btn {
-  min-height: 48px;
-  width: 100%;
-  font-size: var(--pv-type-headline);
-  font-weight: 600;
-  touch-action: manipulation;
-}
-
-.match-operate--embedded .match-operate__clock-btn {
-  min-height: 44px;
-  font-size: var(--pv-type-callout);
-}
-
-.match-operate__period {
-  margin: 0;
-}
-
-.pv-group .match-operate__period select {
-  width: 100%;
-  min-height: 44px;
-  font-size: 16px;
-  border: 0.5px solid var(--pv-border-strong);
-  border-radius: var(--pv-radius-sm);
-  box-shadow: none;
-  background: var(--pv-bg-solid);
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
-}
-
-.match-operate--embedded .match-operate__period select {
-  min-height: 40px;
-}
-
-/* Operator clock minute/second (same pv-group reset override) */
-.operator .clock-controls .field input[type='number'] {
-  border: 0.5px solid var(--pv-border-strong);
-  border-radius: var(--pv-radius-sm);
-  box-shadow: none;
-  background: var(--pv-bg-solid);
-  padding: 0.5rem 0.65rem;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── F1 timing operate ─────────────────────────────────────────────── */
-
-.f1-operate__config,
-.f1-card__fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
-  gap: var(--pv-space-sm);
-}
-
-.f1-operate__config .field,
-.f1-card__fields .field,
-.f1-operate__mv-fields .field {
-  min-width: 0;
-}
-
-.f1-operate__config .field > span,
-.f1-card__fields .field > span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.f1-operate__mv-fields {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: var(--pv-space-sm);
-}
-
-.f1-operate__mv .op-status {
-  margin-top: var(--pv-space-sm);
 }
 
 .f1-drv-list {
@@ -459,10 +508,10 @@
 
 .f1-drv-row {
   display: grid;
-  grid-template-columns: 28px 64px 1fr 92px auto;
+  grid-template-columns: 1.5rem 4rem minmax(0, 1fr) 5.5rem auto;
   align-items: center;
-  gap: var(--pv-space-sm);
-  padding: 6px var(--pv-space-md);
+  gap: var(--pv-space-xs);
+  padding: var(--pv-space-xs) 0;
   border-bottom: 0.5px solid var(--pv-border);
 }
 
@@ -473,17 +522,19 @@
 .f1-drv-row__pos {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: var(--pv-label-secondary);
+  color: var(--pv-text-secondary);
   text-align: center;
 }
 
 .f1-drv-row input {
-  min-height: 36px;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
   border: 0.5px solid var(--pv-border-strong);
   border-radius: var(--pv-radius-sm);
   background: var(--pv-bg-solid);
   padding: 0.35rem 0.5rem;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .f1-drv-row__code {
@@ -499,41 +550,39 @@
 
 .f1-drv-row__actions {
   display: inline-flex;
-  gap: 4px;
+  gap: 2px;
+}
+
+/* Phones: name + gap move to a second line. */
+@container op-card (max-width: 520px) {
+  .f1-drv-row {
+    grid-template-columns: 1.5rem 4rem minmax(0, 1fr) auto;
+  }
+
+  .f1-drv-row__name {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+
+  .f1-drv-row__gap {
+    grid-column: 3;
+    grid-row: 1;
+  }
 }
 
 .f1-operate__add {
-  display: flex;
-  gap: var(--pv-space-sm);
-  flex-wrap: wrap;
-  padding: var(--pv-space-sm) var(--pv-space-md);
+  padding: var(--pv-space-sm) 0;
+}
+
+.f1-operate__import-status:empty {
+  display: none;
 }
 
 .f1-operate__import-status {
-  padding: 0 var(--pv-space-md) var(--pv-space-sm);
-}
-
-.f1-operate__toggles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--pv-space-sm);
-}
-
-.f1-operate__header-toggle,
-.f1-operate__tyre-toggle {
-  width: 100%;
-  min-height: 44px;
-}
-
-.f1-mv-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--pv-space-sm);
-  padding: 0 var(--pv-space-md) var(--pv-space-sm);
+  padding-bottom: var(--pv-space-sm);
 }
 
 .f1-mv-help {
-  margin: 0 var(--pv-space-md) var(--pv-space-sm);
   padding: var(--pv-space-sm) var(--pv-space-md);
   border-radius: var(--pv-radius-md, 12px);
   background: color-mix(in srgb, var(--pv-fill-secondary, #e8e8ed) 70%, transparent);
@@ -544,7 +593,6 @@
   margin: 0 0 0.5rem;
   font-size: 0.92em;
   line-height: 1.35;
-  color: var(--pv-label, #1d1d1f);
 }
 
 .f1-mv-help__steps {
@@ -552,15 +600,7 @@
   padding-left: 1.2rem;
   font-size: 0.88em;
   line-height: 1.45;
-  color: var(--pv-secondary-label, #6e6e73);
-}
-
-.f1-mv-help__steps li + li {
-  margin-top: 0.2rem;
-}
-
-.f1-mv-help code {
-  font-size: 0.92em;
+  color: var(--pv-text-secondary);
 }
 
 .f1-live-line {
@@ -585,4 +625,8 @@
 
 .f1-status-dot.is-off {
   background: #ff3b30;
+}
+
+[data-bind='f1-preview']:empty {
+  display: none;
 }

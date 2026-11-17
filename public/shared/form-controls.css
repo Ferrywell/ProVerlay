@@ -110,22 +110,3 @@
   padding-left: 0;
   padding-right: 0;
 }
-
-/* Match operate clock inputs keep visible field chrome */
-.pv-group .match-operate__clock-field input[type='number'] {
-  background: var(--pv-bg-solid);
-  border: 0.5px solid var(--pv-border-strong);
-  border-radius: var(--pv-radius-sm);
-  box-shadow: none;
-  padding: 0.5rem 0.65rem;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.pv-group .match-operate__period select {
-  background: var(--pv-bg-solid);
-  border: 0.5px solid var(--pv-border-strong);
-  border-radius: var(--pv-radius-sm);
-  box-shadow: none;
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
-}
