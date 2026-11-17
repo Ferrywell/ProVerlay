@@ -85,7 +85,11 @@ opens the operator automatically.
 ## Quick start — Mac app
 
 1. **Download the latest release** from the
-   [releases page](https://github.com/Ferrywell/ProVerlay/releases) (Apple Silicon).
+   [releases page](https://github.com/Ferrywell/ProVerlay/releases):
+   `ProVerlay-mac-arm64.zip` for Apple Silicon (M1 and later) or
+   `ProVerlay-mac-x64.zip` for Intel Macs. `SHA256SUMS.txt` lets you check the
+   download (`shasum -a 256 -c --ignore-missing SHA256SUMS.txt`). The Intel zip and
+   checksums are published from the release after v0.7.0 on.
 2. Unzip and move `ProVerlay.app` to **Applications**.
 3. The first time: **right-click → Open → Open**. If macOS still refuses:
    `xattr -cr /Applications/ProVerlay.app` (the app is ad-hoc signed, not notarized).

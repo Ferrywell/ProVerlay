@@ -87,6 +87,8 @@ Pull requests are reviewed by the maintainers; please be patient and responsive 
 feedback. Do not commit runtime data (`data/`), build output (`dist/`) or client
 material you do not have the rights to share.
 
+Releases are cut by tagging `main`; see [docs/RELEASING.md](docs/RELEASING.md).
+
 ## API changes
 
 If you change a REST endpoint or Socket.io event, update

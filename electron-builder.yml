@@ -11,7 +11,7 @@ files:
   - templates/**
   - package.json
 extraResources:
-  # Alleen seed-data/ (scripts/generate-seed-data.mjs) — NIET de repo data/ map
+  # Only seed-data/ (scripts/generate-seed-data.mjs), NOT the repo's data/ folder
   - from: seed-data
     to: seed-data
 asar: false
@@ -20,11 +20,15 @@ mac:
   category: public.app-category.video
   icon: build/icon.icns
   identity: null
+  # Arch is chosen on the command line: `npm run dist:mac` (arm64) and
+  # `npm run dist:mac:x64` (Intel). Signing and zipping happen afterwards in
+  # scripts/package-mac-app.mjs (ad-hoc by default; see docs/RELEASING.md).
   target:
     - target: dir
       arch:
         - arm64
-# Windows komt later; configuratie alvast voorbereid maar niet gebouwd
+        - x64
+# Windows: prepared but not built yet (no CI job, no release asset)
 win:
   target:
     - target: nsis
