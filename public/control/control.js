@@ -36,6 +36,7 @@ import { operateCardHtml, refreshOperateCard, wireOperateRoot } from '/public/sh
 import { resolveHockeyTypography } from '/public/shared/hockey-utils.js'
 import { showToast, showErrorToast, withPending, copyTextWithFallback } from '/public/shared/toast.js'
 import { sharedSocket, wireConnectionState } from '/public/shared/connection.js'
+import { experimentalEnabled } from '/public/shared/experimental.js'
 import {
   findOnAirOverlaps,
   overlapWarningText,
@@ -1318,10 +1319,26 @@ async function loadNetworkUrls() {
   }
 }
 
+/** Experimental widget types only appear in the Add widget menu while their flag is on. */
+const EXPERIMENTAL_ADD_OPTIONS = [{ flag: 'f1', value: 'f1Timing', label: 'F1 timing (experimental)' }]
+
+function syncExperimentalAddOptions(state) {
+  if (!widgetTypeAdd) return
+  for (const opt of EXPERIMENTAL_ADD_OPTIONS) {
+    const existing = widgetTypeAdd.querySelector(`option[value="${opt.value}"]`)
+    if (experimentalEnabled(state, opt.flag)) {
+      if (!existing) widgetTypeAdd.append(new Option(opt.label, opt.value))
+    } else if (existing) {
+      existing.remove()
+    }
+  }
+}
+
 function applyState(state) {
   applyServerTimeFromState(state)
   noteActiveProject(state)
   currentState = state
+  syncExperimentalAddOptions(state)
   syncProjectBrandFonts(state).then(() => {
     if (!tickerPanel?.hidden) scheduleTickerPreview()
   })

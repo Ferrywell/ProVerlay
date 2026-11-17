@@ -39,6 +39,11 @@ material. The entries below are reconstructed from that history; the tags
 
 ### Changed
 
+- The F1 timing tower is experimental and no longer part of the default widget set
+  (#25): it is gone from the *Add widget* menu, the operator, the Companion presets
+  and the README. Start ProVerlay with `PROVERLAY_EXPERIMENTAL=f1` to add one.
+  Projects that already contain a tower render exactly as before and keep its
+  dashboard card.
 - Old single-image widgets (`{ src, alt }`) are migrated on load to the new Image widget
   with that one image on air; they render exactly as before.
 

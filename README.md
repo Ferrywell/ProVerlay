@@ -31,17 +31,16 @@
 ---
 
 ProVerlay is a local tool for live graphics in streams and broadcasts: score bugs,
-lower thirds, tickers, countdowns, an F1 timing tower and more. You set up the
+lower thirds, tickers, countdowns, a quiz and more. You set up the
 graphics in a desktop dashboard, control them live from a phone, tablet or Stream
 Deck, and OBS or vMix shows them through a transparent browser source. Everything
 runs on your own machine and network — no account, no cloud.
 
 ## Features
 
-- **Widgets:** match score (with optional PNG score strip), hockey scorebug, F1 timing
-  tower, ticker, stream countdown, single lower third, lower-thirds roster, quiz,
-  message, and an image widget for pre-designed PNG lower thirds, logos and sponsor
-  boards.
+- **Widgets:** match score (with optional PNG score strip), hockey scorebug, ticker,
+  stream countdown, single lower third, lower-thirds roster, quiz, message, and an image
+  widget for pre-designed PNG lower thirds, logos and sponsor boards.
 - **One output URL** (`/render`) for all live widgets, plus a solo URL per widget
   (`/render?graphic=<id>`) when you want it on its own layer.
 - **Touch operator** for iPad and iPhone over the local network.
@@ -49,8 +48,6 @@ runs on your own machine and network — no account, no cloud.
 - **Projects** with their own branding (colours, fonts), assets and widgets; export
   and import as a single `.proverlay` file.
 - **Scoreboard editor** to put live text fields on top of your own PNG design.
-- **F1 timing** from a running [MultiViewer](https://multiviewer.app) instance, or
-  manual.
 - **Data sources:** names, titles, ticker lines and quiz questions from Google Sheets,
   CSV or Excel, updated live and cached for offline use, plus `{{variables}}` in text.
 - **REST API and Socket.io** for your own automation.
@@ -210,7 +207,6 @@ See [SECURITY.md](SECURITY.md) for details and how to report a vulnerability.
 | [Data sources](docs/DATA-SOURCES.md) | Google Sheets, CSV, Excel and `{{variables}}` |
 | [Desktop app](docs/APP.md) | Mac and Windows app, preferences, data folders, building the app |
 | [Companion](docs/COMPANION.md) | Stream Deck actions, feedbacks, presets |
-| [F1 timing](docs/F1-TIMING.md) | F1 tower with MultiViewer |
 | [Architecture](docs/ARCHITECTURE.md) | Server, state, API |
 | [Product overview](docs/PRODUCT.md) | Screens, widget types, scope |
 | [Match graphics](docs/ARCHITECTURE-MATCH-GRAPHICS.md) | Score strip model and roadmap |

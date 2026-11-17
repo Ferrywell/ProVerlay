@@ -157,6 +157,9 @@ Generated from the active project: one section per widget type, one group per gr
 | quiz                  | One button per question (red while on air), reveal / hide answer (yellow), hide quiz            |
 | message               | On air toggle shows the message text                                                            |
 
+Experimental widget types (the F1 timing tower) only get presets while ProVerlay runs with their flag
+(`PROVERLAY_EXPERIMENTAL=f1`); existing buttons for them keep working either way.
+
 Presets use the connection label in variable references, so they keep working when the connection is not called
 `proverlay`.
 

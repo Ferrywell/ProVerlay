@@ -134,7 +134,6 @@ In the dashboard, choose a **Widget type** and click **Add widget**.
 |-------------|------------|
 | Match score | Score and match clock; can use a PNG score strip from the scoreboard editor |
 | Hockey scorebug | Team codes, scores, team colours and a Q1–Q4 countdown clock |
-| F1 timing | F1 position tower, manual or live from MultiViewer — see [F1-TIMING.md](F1-TIMING.md) |
 | Ticker | Scrolling text bar |
 | Stream countdown | Countdown to the start of the stream |
 | Lower third (single) | One name + title |

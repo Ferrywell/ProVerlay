@@ -43,7 +43,8 @@ Tip: use a throwaway data folder so you start from a blank project:
 - [ ] Lower third / lower-thirds roster show name and title
 - [ ] Message shows its text
 - [ ] Quiz shows the question, reveal highlights the correct answer
-- [ ] F1 timing shows the tower with the manual list (see [F1-TIMING.md](F1-TIMING.md))
+- [ ] Without `PROVERLAY_EXPERIMENTAL=f1` the *Add widget* menu has no F1 timing; a project
+      that already has one still renders it (see [F1-TIMING.md](F1-TIMING.md))
 - [ ] Several widgets visible at the same time without overlap glitches
 - [ ] In/out transitions play
 
@@ -97,8 +98,8 @@ See [OBS-VMIX.md](OBS-VMIX.md).
 - [ ] Port taken or inside `netsh interface ipv4 show excludedportrange protocol=tcp`:
       clear error with a way to choose another port
 - [ ] Uninstall keeps `%APPDATA%\ProVerlay\data`; reinstall shows the same projects
-- [ ] F1 widget → **Open MultiViewer** without MultiViewer installed offers the download
-      link; with MultiViewer installed it opens the app
+- [ ] (Experimental, `PROVERLAY_EXPERIMENTAL=f1`) F1 widget → **Open MultiViewer** without
+      MultiViewer installed offers the download link; with MultiViewer installed it opens the app
 
 ## 8. Persistence and projects (P1)
 
