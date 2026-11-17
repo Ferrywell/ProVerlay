@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Ferrywell/ProVerlay/security/policy
+    about: Please report security issues privately, not as a public issue.
+  - name: User guide
+    url: https://github.com/Ferrywell/ProVerlay/blob/main/docs/USER-GUIDE.md
+    about: Setup, going live and troubleshooting.
