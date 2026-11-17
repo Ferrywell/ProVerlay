@@ -255,9 +255,16 @@ the server inside the write queue. Both return the updated graphic.
 
 Semantics match the browser helpers in `public/shared/match-utils.js`,
 `public/shared/operate-match.js` (`adjustMatchClock`) and
-`public/shared/hockey-utils.js`. The dashboard, operator and Companion still
-send whole `data` objects today; moving them to these endpoints is a planned
-follow-up.
+`public/shared/hockey-utils.js`. Clients never send whole cached `data`
+objects: the operate cards (`public/shared/operate-*.js`, used by the
+dashboard, `/operate` and `/operator`), the dashboard's Edit settings forms
+(`/control?configure=<id>`) and the Companion module change scores and clocks
+through these endpoints and save everything else with a partial
+`PATCH /api/graphics/:id` that contains only the changed fields (arrays such as
+ticker messages are sent whole, only when they changed). Edit settings diffs
+the form against the server state it was filled with
+(`public/shared/patch-diff.js`), never PATCHes score or running-clock fields,
+and keeps unsaved edits when another client changes the same widget.
 
 ### Validation
 
