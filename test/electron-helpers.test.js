@@ -7,7 +7,14 @@ import {
   normalizeThemeChoice,
   titleBarOverlayFor,
   describeListenError,
-  pickOperatorUrl
+  pickOperatorUrl,
+  localUrlForPort,
+  isProVerlayState,
+  clampWindowSize,
+  HIDDEN_ARG,
+  loginItemSettingsFor,
+  wasStartedHidden,
+  saveDialogOptionsFor
 } from '../electron/helpers.js'
 
 const BASE = baseUrlForPort(2014)
@@ -79,7 +86,7 @@ test('describeListenError explains port in use and permission denied', () => {
   assert.equal(other.detail, 'boom')
 })
 
-test('pickOperatorUrl prefers a 192.168 LAN address and falls back to localhost', () => {
+test('pickOperatorUrl prefers a 192.168 LAN address and falls back to 127.0.0.1', () => {
   const network = {
     urls: {
       lan: [
@@ -91,6 +98,84 @@ test('pickOperatorUrl prefers a 192.168 LAN address and falls back to localhost'
     }
   }
   assert.equal(pickOperatorUrl(network, 2014), 'http://192.168.1.20:2014/operator')
-  assert.equal(pickOperatorUrl({ urls: { lan: [] } }, 2602), 'http://localhost:2602/operator')
-  assert.equal(pickOperatorUrl(undefined, 2014), 'http://localhost:2014/operator')
+  assert.equal(pickOperatorUrl({ urls: { lan: [] } }, 2602), 'http://127.0.0.1:2602/operator')
+  assert.equal(pickOperatorUrl(undefined, 2014), 'http://127.0.0.1:2014/operator')
+})
+
+test('localUrlForPort uses the IPv4 loopback address (server listens on 0.0.0.0)', () => {
+  assert.equal(localUrlForPort(2014), 'http://127.0.0.1:2014')
+  assert.equal(`${localUrlForPort(2602)}/render`, 'http://127.0.0.1:2602/render')
+})
+
+test('isProVerlayState accepts the /api/state shape and rejects foreign servers', () => {
+  assert.equal(isProVerlayState({ graphics: [], projectId: 'blank', projectName: 'New client', serverNow: 1 }), true)
+  assert.equal(isProVerlayState({ graphics: [{ id: 'a' }], projectId: 'new-client' }), true)
+
+  // What a SPA dev server, a status page or another API might answer with 200.
+  for (const foreign of [
+    null,
+    undefined,
+    'busy',
+    '<!doctype html><html></html>',
+    42,
+    [],
+    [{ graphics: [], projectId: 'x' }],
+    {},
+    { ok: true },
+    { graphics: [] },
+    { projectId: 'blank' },
+    { graphics: {}, projectId: 'blank' },
+    { graphics: [], projectId: '' },
+    { graphics: [], projectId: 7 }
+  ]) {
+    assert.equal(isProVerlayState(foreign), false, JSON.stringify(foreign))
+  }
+})
+
+test('clampWindowSize fits the default window into a small work area', () => {
+  const wanted = { width: 1440, height: 920, minWidth: 1024, minHeight: 640 }
+  // 2560×1440 at 100 %: unchanged.
+  assert.deepEqual(clampWindowSize(wanted, { width: 2560, height: 1400 }), wanted)
+  // 1920×1080 at 125 %: work area ≈ 1536×816.
+  assert.deepEqual(clampWindowSize(wanted, { width: 1536, height: 816 }), { ...wanted, height: 816 })
+  // 1366×768 at 125 %: even the minimum height does not fit.
+  assert.deepEqual(clampWindowSize(wanted, { width: 1093, height: 590 }), {
+    width: 1093,
+    height: 590,
+    minWidth: 1024,
+    minHeight: 590
+  })
+  // No (or a nonsense) work area: leave the size alone.
+  assert.deepEqual(clampWindowSize(wanted, undefined), wanted)
+  assert.deepEqual(clampWindowSize(wanted, { width: 0, height: NaN }), wanted)
+  // Fractional DIP sizes round down so the window stays inside.
+  assert.equal(clampWindowSize({ width: 2000, height: 2000 }, { width: 1279.5, height: 719.2 }).height, 719)
+})
+
+test('loginItemSettingsFor passes the same --hidden args on and off (Windows matches path + args)', () => {
+  assert.deepEqual(loginItemSettingsFor('win32', true), { openAtLogin: true, args: [HIDDEN_ARG] })
+  assert.deepEqual(loginItemSettingsFor('win32', false), { openAtLogin: false, args: [HIDDEN_ARG] })
+  assert.deepEqual(loginItemSettingsFor('darwin', true), { openAtLogin: true, openAsHidden: true })
+  assert.deepEqual(loginItemSettingsFor('linux', 1), { openAtLogin: true })
+  assert.equal(HIDDEN_ARG, '--hidden')
+})
+
+test('wasStartedHidden detects a login-item launch', () => {
+  assert.equal(wasStartedHidden({ platform: 'win32', argv: ['C:\\ProVerlay.exe', '--hidden'] }), true)
+  assert.equal(wasStartedHidden({ platform: 'win32', argv: ['C:\\ProVerlay.exe'] }), false)
+  assert.equal(wasStartedHidden({ platform: 'win32', argv: ['x'], loginItem: { wasOpenedAtLogin: true } }), false)
+  assert.equal(wasStartedHidden({ platform: 'darwin', argv: ['x'], loginItem: { wasOpenedAtLogin: true } }), true)
+  assert.equal(wasStartedHidden({ platform: 'darwin', argv: ['x'], loginItem: { wasOpenedAsHidden: true } }), true)
+  assert.equal(wasStartedHidden({ platform: 'darwin', argv: ['x'], loginItem: {} }), false)
+  assert.equal(wasStartedHidden({ platform: 'linux' }), false)
+})
+
+test('saveDialogOptionsFor titles the project export dialog instead of showing the blob URL', () => {
+  const exportOptions = saveDialogOptionsFor('new-client.proverlay')
+  assert.equal(exportOptions.title, 'Export project')
+  assert.deepEqual(exportOptions.filters, [{ name: 'ProVerlay project', extensions: ['proverlay'] }])
+  assert.equal('defaultPath' in exportOptions, false) // keeps the suggested file name
+  assert.equal(saveDialogOptionsFor('Match.PROVERLAY').title, 'Export project')
+  assert.deepEqual(saveDialogOptionsFor('logo.png'), { title: 'Save file' })
+  assert.deepEqual(saveDialogOptionsFor(undefined), { title: 'Save file' })
 })

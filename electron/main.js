@@ -27,7 +27,8 @@ import {
   clipboard,
   dialog,
   ipcMain,
-  Notification
+  screen,
+  session
 } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
@@ -35,13 +36,19 @@ import { fileURLToPath } from 'node:url'
 import { loadSettings, saveSettings, applySettingsPatch, publicSettings, validatePort } from './settings.js'
 import {
   baseUrlForPort,
+  localUrlForPort,
   isAppUrl,
   isSafeExternalUrl,
+  isProVerlayState,
   normalizeThemeChoice,
   titleBarOverlayFor,
   windowBackgroundFor,
   describeListenError,
-  pickOperatorUrl
+  pickOperatorUrl,
+  clampWindowSize,
+  loginItemSettingsFor,
+  wasStartedHidden,
+  saveDialogOptionsFor
 } from './helpers.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -62,6 +69,13 @@ const SECURE_WEB_PREFERENCES = Object.freeze({
 
 if (process.env.PROVERLAY_USER_DATA_DIR) {
   app.setPath('userData', path.resolve(process.env.PROVERLAY_USER_DATA_DIR))
+} else if (IS_WINDOWS && process.env.LOCALAPPDATA) {
+  // Chromium's caches (Cache, Code Cache, GPUCache, Local Storage, …) are
+  // machine-local: keep them out of the roaming %APPDATA% profile. userData
+  // (%APPDATA%\ProVerlay: settings.json and the data folder with projects)
+  // stays where it is. With PROVERLAY_USER_DATA_DIR everything stays in that
+  // folder, so a test run never shares a browser profile with the real app.
+  app.setPath('sessionData', path.join(process.env.LOCALAPPDATA, 'ProVerlay'))
 }
 if (IS_WINDOWS) app.setAppUserModelId(APP_ID)
 
@@ -141,10 +155,16 @@ function ensureDataDir() {
   return target
 }
 
+/**
+ * True when a ProVerlay server answers on `port`. Checks the shape of
+ * /api/state, not just the status: a dev server with an SPA fallback answers
+ * 200 on every path and must get the "Port already in use" dialog instead.
+ */
 async function isProVerlayAt(port) {
   try {
-    const res = await fetch(`${baseUrlForPort(port)}/api/state`, { signal: AbortSignal.timeout(1500) })
-    return res.ok
+    const res = await fetch(`${localUrlForPort(port)}/api/state`, { signal: AbortSignal.timeout(1500) })
+    if (!res.ok) return false
+    return isProVerlayState(await res.json())
   } catch {
     return false
   }
@@ -249,12 +269,15 @@ function updateWindowTheme() {
 }
 
 function createMainWindow() {
+  // 1440×920 does not fit every screen (e.g. 1920×1080 at 125 % leaves a
+  // ~816 DIP high work area): keep the window clear of the taskbar/Dock.
+  const size = clampWindowSize(
+    { width: 1440, height: 920, minWidth: 1024, minHeight: 640 },
+    screen.getPrimaryDisplay().workAreaSize
+  )
   const options = {
     ...appWindowOptions(),
-    width: 1440,
-    height: 920,
-    minWidth: 1024,
-    minHeight: 640,
+    ...size,
     title: 'ProVerlay',
     show: false
   }
@@ -274,8 +297,11 @@ function createMainWindow() {
     if (quitting) return
     // Closing hides to the tray; the server keeps serving OBS/vMix.
     event.preventDefault()
-    win.hide()
-    maybeShowTrayNotice()
+    hideToTray(win)
+  })
+  // Windows sign-out/shutdown: let the window close instead of hiding it.
+  win.on('session-end', () => {
+    quitting = true
   })
   win.on('closed', () => {
     if (mainWindow === win) mainWindow = null
@@ -331,10 +357,24 @@ function loginItemSupport() {
   return { supported: true }
 }
 
+// Windows: the Run entry carries --hidden, and Windows matches path + args,
+// so reading and removing it pass the same args (loginItemSettingsFor).
+function loginItemOpensAtLogin() {
+  return app.getLoginItemSettings(loginItemSettingsFor(process.platform, true)).openAtLogin
+}
+
+/** The login item starts ProVerlay hidden: server and tray, no window. */
 function applyLoginItem(openAtLogin) {
   if (!loginItemSupport().supported) return
   try {
-    app.setLoginItemSettings({ openAtLogin })
+    const current = loginItemOpensAtLogin()
+    // Already on: leave it alone (re-writing it on Windows would re-enable an
+    // entry the user switched off in Task Manager). Off is always applied on
+    // Windows: it removes the Run value by name, which also clears an older
+    // entry without --hidden (that one does not read back as "on").
+    if (openAtLogin && current) return
+    if (!openAtLogin && !current && !IS_WINDOWS) return
+    app.setLoginItemSettings(loginItemSettingsFor(process.platform, openAtLogin))
   } catch (err) {
     console.error('[proverlay] Could not change the login item:', err.message)
   }
@@ -383,7 +423,7 @@ ipcMain.handle('prefs:get', (event) => {
   if (!isFromPrefs(event)) throw new Error('Not allowed')
   const loginItem = loginItemSupport()
   const shown = publicSettings(settings)
-  if (loginItem.supported) shown.startAtLogin = app.getLoginItemSettings().openAtLogin
+  if (loginItem.supported) shown.startAtLogin = loginItemOpensAtLogin()
   const running = isServerRunning()
   return {
     settings: shown,
@@ -435,7 +475,7 @@ ipcMain.on('prefs:close', (event) => {
 })
 
 // The Preferences page reports its content height so the window fits it
-// (it grows when an error or the port-change note is shown).
+// (it grows when an error is shown; the port-change note has reserved space).
 ipcMain.on('prefs:fit', (event, height) => {
   if (!isFromPrefs(event)) return
   const h = Math.round(Number(height))
@@ -498,7 +538,13 @@ function refreshTrayMenu() {
     Menu.buildFromTemplate([
       { label: 'Open Dashboard', enabled: running, click: () => showDashboard() },
       { label: 'Copy Operator URL (iPad/Phone)', enabled: running, click: () => copyOperatorUrl() },
-      { label: 'Copy Render URL (OBS/vMix)', enabled: running, click: () => clipboard.writeText(`${baseUrl()}/render`) },
+      {
+        label: 'Copy Render URL (OBS/vMix)',
+        enabled: running,
+        // 127.0.0.1, not localhost: the server is IPv4-only and Windows may
+        // resolve localhost to ::1 first.
+        click: () => clipboard.writeText(`${localUrlForPort(currentPort())}/render`)
+      },
       { type: 'separator' },
       { label: 'Preferences…', click: () => openPreferences() },
       { type: 'separator' },
@@ -514,16 +560,46 @@ function ensureTray() {
   if (!IS_MAC) tray.on('click', () => showDashboard())
 }
 
-function maybeShowTrayNotice() {
-  if (IS_MAC || settings.trayNoticeShown || !tray) return
-  const title = 'ProVerlay is still running'
-  const content = 'ProVerlay is still running in the system tray, so OBS and vMix keep their graphics. Right-click the tray icon to quit.'
-  if (IS_WINDOWS) {
-    tray.displayBalloon({ iconType: 'info', title, content })
-  } else if (Notification.isSupported()) {
-    new Notification({ title, body: content }).show()
+let trayNoticePending = false
+let trayNoticeShownThisRun = false
+
+/**
+ * Close button: hide the window, keep the server running. The first close
+ * of a run (until the user ticks "Don't show this again") explains that
+ * ProVerlay is still running, in a message box on top of the window: a tray
+ * balloon/toast can be suppressed by Do Not Disturb, so it is not used.
+ * macOS: no notice; apps that keep running after their window closes (Dock
+ * icon, menu bar extra, Cmd+Q to quit) are the norm there.
+ */
+async function hideToTray(win) {
+  if (trayNoticePending) return
+  const notice = !IS_MAC && tray && isServerRunning() && !settings.trayNoticeShown && !trayNoticeShownThisRun
+  if (!notice) {
+    win.hide()
+    return
   }
-  persist({ trayNoticeShown: true })
+  trayNoticePending = true
+  trayNoticeShownThisRun = true
+  try {
+    const { checkboxChecked } = await dialog.showMessageBox(win, {
+      type: 'info',
+      title: 'ProVerlay',
+      message: 'ProVerlay keeps running in the tray',
+      detail:
+        'ProVerlay keeps running in the system tray so OBS, vMix and operators stay connected. ' +
+        'Quit from the tray icon (right-click → Quit ProVerlay).',
+      checkboxLabel: "Don't show this again",
+      checkboxChecked: false,
+      buttons: ['OK'],
+      noLink: true
+    })
+    if (checkboxChecked) persist({ trayNoticeShown: true })
+  } catch (err) {
+    console.error('[proverlay] Could not show the tray notice:', err.message)
+  } finally {
+    trayNoticePending = false
+  }
+  if (!win.isDestroyed() && !quitting) win.hide()
 }
 
 /* ---------------------------------------------------------------- menu */
@@ -611,6 +687,9 @@ async function showFirewallNoticeOnce() {
     detail:
       'When Windows Defender Firewall asks, allow ProVerlay on "Private networks". ' +
       'That lets an iPad, phone or Bitfocus Companion on the same network connect.\n\n' +
+      'Windows marks a new network as Public by default. If yours is Public, switch it to Private ' +
+      '(Settings → Network & internet → your network → Properties), or allow both. ' +
+      'Otherwise phones and Companion are blocked.\n\n' +
       'OBS or vMix on this computer can use ProVerlay either way.',
     buttons: ['OK'],
     noLink: true
@@ -649,10 +728,24 @@ app.whenReady().then(async () => {
   settings = loaded.settings
 
   buildAppMenu()
+
+  // Downloads come from the dashboard's project export (an <a download> on a
+  // blob: URL); without a title the Save dialog shows that raw URL.
+  session.defaultSession.on('will-download', (_event, item) => {
+    item.setSaveDialogOptions(saveDialogOptionsFor(item.getFilename()))
+  })
+
+  // Started by the login item: server and tray only, no dashboard window.
+  const startHidden = wasStartedHidden({
+    platform: process.platform,
+    argv: process.argv,
+    loginItem: IS_MAC ? app.getLoginItemSettings() : undefined
+  })
+
   await showFirewallNoticeOnce()
 
   const result = await startServerOn(initialPort(), { attach: true })
-  if (result.ok) onServerReady({ openDashboard: settings.openDashboardOnStart })
+  if (result.ok) onServerReady({ openDashboard: settings.openDashboardOnStart && !startHidden })
   else await showStartError()
 })
 

@@ -97,12 +97,94 @@ export function describeListenError(err, port, platform = process.platform) {
 
 /**
  * URL another device on the network should open for the Operator (iPad,
- * phone). Prefers a private LAN address; falls back to localhost.
+ * phone). Prefers a private LAN address; falls back to 127.0.0.1.
  * @param {{ urls: { lan: { ip: string, path: string, url: string }[] } }} network buildNetworkUrls() result
  */
 export function pickOperatorUrl(network, port) {
   const lan = (network?.urls?.lan || []).filter((entry) => entry.path === 'operator')
   const rank = (ip) => (/^192\.168\./.test(ip) ? 0 : /^10\./.test(ip) ? 1 : /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ? 2 : 3)
   lan.sort((a, b) => rank(a.ip) - rank(b.ip))
-  return lan[0]?.url || `${baseUrlForPort(port)}/operator`
+  return lan[0]?.url || `${localUrlForPort(port)}/operator`
+}
+
+/**
+ * URL for OBS/vMix browser sources and other clients on this computer. The
+ * server listens on IPv4 only (0.0.0.0), and on Windows `localhost` may
+ * resolve to ::1 first, so these use 127.0.0.1. (App windows keep
+ * baseUrlForPort: their localStorage is tied to that origin.)
+ */
+export function localUrlForPort(port) {
+  return `http://127.0.0.1:${port}`
+}
+
+/**
+ * True when `body` looks like ProVerlay's GET /api/state response
+ * (server/state.js getState(): the active project's state with a `graphics`
+ * array and its `projectId`). Another program that answers 200 on every
+ * path must not be mistaken for a running ProVerlay.
+ */
+export function isProVerlayState(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return false
+  return Array.isArray(body.graphics) && typeof body.projectId === 'string' && body.projectId.length > 0
+}
+
+/**
+ * Fit a window size into a display work area (DIP). The minimum size is
+ * lowered too when the work area is smaller; otherwise it would push the
+ * window past the screen edge (behind the taskbar).
+ * @param {{ width: number, height: number, minWidth?: number, minHeight?: number }} size
+ * @param {{ width: number, height: number } | null | undefined} workArea
+ */
+export function clampWindowSize(size, workArea) {
+  const out = { ...size }
+  const areaW = Math.floor(Number(workArea?.width))
+  const areaH = Math.floor(Number(workArea?.height))
+  if (Number.isFinite(areaW) && areaW > 0) {
+    out.width = Math.min(out.width, areaW)
+    if (out.minWidth !== undefined) out.minWidth = Math.min(out.minWidth, areaW)
+  }
+  if (Number.isFinite(areaH) && areaH > 0) {
+    out.height = Math.min(out.height, areaH)
+    if (out.minHeight !== undefined) out.minHeight = Math.min(out.minHeight, areaH)
+  }
+  return out
+}
+
+/** Command-line flag of the login item: start in the tray, no window. */
+export const HIDDEN_ARG = '--hidden'
+
+/**
+ * Options for app.setLoginItemSettings (and getLoginItemSettings). Windows
+ * stores the args in the Run entry and matches on path + args, so reading
+ * and turning the item off must pass the same args.
+ */
+export function loginItemSettingsFor(platform, openAtLogin) {
+  const on = Boolean(openAtLogin)
+  if (platform === 'win32') return { openAtLogin: on, args: [HIDDEN_ARG] }
+  // openAsHidden only works before macOS 13; later versions report
+  // wasOpenedAtLogin instead (see wasStartedHidden).
+  if (platform === 'darwin') return { openAtLogin: on, openAsHidden: true }
+  return { openAtLogin: on }
+}
+
+/**
+ * True when this launch came from the login item and should start in the
+ * tray/menu bar only (server and tray, no dashboard window).
+ * @param {{ platform: string, argv?: string[], loginItem?: { wasOpenedAtLogin?: boolean, wasOpenedAsHidden?: boolean } }} launch
+ */
+export function wasStartedHidden({ platform, argv = [], loginItem = {} }) {
+  if (Array.isArray(argv) && argv.includes(HIDDEN_ARG)) return true
+  if (platform === 'darwin') return Boolean(loginItem?.wasOpenedAtLogin || loginItem?.wasOpenedAsHidden)
+  return false
+}
+
+/**
+ * Save dialog options for a download (project export). Without a title the
+ * dialog shows the raw blob: URL. The file name is left to Electron.
+ */
+export function saveDialogOptionsFor(filename) {
+  if (/\.proverlay$/i.test(String(filename || ''))) {
+    return { title: 'Export project', filters: [{ name: 'ProVerlay project', extensions: ['proverlay'] }] }
+  }
+  return { title: 'Save file' }
 }
