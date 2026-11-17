@@ -28,6 +28,7 @@ import {
   resolveHockeyTypography,
   resolveLiveHockeyClock
 } from '/public/shared/hockey-utils.js'
+import { reconnectAfterServerDisconnect } from '/public/shared/reconnect.js'
 
 const stage = document.getElementById('stage')
 const layers = new Map()
@@ -1779,7 +1780,7 @@ async function applyState(state) {
 initRenderCompat()
 setupPreviewWindow()
 
-const socket = io()
+const socket = reconnectAfterServerDisconnect(io())
 socket.on('stateChanged', applyState)
 socket.on('f1TimingUpdate', (payload) => {
   if (!payload?.graphicId) return
