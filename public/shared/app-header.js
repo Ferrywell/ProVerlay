@@ -76,6 +76,12 @@ export function applyTheme(theme) {
   const root = document.documentElement
   if (theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme)
   else root.removeAttribute('data-theme')
+  // Desktop app: keep the window chrome (caption buttons) in step.
+  try {
+    window.proverlayDesktop?.setTheme(theme)
+  } catch {
+    /* bridge unavailable: chrome follows the OS theme */
+  }
 }
 
 export function setThemePreference(theme) {
@@ -422,9 +428,23 @@ function wireProjects(chip) {
   return { applyProjects, applyState, loadProjects }
 }
 
+/** Desktop app only: port / startup settings live in the app's Preferences window. */
+function addDesktopPreferences(panel) {
+  const desktop = window.proverlayDesktop
+  if (!desktop || typeof desktop.openPreferences !== 'function') return
+  const separator = el('div', { class: 'pv-popover__separator', role: 'separator' })
+  const item = el('button', { type: 'button', class: 'pv-popover__item', role: 'menuitem' }, 'App preferences…')
+  item.addEventListener('click', () => {
+    closePopover()
+    desktop.openPreferences()
+  })
+  panel.append(separator, item)
+}
+
 function wireMenu(menu) {
   const button = menu.querySelector('#pv-app-menu-button')
   const panel = menu.querySelector('.pv-app-menu__panel')
+  addDesktopPreferences(panel)
   button.addEventListener('click', () => togglePopover(button, panel))
   wirePopoverKeys(panel)
   panel.addEventListener('click', (event) => {
