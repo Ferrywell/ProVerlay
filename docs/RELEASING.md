@@ -14,7 +14,7 @@ tag is pushed. Nobody needs to build or upload a Mac app or Windows installer by
      updates the compare links at the bottom.
 
    The test suite checks that the `package.json` version has a CHANGELOG section,
-   and the PR build job (see below) builds the app, so a broken release PR fails
+   and the PR build job (see below) builds the Windows installer, so a broken release PR fails
    before it is merged. `npm run changelog -- 0.8.0` shows the notes exactly as
    they will appear on the release page.
 2. **Merge** the pull request into `main`.
@@ -113,11 +113,18 @@ notarization are enabled (below), these steps are no longer needed.
 
 Pull requests that touch `electron/`, `build/`, `scripts/`, `electron-builder.yml`,
 `package.json`, `package-lock.json` or the workflow itself run the same build and
-verification without publishing — including the Windows installer and its
-install/uninstall smoke test. The zips and `ProVerlay-win-x64-setup.exe` are attached
-to the workflow run as artifacts for 5 days (**Actions → the run → Artifacts**), so a
-packaging change can be tried on a real Mac or PC before it is merged. Pull request
-builds are never signed.
+verification without publishing for the **Windows installer**, including its
+install/uninstall smoke test. `ProVerlay-win-x64-setup.exe` is attached to the
+workflow run as an artifact for 5 days (**Actions → the run → Artifacts**), so a
+packaging change can be tried on a real PC before it is merged. Pull request builds are
+never signed.
+
+The **Mac build is skipped on pull requests**, and the CI tests run on Linux and Windows
+only (macOS on a manual *Run workflow* of CI). GitHub's hosted macOS runners are often
+out of capacity; a job that is never picked up is cancelled after about an hour and
+reported as a failed run, with an email, although nothing failed. To check a Mac
+packaging change before merging, build it locally (`npm run dist:mac`, see below); every
+release tag builds and tests on macOS anyway.
 
 ## Building locally
 
