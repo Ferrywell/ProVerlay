@@ -1,8 +1,14 @@
 import { hexFromColor, patchGraphic } from '/public/shared/client.js'
 import { resolveEditorGraphicId } from '/public/shared/device.js'
-import { resolveBindText, penaltiesFeatureEnabled } from '/public/shared/match-utils.js'
+import {
+  resolveBindText,
+  penaltiesFeatureEnabled,
+  clockPlateUsesPill,
+  resolveClockPlate
+} from '/public/shared/match-utils.js'
 import {
   canvasAspectRatio,
+  clockPillStyles,
   elementBoxStyle,
   isStripLayout,
   layoutBackgroundVisible,
@@ -103,6 +109,13 @@ const alignYBtn = document.getElementById('align-y')
 const alignXBtn = document.getElementById('align-x')
 const alignFontBtn = document.getElementById('align-font')
 const alignScoresBtn = document.getElementById('align-scores')
+const emptyState = document.getElementById('editor-empty')
+const emptyEyebrow = document.getElementById('editor-empty-eyebrow')
+const emptyTitle = document.getElementById('editor-empty-title')
+const emptyBody = document.getElementById('editor-empty-body')
+const emptyUploadBtn = document.getElementById('editor-empty-upload')
+const emptyDashboardLink = document.getElementById('editor-empty-dashboard')
+const emptyDropHint = document.getElementById('editor-empty-drop')
 
 let state = null
 let graphic = null
@@ -476,6 +489,43 @@ function applyBackground() {
     stage.style.backgroundImage = ''
     stage.classList.toggle('has-bg-hint', !layout.background)
   }
+  updateEmptyState()
+}
+
+/**
+ * Empty state: without a PNG design the render shows ProVerlay's built-in
+ * look (score bug / lower-third plate) and ignores positioned text fields,
+ * so the editor explains how to add a PNG instead of a blank black canvas.
+ */
+function updateEmptyState() {
+  if (!emptyState) return
+  const noGraphic = !graphic
+  const noDesign = Boolean(graphic) && !layout.background
+  const empty = noGraphic || noDesign
+  emptyState.hidden = !empty
+  canvas?.classList.toggle('is-empty', empty)
+  if (!empty) return
+
+  if (noGraphic) {
+    emptyEyebrow.textContent = 'Nothing to edit yet'
+    emptyTitle.textContent = 'Add a Match score or Lower third first'
+    emptyBody.textContent =
+      'The editor positions text on a PNG design for Match score and Lower third (show) widgets. Add one in the dashboard, then come back here.'
+    emptyUploadBtn.hidden = true
+    emptyDropHint.hidden = true
+    emptyDashboardLink.hidden = false
+    return
+  }
+
+  const lowerThird = isLowerThird()
+  emptyEyebrow.textContent = lowerThird ? 'No lower-third design yet' : 'No score strip yet'
+  emptyTitle.textContent = lowerThird ? 'Add your lower-third PNG' : 'Add your score strip PNG'
+  emptyBody.textContent = lowerThird
+    ? 'Upload a transparent PNG of your lower-third design, then drag the name and title fields onto it. Until then the render uses the built-in ProVerlay lower-third plate.'
+    : 'Upload a transparent PNG of your score bar (for example 3197×335 px), then drag the team codes, scores and clock onto it. Until then the render uses the built-in ProVerlay score bug in your brand colours.'
+  emptyUploadBtn.hidden = false
+  emptyDropHint.hidden = false
+  emptyDashboardLink.hidden = true
 }
 
 async function persistBackgroundVisibility() {
@@ -513,14 +563,33 @@ function renderElements() {
   elementsRoot.innerHTML = ''
   const brandFamily = state?.brand?.fontFamily || ''
 
+  // Clock plate: same shared geometry as /render (clockPillStyles), so the
+  // pill you position here is exactly the pill on air.
+  const usePill = graphic?.type === 'matchScoreboard' && clockPlateUsesPill(layout)
+  const pillCfg = usePill ? resolveClockPlate(layout) : null
+
   for (const el of elements) {
+    const styledEl = { ...el, fontFamily: resolveElementFontFamily(el, brandFamily) }
+    const selectedClass = selectedIds.has(el.id) ? ' is-selected' : ''
+    if (usePill && el.bind === 'clock') {
+      const pill = clockPillStyles(pillCfg, styledEl, layout)
+      const node = document.createElement('span')
+      node.className = `editor-element editor-element--pill clock-pill score-el--clock${selectedClass}`
+      node.dataset.id = el.id
+      node.setAttribute('style', pill.box)
+      const textNode = document.createElement('span')
+      textNode.className = 'clock-pill__text'
+      textNode.setAttribute('style', pill.text)
+      textNode.textContent = previewText(el)
+      node.appendChild(textNode)
+      if (!stripMode) node.addEventListener('pointerdown', (event) => startDrag(event, el.id))
+      elementsRoot.appendChild(node)
+      continue
+    }
     const node = document.createElement('span')
-    node.className = `editor-element score-el score-el--${el.bind || 'custom'}${selectedIds.has(el.id) ? ' is-selected' : ''}`
+    node.className = `editor-element score-el score-el--${el.bind || 'custom'}${selectedClass}`
     node.dataset.id = el.id
-    node.setAttribute(
-      'style',
-      elementBoxStyle({ ...el, fontFamily: resolveElementFontFamily(el, brandFamily) }, layout)
-    )
+    node.setAttribute('style', elementBoxStyle(styledEl, layout))
     const text = previewText(el)
     if (el.bind === 'homeScore' || el.bind === 'awayScore') {
       node.innerHTML = `<span class="score-el-text score-el-text--animated">${text}</span>`
@@ -695,7 +764,11 @@ function loadFromGraphic(g) {
   graphic = g
   updateBindOptions()
   const data = editableData(g)
+  const storedLayout = data.layout && typeof data.layout === 'object' ? data.layout : {}
   layout = {
+    // Keep fields the editor does not edit itself (clockPlate,
+    // clockPlateWidth, …) so Save does not silently drop them.
+    ...structuredClone(storedLayout),
     refWidth: data.layout?.refWidth || 1920,
     refHeight: data.layout?.refHeight || 1080,
     background: data.layout?.background || '',
@@ -706,7 +779,10 @@ function loadFromGraphic(g) {
     referenceVisible: data.layout?.referenceVisible !== false,
     backgroundVisible: data.layout?.backgroundVisible !== false
   }
-  elements = (data.elements?.length ? structuredClone(data.elements) : structuredClone(DEFAULT_ELEMENTS))
+  const storedElements = Array.isArray(data.elements)
+    ? data.elements.filter((el) => el && typeof el === 'object')
+    : []
+  elements = (storedElements.length ? structuredClone(storedElements) : structuredClone(DEFAULT_ELEMENTS))
     .map((el) => ({
       ...el,
       fontFamily: resolveElementFontFamily(el, state?.brand?.fontFamily)
@@ -1037,6 +1113,24 @@ function wireUpload() {
     const file = event.dataTransfer?.files?.[0]
     if (file) tryUploadBackground(file)
   })
+
+  // Empty state: same upload flow as the "PNG background" zone below
+  emptyUploadBtn?.addEventListener('click', () => {
+    if (graphic) bgUpload?.click()
+  })
+  canvas?.addEventListener('dragover', (event) => {
+    if (!graphic || !event.dataTransfer?.types?.includes('Files')) return
+    event.preventDefault()
+    canvas.classList.add('is-dragover')
+  })
+  canvas?.addEventListener('dragleave', () => canvas.classList.remove('is-dragover'))
+  canvas?.addEventListener('drop', (event) => {
+    canvas.classList.remove('is-dragover')
+    const file = event.dataTransfer?.files?.[0]
+    if (!graphic || !file) return
+    event.preventDefault()
+    tryUploadBackground(file)
+  })
 }
 
 function wireCanvas() {
@@ -1152,10 +1246,16 @@ socket.on('stateChanged', async (next) => {
   const currentId = graphic?.id || resolveGraphicId()
   populateGraphicSelect()
   await Promise.all([refreshProjectFonts(), loadDesignAssets()])
-  const g = editableGraphics().find((item) => item.id === currentId)
+  const g =
+    editableGraphics().find((item) => item.id === currentId) ||
+    editableGraphics().find((item) => item.id === resolveGraphicId())
   if (g) {
+    if (graphicSelect) graphicSelect.value = g.id
     loadFromGraphic(g)
     updatePreviewLink()
+  } else {
+    graphic = null
+    updateEmptyState()
   }
 })
 
@@ -1171,7 +1271,7 @@ fetch('/api/state')
       loadFromGraphic(g)
       updatePreviewLink()
     } else {
-      setStatus('Add a match score overlay to this project', 'error')
+      updateEmptyState()
     }
   })
   .catch((err) => {
