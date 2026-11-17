@@ -4,6 +4,7 @@ import {
   projectCanvas,
   resolvePlacement
 } from '/public/shared/canvas-layout.js'
+import { showErrorToast } from '/public/shared/toast.js'
 
 const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/webp'])
 
@@ -117,6 +118,9 @@ function setPhase(next) {
 
 function setStatus(message, type = '') {
   if (!composeStatus) return
+  // The status line lives in the review phase; during upload/create it is
+  // hidden, so surface errors as a toast instead of failing silently.
+  if (type === 'error' && message && !composeStatus.offsetParent) showErrorToast(message)
   composeStatus.textContent = message
   composeStatus.classList.remove('is-success', 'is-error')
   if (type === 'success') composeStatus.classList.add('is-success')
@@ -514,7 +518,7 @@ uploadForm?.addEventListener('submit', async (event) => {
 
   const btn = document.getElementById('compose-analyze-btn')
   btn.disabled = true
-  setStatus('Uploading and analyzing…')
+  setStatus('Uploading…')
 
   try {
     uploadedFilename = await uploadAsset(file)

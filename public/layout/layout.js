@@ -143,19 +143,26 @@ els.frame.addEventListener('load', () => {
 
 /* ---------- layers panel ---------- */
 
+const EYE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>'
+const EYE_OFF_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.6M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M2 2l20 20"/></svg>'
+
 function renderLayers() {
   const items = [...state.graphics].reverse()
   els.layers.innerHTML = items
     .map((g) => {
       const visible = previewLayers[g.id] !== false
       const { mode } = dragMeta(g)
+      const name = escapeHtml(g.name || g.id)
       return `
-        <li class="layout-layer${g.id === selectedId ? ' is-selected' : ''}" data-id="${g.id}">
-          <button type="button" class="layout-layer__eye" data-eye="${g.id}" aria-pressed="${visible}" title="Show/hide in this editor only">${visible ? '◉' : '○'}</button>
-          <span class="layout-layer__name">${escapeHtml(g.name || g.id)}</span>
-          <span class="layout-layer__type">${TYPE_LABELS[g.type] || g.type}</span>
+        <li class="layout-layer${g.id === selectedId ? ' is-selected' : ''}" data-id="${escapeHtml(g.id)}">
+          <button type="button" class="layout-layer__eye" data-eye="${escapeHtml(g.id)}" aria-pressed="${visible}"
+            aria-label="Show ${name} in this editor preview" title="${visible ? 'Hide' : 'Show'} in this editor only — live output is not affected">${visible ? EYE_ICON : EYE_OFF_ICON}</button>
+          <button type="button" class="layout-layer__select" data-select="${escapeHtml(g.id)}" aria-pressed="${g.id === selectedId}">
+            <span class="layout-layer__name">${name}</span>
+            <span class="layout-layer__type">${escapeHtml(TYPE_LABELS[g.type] || g.type)}</span>
+          </button>
           ${mode === 'locked' ? '<span class="layout-layer__lock" title="Fixed position">FIXED</span>' : ''}
-          ${g.visible ? '<span class="layout-layer__live">LIVE</span>' : ''}
+          ${g.visible ? '<span class="pill pill--on-air" title="Visible on the combined /render output">ON AIR</span>' : ''}
         </li>`
     })
     .join('')
