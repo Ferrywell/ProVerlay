@@ -1,7 +1,7 @@
 {
   "name": "proverlay",
   "version": "0.6.8",
-  "description": "Simple live broadcast graphics with Companion support",
+  "description": "Live broadcast graphics for OBS and vMix: build overlays on your Mac, operate them from an iPad or Stream Deck, play them out through one browser source",
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
@@ -26,5 +26,14 @@
     "electron": "^42.4.0",
     "electron-builder": "^26.15.2"
   },
-  "author": "ProductionPro (productionpro.nl)"
+  "author": "ProductionPro <hello@productionpro.nl> (https://productionpro.nl)",
+  "license": "GPL-3.0-only",
+  "homepage": "https://ferrywell.github.io/ProVerlay/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ferrywell/ProVerlay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ferrywell/ProVerlay/issues"
+  }
 }

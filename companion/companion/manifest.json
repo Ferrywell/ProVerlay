@@ -2,24 +2,25 @@
   "$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
   "type": "connection",
   "id": "proverlay",
-  "name": "proverlay",
+  "name": "ProVerlay",
   "shortname": "proverlay",
   "description": "Live graphics control for ProVerlay",
   "version": "0.1.0",
   "license": "MIT",
-  "repository": "git+https://github.com/example/proverlay.git",
-  "bugs": "https://github.com/example/proverlay/issues",
+  "repository": "git+https://github.com/Ferrywell/ProVerlay.git",
+  "bugs": "https://github.com/Ferrywell/ProVerlay/issues",
   "maintainers": [
     {
-      "name": "ProVerlay Team",
-      "email": "dev@example.com"
+      "name": "ProductionPro",
+      "email": "hello@productionpro.nl",
+      "url": "https://productionpro.nl"
     }
   ],
   "legacyIds": [],
   "runtime": {
     "type": "node22",
     "api": "nodejs-ipc",
-    "apiVersion": "0.0.0",
+    "apiVersion": "2.0.0",
     "entrypoint": "../index.js"
   },
   "manufacturer": "ProVerlay",
