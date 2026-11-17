@@ -214,13 +214,13 @@ test('hockey clock and periods', async () => {
   assert.equal(clock.running, false)
   await waitFor(() => instance.variableValues[`clock_${key}`] === '—:—', 'break clock variable')
 
-  // default hockey period is q2 → after the break comes q3
+  // default hockey period is q1 → after the break comes q2
   await press('hockey_period', { graphic: ids.hockey, mode: 'next', resetClock: true })
   clock = (await graphic(ids.hockey)).data.clock
-  assert.equal(clock.period, 'q3')
+  assert.equal(clock.period, 'q2')
   assert.equal(clock.remainingMs, clock.quarterMs)
   await press('hockey_period', { graphic: ids.hockey, mode: 'previous' })
-  assert.equal((await graphic(ids.hockey)).data.clock.period, 'q2')
+  assert.equal((await graphic(ids.hockey)).data.clock.period, 'q1')
 })
 
 test('ticker: toggle and add messages', async () => {
