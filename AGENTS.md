@@ -143,7 +143,7 @@ Environment (browser, OS)
 | Control UI | ✅ Project panel (UX agent) |
 | Operator / Companion | ✅ Score bediening |
 | Design hub | ✅ `/design` — setup checklist |
-| F1 timing tower | ✅ `f1Timing` widget — MultiViewer live + manual (`docs/F1-TIMING.md`) |
+| F1 timing tower | 🧪 experimenteel — alleen met `PROVERLAY_EXPERIMENTAL=f1` (`docs/F1-TIMING.md`) |
 | Hockey scorebug | ✅ `hockeyScorebug` — teamkleuren + projectfont (geen ring) |
 | QA project tests | 🟡 Beta agent — her-test na API |
 

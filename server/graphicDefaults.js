@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { defaultMatchData } from './matchClock.js'
 import { defaultF1Drivers } from './f1Timing.js'
+import { experimentalFlagForType, isExperimentalEnabled } from './experimental.js'
 
 export function defaultHockeyScorebugData() {
   return {
@@ -153,7 +154,7 @@ export function defaultStreamCountdownData() {
  *   message                           custom, bottom center just above the ticker
  *   lowerThird / lowerThirdShow       bottom-left
  *   quizShow                          top-left    (panel itself sits left, see data.panel)
- *   f1Timing                          custom      (left side, data.placementFree)
+ *   f1Timing                          custom      (left side, data.placementFree; experimental)
  * Only newly created widgets use these; existing projects keep their positions.
  */
 const GRAPHIC_TEMPLATES = {
@@ -281,6 +282,13 @@ export function createGraphicFromType(type, name = 'New widget') {
       status: 400,
       expose: true
     })
+  }
+  const flag = experimentalFlagForType(type)
+  if (flag && !isExperimentalEnabled(flag)) {
+    throw Object.assign(
+      new Error(`${type} is experimental: start ProVerlay with PROVERLAY_EXPERIMENTAL=${flag} to add one`),
+      { status: 400, expose: true }
+    )
   }
   const factory = GRAPHIC_TEMPLATES[type]
   return { id: graphicIdFor(type), transition: defaultTransition(), ...factory(name) }

@@ -11,6 +11,7 @@ import {
   tickerMessages,
   truncate,
   typeLabel,
+  typeHiddenFromPresets,
 } from './model.js'
 
 const SOLO_STYLE = { color: COLORS.white, bgcolor: COLORS.solo }
@@ -44,6 +45,7 @@ export function getPresetDefinitions(state, keys, label = 'proverlay') {
   const sections = new Map()
 
   for (const g of graphicsOf(state)) {
+    if (typeHiddenFromPresets(state, g.type)) continue
     const k = keys.get(g.id)
     const name = graphicLabel(g)
     const ids = []
