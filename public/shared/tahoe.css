@@ -231,12 +231,39 @@
   --pv-shadow-group: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+/* color-scheme drives the native parts Chromium draws itself: scrollbars,
+   form controls and <select> popups. It follows the same choice as the
+   tokens: data-theme on <html> when set, the system setting otherwise. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+  }
+}
+
 :root[data-theme='light'] {
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
+}
+
+/* The popup list of a native <select> (Windows/Linux) is painted from the
+   option colours; without them it can stay white in the dark theme. */
+select option,
+select optgroup {
+  background-color: var(--pv-bg-solid);
+  color: var(--pv-text);
+}
+
+select option:disabled {
+  color: var(--pv-text-tertiary);
 }
 
 /* Embedded /render previews keep their transparent canvas in dark mode:
@@ -1422,6 +1449,13 @@ input[type='color']:focus-visible {
 .is-electron .pv-app-header label,
 .is-electron .pv-app-header .pill,
 .is-electron .pv-popover {
+  -webkit-app-region: no-drag;
+}
+
+/* While a header menu is open the header is not a drag area, so a click on
+   an empty part of it reaches the page and closes the menu
+   (app-header.js). */
+.is-electron.pv-popover-open .pv-app-header {
   -webkit-app-region: no-drag;
 }
 

@@ -98,12 +98,19 @@ export function setThemePreference(theme) {
 
 let openPopover = null
 
+// Desktop app: the header is a window drag area, and the OS swallows clicks
+// on it (no pointer events reach the page). While a popover is open the
+// header stops being draggable (tahoe.css `.pv-popover-open`), so a click on
+// an empty part of it reaches the pointerdown handler below and closes it.
+const POPOVER_OPEN_CLASS = 'pv-popover-open'
+
 function closePopover({ restoreFocus = false } = {}) {
   if (!openPopover) return
   const { panel, trigger } = openPopover
   panel.hidden = true
   trigger.setAttribute('aria-expanded', 'false')
   openPopover = null
+  document.documentElement.classList.remove(POPOVER_OPEN_CLASS)
   if (restoreFocus) trigger.focus()
 }
 
@@ -123,6 +130,7 @@ function togglePopover(trigger, panel, { onOpen } = {}) {
   panel.hidden = false
   trigger.setAttribute('aria-expanded', 'true')
   openPopover = { panel, trigger }
+  document.documentElement.classList.add(POPOVER_OPEN_CLASS)
   const items = menuItems(panel)
   const current = items.find((item) => item.getAttribute('aria-checked') === 'true') || items[0]
   current?.focus()
@@ -157,6 +165,10 @@ document.addEventListener('pointerdown', (event) => {
   if (openPopover.panel.contains(event.target) || openPopover.trigger.contains(event.target)) return
   closePopover()
 })
+
+// Switching to another window (or clicking into an embedded preview) closes
+// the menu too, like a native menu.
+window.addEventListener('blur', () => closePopover())
 
 /* ------------------------------------------------------- confirm dialog */
 
