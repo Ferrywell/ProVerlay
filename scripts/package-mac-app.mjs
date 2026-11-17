@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Sign + zip voor distributie. Alles in /tmp — kopie terug naar ~/Documents breekt codesign.
+ * Ad-hoc sign + zip for distribution. Works in a temp dir; the zip has no AppleDouble (._) entries.
  */
 import { execFileSync } from 'child_process'
 import fs from 'fs'
@@ -62,7 +62,7 @@ try {
 
   console.log('package-mac-app: creating zip…')
   fs.rmSync(zipPath, { force: true })
-  run('ditto', ['-c', '-k', '--keepParent', tmpApp, zipPath])
+  run('ditto', ['-c', '-k', '--norsrc', '--noextattr', '--keepParent', tmpApp, zipPath])
 
   console.log('package-mac-app: OK —', zipPath)
 } finally {
