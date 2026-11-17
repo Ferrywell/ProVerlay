@@ -11,8 +11,9 @@
   letter-spacing: 0;
 }
 
+/* -0.02em: tight but the heavy tabular digits of Inter (default font) never touch */
 .cd-seg {
-  letter-spacing: -0.05em;
+  letter-spacing: -0.02em;
 }
 
 .cd-colon {

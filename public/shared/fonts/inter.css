@@ -1,0 +1,17 @@
+/*
+ * Inter 4.1 (variable, weights 100–900), bundled so overlays look the same in
+ * OBS and vMix on macOS and Windows. SIL Open Font License 1.1 — see OFL.txt
+ * and README.md in this folder.
+ *
+ * The family is registered as 'Inter' so `font-family: 'Inter', …` uses this
+ * file even when a different Inter version is installed on the machine.
+ * font-display: block avoids flashing a fallback face on air while the file
+ * loads (it is served locally, so the block period is a few milliseconds).
+ */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: block;
+  src: url('InterVariable.woff2') format('woff2');
+}

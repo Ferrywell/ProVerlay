@@ -27,7 +27,7 @@
   --home-color: #e5484d;
   --away-color: #3e63dd;
   --hockey-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.14) 100%);
-  --hockey-type: var(--brand-font, system-ui, sans-serif);
+  --hockey-type: var(--brand-font, 'Inter', system-ui, sans-serif);
   display: flex;
   align-items: center;
   gap: var(--gap);

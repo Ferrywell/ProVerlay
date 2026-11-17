@@ -6,6 +6,9 @@
     <title>ProVerlay Render</title>
     <!-- No favicon request: keeps the OBS/vMix console free of 404 noise -->
     <link rel="icon" href="data:," />
+    <!-- Bundled Inter (default brand font): same glyphs in OBS/vMix on macOS and Windows -->
+    <link rel="preload" href="/public/shared/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/public/shared/fonts/inter.css" />
     <link rel="stylesheet" href="/public/shared/countdown-display.css" />
     <link rel="stylesheet" href="/public/render/render.css" />
     <link rel="stylesheet" href="/public/render/render-hockey.css" />
