@@ -1293,6 +1293,11 @@ html[data-preview-window] .score-canvas--no-bg {
   border-radius: 0 999px 999px 0;
 }
 
+/* No brand name: an empty coloured tab looks like a rendering glitch on air. */
+.ticker-default--no-tab .ticker-board::before {
+  content: none;
+}
+
 .ticker-default {
   position: relative;
 }

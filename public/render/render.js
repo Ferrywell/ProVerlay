@@ -486,10 +486,11 @@ function buildCustomTicker(rawData, graphicId) {
   if (asObject(data.layout).background) return html
   // No PNG bar uploaded: built-in dark bar with a brand-colour tab in the
   // left inset (where a PNG would normally carry the logo), so the text is
-  // legible over any video.
+  // legible over any video. Without a brand name there is no tab at all.
   const insetL = Number.isFinite(Number(data.textInsetLeft)) ? Number(data.textInsetLeft) : 16
   const label = brandName ? `<span class="ticker-default__label">${escape(brandName)}</span>` : ''
-  return `<div class="ticker-default" style="--ticker-tab-w:${Math.max(0, Math.min(40, insetL))}%">${html}${label}</div>`
+  const tabClass = brandName ? '' : ' ticker-default--no-tab'
+  return `<div class="ticker-default${tabClass}" style="--ticker-tab-w:${Math.max(0, Math.min(40, insetL))}%">${html}${label}</div>`
 }
 
 /** Relative luminance (0 dark … 1 light) of a #rgb/#rrggbb colour, or null. */
