@@ -12,6 +12,7 @@ import { migrateStateTickers, normalizeTickerMessagesInput } from '../server/tic
 import { isPrivateIp, isTrustedHostname, isAllowedOrigin, isAllowedHostHeader } from '../server/netSecurity.js'
 import { applyClockOp, applyScoreOp, adjustMatchClock } from '../server/clockOps.js'
 import { createGraphicFromType, isWidgetType } from '../server/graphicDefaults.js'
+import { getLocalAddresses, isLinkLocalIPv4 } from '../server/network.js'
 
 test('deepMerge merges nested objects and replaces arrays', () => {
   const target = { a: { b: 1, c: 2 }, list: [1, 2], keep: 'x' }
@@ -107,6 +108,23 @@ test('migrations', () => {
   })
   assert.equal(normalized.length, 2)
   assert.equal(normalized[1].enabled, true)
+})
+
+test('LAN addresses skip link-local 169.254.x.x unless nothing else is available', () => {
+  const iface = (address, extra = {}) => ({ address, family: 'IPv4', internal: false, ...extra })
+  const nets = {
+    lo0: [iface('127.0.0.1', { internal: true }), { address: '::1', family: 'IPv6', internal: true }],
+    'Ethernet 2': [iface('169.254.83.107')],
+    Netwerk: [iface('192.168.2.212'), { address: 'fe80::1', family: 'IPv6', internal: false }]
+  }
+  assert.deepEqual(getLocalAddresses(nets), [{ name: 'Netwerk', address: '192.168.2.212' }])
+
+  // Direct cable to an iPad without DHCP: link-local is all there is, so keep it.
+  assert.deepEqual(getLocalAddresses({ en5: [iface('169.254.10.20')] }), [{ name: 'en5', address: '169.254.10.20' }])
+  assert.deepEqual(getLocalAddresses({}), [])
+
+  assert.ok(isLinkLocalIPv4('169.254.0.1'))
+  for (const ip of ['192.168.1.2', '10.169.254.1', '169.25.1.1', '172.16.0.1']) assert.ok(!isLinkLocalIPv4(ip), ip)
 })
 
 test('network helpers', () => {
