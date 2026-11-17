@@ -10,7 +10,7 @@ import { IDS, fakeSelf, sampleState } from './fixtures.js'
 const VAR_RE = /\$\(([^:)]+):([^)]+)\)/g
 
 test('presets: one section per widget type, one group per graphic', () => {
-  const state = sampleState()
+  const state = { ...sampleState(), experimental: ['f1'] }
   const keys = buildVarKeys(state)
   const { structure, presets } = getPresetDefinitions(state, keys, 'proverlay')
 
@@ -35,6 +35,16 @@ test('presets: one section per widget type, one group per graphic', () => {
   assert.equal(presets[`score_${k}_home_plus`].style.text, `$(proverlay:code_${k}_home)\n$(proverlay:score_${k}_home)`)
   assert.deepEqual(presets[`onair_${k}`].feedbacks[0].feedbackId, 'graphic_on_air')
   assert.ok(presets[`onair_${k}`].feedbacks[0].style.bgcolor, 'ON AIR style')
+})
+
+test('presets: experimental F1 tower only gets presets while ProVerlay has the f1 flag on', () => {
+  for (const state of [sampleState(), { ...sampleState(), experimental: [] }]) {
+    const { structure, presets } = getPresetDefinitions(state, buildVarKeys(state), 'proverlay')
+    assert.ok(!structure.some((s) => s.name === 'F1 timing tower'), 'no F1 section')
+    const f1Key = buildVarKeys(state).get(IDS.f1)
+    assert.equal(presets[`onair_${f1Key}`], undefined)
+    assert.ok(structure.some((s) => s.name === 'Match scoreboard'), 'other sections stay')
+  }
 })
 
 test('presets only reference existing actions, feedbacks, options and variables', () => {

@@ -19,6 +19,19 @@ export const TYPE_LABELS = {
   f1Timing: 'F1 timing tower',
 }
 
+/**
+ * Experimental widget types and the ProVerlay flag that enables them
+ * (PROVERLAY_EXPERIMENTAL, sent as `state.experimental`). Without the flag they
+ * get no presets; actions and feedbacks keep working for existing buttons.
+ */
+export const EXPERIMENTAL_TYPES = { f1Timing: 'f1' }
+
+export function typeHiddenFromPresets(state, type) {
+  const flag = Object.hasOwn(EXPERIMENTAL_TYPES, type) ? EXPERIMENTAL_TYPES[type] : null
+  if (!flag) return false
+  return !(Array.isArray(state?.experimental) && state.experimental.includes(flag))
+}
+
 /** Widgets with a score and a clock (atomic /score and /clock endpoints). */
 export const SCORE_TYPES = ['matchScoreboard', 'hockeyScorebug']
 

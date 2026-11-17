@@ -11,6 +11,14 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+### Changed
+
+- The F1 timing tower is experimental and no longer part of the default widget set
+  (#25): it is gone from the *Add widget* menu, the operator, the Companion presets
+  and the README. Start ProVerlay with `PROVERLAY_EXPERIMENTAL=f1` to add one.
+  Projects that already contain a tower render exactly as before and keep its
+  dashboard card.
+
 ## [0.9.0] - 2026-11-17
 
 First Windows release (beta), the same overlay output on every OS, and fixes from a

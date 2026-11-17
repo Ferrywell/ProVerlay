@@ -9,6 +9,7 @@ import { escapeHtml } from '/public/shared/operate-ui.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
 import { sharedSocket, wireConnectionState } from '/public/shared/connection.js'
+import { widgetTypeAvailable } from '/public/shared/experimental.js'
 
 const root = document.getElementById('operator-root')
 const switcher = document.getElementById('op-switcher')
@@ -20,7 +21,9 @@ const ALL = 'all'
 let currentState = null
 
 const getGraphic = (id) => (currentState?.graphics || []).find((g) => g.id === id) || null
-const operatorGraphics = () => (currentState?.graphics || []).filter((g) => g.operator)
+// Experimental widget types (e.g. the F1 tower) stay off the operator unless their flag is on
+const operatorGraphics = () =>
+  (currentState?.graphics || []).filter((g) => g.operator && widgetTypeAvailable(currentState, g.type))
 
 /* ---------------------------------------------------- widget switcher */
 

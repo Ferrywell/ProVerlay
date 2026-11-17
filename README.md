@@ -31,16 +31,15 @@
 ---
 
 ProVerlay is a local tool for live graphics in streams and broadcasts: score bugs,
-lower thirds, tickers, countdowns, an F1 timing tower and more. You set up the
+lower thirds, tickers, countdowns, a quiz and more. You set up the
 graphics in a desktop dashboard, control them live from a phone, tablet or Stream
 Deck, and OBS or vMix shows them through a transparent browser source. Everything
 runs on your own machine and network — no account, no cloud.
 
 ## Features
 
-- **Widgets:** match score (with optional PNG score strip), hockey scorebug, F1 timing
-  tower, ticker, stream countdown, single lower third, lower-thirds roster, quiz and
-  message.
+- **Widgets:** match score (with optional PNG score strip), hockey scorebug, ticker,
+  stream countdown, single lower third, lower-thirds roster, quiz and message.
 - **One output URL** (`/render`) for all live widgets, plus a solo URL per widget
   (`/render?graphic=<id>`) when you want it on its own layer.
 - **Touch operator** for iPad and iPhone over the local network.
@@ -48,8 +47,6 @@ runs on your own machine and network — no account, no cloud.
 - **Projects** with their own branding (colours, fonts), assets and widgets; export
   and import as a single `.proverlay` file.
 - **Scoreboard editor** to put live text fields on top of your own PNG design.
-- **F1 timing** from a running [MultiViewer](https://multiviewer.app) instance, or
-  manual.
 - **REST API and Socket.io** for your own automation.
 - **Desktop app** for macOS (Apple Silicon and Intel) and Windows (beta), with a
   menu-bar/tray icon; or run the server from source on any OS with Node.
@@ -206,7 +203,6 @@ See [SECURITY.md](SECURITY.md) for details and how to report a vulnerability.
 | [OBS and vMix](docs/OBS-VMIX.md) | Browser input setup, transparency, performance |
 | [Desktop app](docs/APP.md) | Mac and Windows app, preferences, data folders, building the app |
 | [Companion](docs/COMPANION.md) | Stream Deck actions, feedbacks, presets |
-| [F1 timing](docs/F1-TIMING.md) | F1 tower with MultiViewer |
 | [Architecture](docs/ARCHITECTURE.md) | Server, state, API |
 | [Product overview](docs/PRODUCT.md) | Screens, widget types, scope |
 | [Match graphics](docs/ARCHITECTURE-MATCH-GRAPHICS.md) | Score strip model and roadmap |

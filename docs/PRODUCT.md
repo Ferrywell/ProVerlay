@@ -55,13 +55,16 @@ on a phone or tablet redirects to `/operator`.
 |------|-----------------|:-----------:|-----|
 | `matchScoreboard` | Match score | yes | Match score and clock, optional PNG strip |
 | `hockeyScorebug` | Hockey scorebug | yes | Q1–Q4 countdown clock, team codes and colours |
-| `f1Timing` | F1 timing | yes | F1 position tower, manual or MultiViewer live ([F1-TIMING.md](F1-TIMING.md)) |
 | `customTicker` | Ticker | yes | Scrolling ticker |
 | `lowerThirdShow` | Lower thirds | yes | Roster of people; put one on air with a click |
 | `quizShow` | Quiz | yes | Multiple-choice question with reveal |
 | `streamCountdown` | Stream countdown | no | Countdown to the stream start |
 | `lowerThird` | Lower third (single) | no | One name/title lower third |
 | `message` | Message | no | Text message / break slide |
+
+Experimental, not in the menus of the open-source release: `f1Timing` (F1 timing tower).
+Start ProVerlay with `PROVERLAY_EXPERIMENTAL=f1` to add one, see [F1-TIMING.md](F1-TIMING.md).
+Projects that already contain one keep rendering it either way.
 
 "On operator" is set per widget type when the widget is created.
 
