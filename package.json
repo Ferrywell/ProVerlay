@@ -1,6 +1,6 @@
 {
   "name": "proverlay",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Live broadcast graphics for OBS and vMix: build overlays on your computer, operate them from an iPad, phone or Stream Deck, play them out through one browser source",
   "type": "module",
   "main": "electron/main.js",

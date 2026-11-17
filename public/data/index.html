@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProVerlay — Data</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="/public/shared/app-shell.js"></script>
+    <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/public/shared/tahoe.css" />
+    <link rel="stylesheet" href="/public/shared/form-controls.css" />
+    <link rel="stylesheet" href="/public/data/data.css" />
+  </head>
+  <body class="data-page">
+    <header class="pv-app-header" data-section="data">
+      <div class="pv-app-header__title"><h1>Data</h1></div>
+    </header>
+
+    <main class="data-grid">
+      <section class="glass panel panel--wide" aria-labelledby="sources-heading">
+        <div class="panel-head">
+          <h2 id="sources-heading">Data sources</h2>
+          <p>Names, titles, ticker lines, quiz questions or image lists from a spreadsheet. ProVerlay keeps the last good copy in the project, so the show keeps working without internet.</p>
+        </div>
+
+        <div class="source-add" role="group" aria-label="Add a data source">
+          <form id="add-sheet" class="source-add__form">
+            <h3>Google Sheet</h3>
+            <p class="hint">Paste the link of a sheet shared as “anyone with the link”, or a <em>Publish to web</em> CSV link. No Google login needed.</p>
+            <label class="field"><span>Sheet link</span><input name="url" type="url" required placeholder="https://docs.google.com/spreadsheets/d/…" /></label>
+            <label class="field"><span>Name (optional)</span><input name="name" type="text" maxlength="120" /></label>
+            <button class="button button--primary" type="submit">Add sheet</button>
+          </form>
+
+          <form id="add-upload" class="source-add__form">
+            <h3>CSV or Excel file</h3>
+            <p class="hint">Upload a <code>.csv</code> (comma, semicolon or tab separated) or <code>.xlsx</code> file. It is stored in the project; upload a new version any time.</p>
+            <label class="field"><span>File</span><input name="file" type="file" accept=".csv,.tsv,.txt,.xlsx" required /></label>
+            <label class="field"><span>Name (optional)</span><input name="name" type="text" maxlength="120" /></label>
+            <button class="button button--primary" type="submit">Upload</button>
+          </form>
+
+          <form id="add-file" class="source-add__form">
+            <h3>Linked file on this computer</h3>
+            <p class="hint">ProVerlay re-reads the file as soon as it is saved. Only possible on the ProVerlay computer itself.</p>
+            <label class="field"><span>Full path</span><input name="path" type="text" required placeholder="/Users/me/Show/names.xlsx or C:\Show\names.csv" /></label>
+            <label class="field"><span>Name (optional)</span><input name="name" type="text" maxlength="120" /></label>
+            <button class="button button--secondary" type="submit">Link file</button>
+          </form>
+        </div>
+
+        <div id="source-list" class="source-list" aria-live="polite"></div>
+      </section>
+
+      <section class="glass panel" aria-labelledby="variables-heading">
+        <div class="panel-head">
+          <h2 id="variables-heading">Variables</h2>
+          <p>Use them in any text field as <code>{{event.title}}</code>. Letters, digits, <code>.</code> <code>_</code> and <code>-</code>. Graphics on air update right away.</p>
+        </div>
+        <form id="variables-form" class="variables-form">
+          <div id="variable-rows" class="variable-rows"></div>
+          <div class="action-group">
+            <button class="button button--secondary" type="button" id="variable-add">Add variable</button>
+            <button class="button button--primary" type="submit">Save variables</button>
+          </div>
+        </form>
+        <div id="variable-warnings" class="variable-warnings" hidden></div>
+      </section>
+
+      <section class="glass panel" aria-labelledby="source-vars-heading">
+        <div class="panel-head">
+          <h2 id="source-vars-heading">Variables from a source</h2>
+          <p>A sheet with a <em>key</em> and a <em>value</em> column becomes variables. They override project variables with the same name.</p>
+        </div>
+        <form id="variable-source-form" class="form-grid">
+          <label class="field"><span>Source</span><select name="sourceId"></select></label>
+          <label class="field"><span>Key column</span><select name="keyColumn"></select></label>
+          <label class="field"><span>Value column</span><select name="valueColumn"></select></label>
+          <div class="action-group">
+            <button class="button button--primary" type="submit">Use these columns</button>
+            <button class="button button--secondary" type="button" id="variable-source-clear">Stop</button>
+          </div>
+        </form>
+        <div id="source-variable-list" class="kv-list"></div>
+        <details class="pv-details builtins">
+          <summary>Built-in variables</summary>
+          <div id="builtin-list" class="kv-list"></div>
+        </details>
+      </section>
+
+      <section class="glass panel panel--wide" aria-labelledby="hosts-heading">
+        <div class="panel-head">
+          <h2 id="hosts-heading">Allowed hosts</h2>
+          <p>Sheet links are fetched over https from Google Sheets only. Add other hosts here (one per line, <code>*.example.com</code> for subdomains). Private network addresses are never fetched. Only changeable on the ProVerlay computer.</p>
+        </div>
+        <form id="hosts-form" class="hosts-form">
+          <textarea name="hosts" rows="3" spellcheck="false" placeholder="data.example.com"></textarea>
+          <button class="button button--secondary" type="submit">Save hosts</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/public/shared/app-header.js"></script>
+    <script type="module" src="/public/data/data.js"></script>
+  </body>
+</html>

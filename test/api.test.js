@@ -27,7 +27,7 @@ async function assertAlive() {
 }
 
 test('pages are served', async () => {
-  for (const page of ['/control', '/render', '/operator', '/editor', '/project']) {
+  for (const page of ['/control', '/render', '/operator', '/editor', '/project', '/data', '/layout', '/design']) {
     const res = await srv.get(page)
     assert.equal(res.status, 200, page)
   }

@@ -8,9 +8,10 @@ coverage/
 
 # Runtime data (projects, registry, brand presets you add). Created on first start;
 # the Electron app keeps it in its user-data folder instead.
-data/
+# Anchored to the repo root: public/data/ (the Data page) is source code.
+/data/
 # Build output of scripts/generate-seed-data.mjs
-seed-data/
+/seed-data/
 
 # Internal working material — kept locally, not part of the public repo
 docs/ux/
