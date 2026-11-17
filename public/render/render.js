@@ -5,7 +5,8 @@ import {
   formatClock,
   widgetVisible,
   clockPlateUsesPill,
-  resolveClockPlate
+  resolveClockPlate,
+  PERIOD_OPTIONS
 } from '/public/shared/match-utils.js'
 import {
   msUntilTarget,
@@ -17,7 +18,7 @@ import { mountCustomTicker, stopCustomTicker } from '/public/shared/ticker-engin
 import { buildTickerBoardHtml, tickerAssetUrl } from '/public/shared/ticker-board.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
 import { persistAutoStoppageIfNeeded } from '/public/shared/operate-match.js'
-import { canvasAspectRatio, elementBoxStyle, isStripLayout, isFullFrameBackground, layoutBackgroundVisible, placementStyle, fontSizeStyle, resolveContainerWidthPx, projectCanvas, supportsContainerQueries, clockPillBoxStyle, clockPillTextStyle } from '/public/shared/canvas-layout.js'
+import { canvasAspectRatio, elementBoxStyle, isStripLayout, layoutBackgroundVisible, placementStyle, fontSizeStyle, resolveContainerWidthPx, projectCanvas, supportsContainerQueries, clockPillStyles } from '/public/shared/canvas-layout.js'
 import { injectProjectFontFaces, fetchProjectFontAssets, injectBrandFontFace, resolveRenderFontFamily } from '/public/shared/project-fonts.js'
 import { buildTowerRows, f1RowGapText, isFocusRow, dedupeRows, resolveF1Animation, resolveF1Decimals, f1TyreInfo, f1TrackFlag } from '/public/shared/f1-timing.js'
 import {
@@ -71,6 +72,7 @@ const POSITION_CLASS = {
 }
 
 let projectId = 'blank'
+let brandName = ''
 let projectSettings = { canvasWidth: 1920, canvasHeight: 1080 }
 let matchClockTimer = null
 let countdownTimer = null
@@ -157,8 +159,9 @@ async function applyProjectFonts(state) {
 
 function applyBrand(state) {
   projectId = state.projectId || 'blank'
-  const brand = state.brand || {}
-  const colors = brand.colors || {}
+  const brand = asObject(state.brand)
+  const colors = asObject(brand.colors)
+  brandName = textOf(brand.name).trim()
   document.documentElement.style.setProperty('--primary', colors.primary || '#007AFF')
   document.documentElement.style.setProperty('--secondary', colors.secondary || '#5856D6')
   document.documentElement.style.setProperty('--text', colors.text || '#1D1D1F')
@@ -182,6 +185,24 @@ function escape(value = '') {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
+}
+
+// Builders must survive hand-edited or half-migrated show data: a string where
+// an array/object is expected may never take the whole overlay down (QA-110).
+function asArray(value) {
+  return Array.isArray(value) ? value : []
+}
+
+function asObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+}
+
+function asElements(value) {
+  return asArray(value).filter((el) => el && typeof el === 'object')
+}
+
+function textOf(value) {
+  return value === null || value === undefined ? '' : String(value)
 }
 
 function animateScore(node, newText, graphicId, bind, anim) {
@@ -211,10 +232,10 @@ function layoutBackgroundImageAttr(layout) {
 }
 
 function buildLowerThirdShow(data) {
-  const entry = (data.entries || []).find((e) => e.id === data.activeEntryId)
+  const entry = asArray(data.entries).find((e) => e && e.id === data.activeEntryId)
   if (!entry) return ''
-  const template = data.template || {}
-  const layout = template.layout || { refWidth: 1920, refHeight: 1080, background: '' }
+  const template = asObject(data.template)
+  const layout = { refWidth: 1920, refHeight: 1080, background: '', ...asObject(template.layout) }
   const bgAttr = layoutBackgroundImageAttr(layout)
 
   // Zonder achtergrond-PNG: nette standaard lower-third plate, anders is witte
@@ -231,7 +252,7 @@ function buildLowerThirdShow(data) {
     `
   }
 
-  const elements = (template.elements || [])
+  const elements = asElements(template.elements)
     .map((el) => {
       const bindData = el.bind === 'custom' ? { ...entry, text: el.text } : entry
       const text = el.bind === 'custom' ? (el.text || '') : resolveBindText(el.bind, bindData)
@@ -251,12 +272,17 @@ function buildLowerThirdShow(data) {
 }
 
 function buildQuizShow(data) {
-  const q = (data.questions || []).find((item) => item.id === data.activeQuestionId)
+  const q = asArray(data.questions).find((item) => item && item.id === data.activeQuestionId)
   if (!q) return ''
-  const panel = data.panel || { x: 4, y: 50, width: 44 }
+  const rawPanel = asObject(data.panel)
+  const panel = {
+    x: Number.isFinite(Number(rawPanel.x)) ? Number(rawPanel.x) : 4,
+    y: Number.isFinite(Number(rawPanel.y)) ? Number(rawPanel.y) : 50,
+    width: Number(rawPanel.width) || 44
+  }
   const letters = ['A', 'B', 'C', 'D', 'E', 'F']
   const revealed = Boolean(data.revealed)
-  const options = (q.options || [])
+  const options = asArray(q.options)
     .map((opt, i) => {
       if (!String(opt || '').trim()) return ''
       const isCorrect = revealed && i === q.correct
@@ -277,15 +303,77 @@ function buildQuizShow(data) {
   `
 }
 
-function buildMatchScoreboard(data, graphicId) {
-  const layout = data.layout || { refWidth: 1920, refHeight: 1080, background: '' }
+/** Match scoreboard has a designed PNG (strip or full frame) to position text on. */
+function matchHasDesign(data) {
+  return Boolean(asObject(asObject(data).layout).background)
+}
+
+const PERIOD_SHORT = {
+  first_half: '1H',
+  second_half: '2H',
+  extra_first: 'ET1',
+  extra_second: 'ET2',
+  penalties: 'PEN'
+}
+
+/**
+ * Built-in score bug for a match scoreboard without an uploaded PNG strip
+ * (QA-106). Same visual language as the hockey scorebug: black pills, team
+ * colour chips (data.homeColor/awayColor, else the brand primary/secondary),
+ * brand font, tabular figures. Sized in vmin so it scales with the canvas.
+ */
+function buildDefaultMatchScoreboard(data, graphicId) {
+  const widgets = data.widgets
+  const homeCode = resolveBindText('homeCode', data)
+  const awayCode = resolveBindText('awayCode', data)
+  const showHomeScore = widgetVisible(widgets, 'homeScore')
+  const showAwayScore = widgetVisible(widgets, 'awayScore')
+  const showClock = widgetVisible(widgets, 'clock')
+  const period = asObject(data.clock).period
+  const periodText = PERIOD_SHORT[period] || ''
+  const periodLabel = PERIOD_OPTIONS.find((p) => p.value === period)?.label || ''
+  const vars = [
+    `--mb-home:${data.homeColor ? safeCssColor(data.homeColor, 'var(--primary)') : 'var(--primary, #007aff)'}`,
+    `--mb-away:${data.awayColor ? safeCssColor(data.awayColor, 'var(--secondary)') : 'var(--secondary, #5856d6)'}`
+  ].join(';')
+  const score = (bind, show) =>
+    show
+      ? `<span class="mb-score"><span class="score-el-text score-el-text--animated" data-score-bind="${bind}" data-graphic-id="${escape(graphicId)}">${escape(resolveBindText(bind, data))}</span></span>`
+      : ''
+
+  return `
+    <div class="match-board match-board--default" style="${vars}">
+      <div class="mb-bar">
+        ${homeCode ? `<span class="mb-team mb-team--home">${escape(homeCode)}</span>` : ''}
+        ${score('homeScore', showHomeScore)}
+        ${showHomeScore && showAwayScore ? '<span class="mb-sep" aria-hidden="true"></span>' : ''}
+        ${score('awayScore', showAwayScore)}
+        ${awayCode ? `<span class="mb-team mb-team--away">${escape(awayCode)}</span>` : ''}
+      </div>
+      ${
+        showClock
+          ? `<div class="mb-clock">
+        <span class="mb-clock__time" data-bind="clock">${escape(formatClock(data.clock))}</span>
+        ${periodText ? `<span class="mb-clock__period" title="${escape(periodLabel)}">${escape(periodText)}</span>` : ''}
+      </div>`
+          : ''
+      }
+    </div>
+  `
+}
+
+function buildMatchScoreboard(rawData, graphicId) {
+  const data = asObject(rawData)
+  if (!matchHasDesign(data)) return buildDefaultMatchScoreboard(data, graphicId)
+
+  const layout = { refWidth: 1920, refHeight: 1080, background: '', ...asObject(data.layout) }
   const bgAttr = layoutBackgroundImageAttr(layout)
-  const anim = data.animation || { enabled: true, durationMs: 420 }
   const strip = isStripLayout(layout)
   const styleOpts = layoutStyleOptions(layout)
   const usePill = clockPlateUsesPill(layout)
-  const clockEl = (data.elements || []).find((el) => el.bind === 'clock')
-  const elements = (data.elements || [])
+  const allElements = asElements(data.elements)
+  const clockEl = allElements.find((el) => el.bind === 'clock')
+  const elements = allElements
     .filter((el) => !(usePill && el.bind === 'clock'))
     .map((el) => {
       const text = el.bind === 'custom' ? (el.text || '') : resolveBindText(el.bind, data)
@@ -297,8 +385,8 @@ function buildMatchScoreboard(data, graphicId) {
       const styledEl = el.fontFamily
         ? { ...el, fontFamily: resolveRenderFontFamily(el.fontFamily) }
         : el
-      const boxStyle = elementBoxStyle(styledEl, layout, layoutStyleOptions(layout))
-      return `<span class="score-el score-el--${el.bind || 'custom'}" data-bind="${el.bind}" style="${boxStyle}">${inner}</span>`
+      const boxStyle = elementBoxStyle(styledEl, layout, styleOpts)
+      return `<span class="score-el score-el--${escape(el.bind || 'custom')}" data-bind="${escape(el.bind)}" style="${boxStyle}">${inner}</span>`
     })
     .join('')
 
@@ -309,10 +397,10 @@ function buildMatchScoreboard(data, graphicId) {
       ? { ...clockEl, fontFamily: resolveRenderFontFamily(clockEl.fontFamily) }
       : clockEl
     const clockText = resolveBindText('clock', data)
-    const pillStyle = clockPillBoxStyle(pillCfg, clockEl, layout, styleOpts)
-    const textStyle = clockPillTextStyle(styledClock, layout, styleOpts, pillCfg)
+    // Same geometry as the /editor preview (shared clockPillStyles)
+    const pill = clockPillStyles(pillCfg, styledClock, layout, styleOpts)
     const hidePill = !widgetVisible(data.widgets, 'clock')
-    clockPillHtml = `<div class="clock-pill${hidePill ? ' clock-pill--hidden' : ''}" style="${pillStyle}"><span class="clock-pill__text" data-bind="clock" style="${textStyle}">${escape(clockText)}</span></div>`
+    clockPillHtml = `<div class="clock-pill${hidePill ? ' clock-pill--hidden' : ''}" style="${pill.box}"><span class="clock-pill__text" data-bind="clock" style="${pill.text}">${escape(clockText)}</span></div>`
   }
 
   let penaltiesHtml = ''
@@ -334,19 +422,22 @@ function buildMatchScoreboard(data, graphicId) {
       </div>`
   }
 
-  const stripClass = strip ? ' score-canvas--strip' : ''
-  const placedClass = strip ? ' match-board--placed' : ''
+  const stripClass = strip ? ' score-canvas--strip' : ' score-canvas--frame'
+  // Strip PNG: placed on the stage (x/y/width). Full-frame PNG: covers the
+  // whole canvas, exactly like the /editor full-frame stage.
+  const boardClass = strip ? ' match-board--strip match-board--placed' : ' match-board--frame'
   const placedStyle = strip ? placementStyle(layout, projectSettings) : ''
+  const aspectStyle = strip ? `aspect-ratio:${canvasAspectRatio(layout)};` : ''
   const clockPlateW = Number(layout.clockPlateWidth) || 0
   const usePngPlate = !usePill && clockPlateW > 0
   const hideClockPlate = usePngPlate && !widgetVisible(data.widgets, 'clock')
   const plateClass = hideClockPlate ? ' score-canvas--clock-plate-hidden' : ''
   const pillClass = usePill ? ' score-canvas--clock-pill' : ''
   const noBgClass = !layoutBackgroundVisible(layout) ? ' score-canvas--no-bg' : ''
-  const plateStyle = usePngPlate ? `--clock-plate-w:${clockPlateW}%` : ''
+  const plateStyle = usePngPlate ? `--clock-plate-w:${clockPlateW}%;` : ''
   return `
-    <div class="match-board${strip ? ' match-board--strip' : ''}${placedClass}" style="${placedStyle}">
-      <div class="score-canvas${stripClass}${plateClass}${pillClass}${noBgClass}" style="--ref-w:${layout.refWidth};--ref-h:${layout.refHeight};aspect-ratio:${canvasAspectRatio(layout)};${plateStyle};${bgAttr}">
+    <div class="match-board${boardClass}" style="${placedStyle}">
+      <div class="score-canvas${stripClass}${plateClass}${pillClass}${noBgClass}" style="--ref-w:${Number(layout.refWidth) || 1920};--ref-h:${Number(layout.refHeight) || 1080};${aspectStyle}${plateStyle}${bgAttr}">
         ${elements}
         ${clockPillHtml}
       </div>
@@ -355,37 +446,72 @@ function buildMatchScoreboard(data, graphicId) {
   `
 }
 
-function buildCustomTicker(data, graphicId) {
+function buildCustomTicker(rawData, graphicId) {
+  const data = asObject(rawData)
   const { width } = projectCanvas(projectSettings)
-  return buildTickerBoardHtml(data, {
+  const html = buildTickerBoardHtml(data, {
     graphicId,
     projectId,
     canvasWidth: width,
     useCqw: useRenderCqw()
   })
+  if (asObject(data.layout).background) return html
+  // No PNG bar uploaded: built-in dark bar with a brand-colour tab in the
+  // left inset (where a PNG would normally carry the logo), so the text is
+  // legible over any video.
+  const insetL = Number.isFinite(Number(data.textInsetLeft)) ? Number(data.textInsetLeft) : 16
+  const label = brandName ? `<span class="ticker-default__label">${escape(brandName)}</span>` : ''
+  return `<div class="ticker-default" style="--ticker-tab-w:${Math.max(0, Math.min(40, insetL))}%">${html}${label}</div>`
 }
 
-function buildStreamCountdown(data, graphicId) {
-  const layout = data.layout || { refWidth: 480, refHeight: 140, background: '' }
+/** Relative luminance (0 dark … 1 light) of a #rgb/#rrggbb colour, or null. */
+function hexLuminance(value) {
+  const m = String(value || '').trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)
+  if (!m) return null
+  const hex = m[1].length === 3 ? [...m[1]].map((c) => c + c).join('') : m[1]
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+function buildStreamCountdown(rawData, graphicId) {
+  const data = asObject(rawData)
+  const layout = { refWidth: 480, refHeight: 140, background: '', ...asObject(data.layout) }
+  const rw = Number(layout.refWidth) || 480
+  const rh = Number(layout.refHeight) || 140
   const bgAttr = layoutBackgroundImageAttr(layout)
   const ms = msUntilTarget(data.targetDateTime)
-  const text = formatCountdown(ms, data.format || 'mm:ss')
-  const rw = layout.refWidth || 480
+  const format = data.format === 'h:mm:ss' ? 'h:mm:ss' : 'mm:ss'
+  const text = formatCountdown(ms, format)
   const ff = resolveRenderFontFamily(data.fontFamily) || 'var(--brand-font)'
-  const pxMode = !useRenderCqw()
-  const fontSize = fontSizeStyle(data.fontSize || 96, rw, rw, { useCqw: useRenderCqw() })
+  const useCqw = useRenderCqw()
+  const fontSize = fontSizeStyle(Number(data.fontSize) || 96, rw, rw, { useCqw })
+  const color = cssColorValue(data.color, '#1d1d1f')
 
   if (data.hideWhenExpired && ms <= 0) {
     return '<div class="countdown-board countdown-board--empty"></div>'
   }
 
-  const boardWidth = pxMode ? `width:${rw}px;` : ''
+  // The board needs an explicit width: it is a size container (cqw text) in
+  // a shrink-to-fit layer, so without one it collapsed to 0×0 (QA-106).
+  // refWidth is in 1080p design px → scale with the canvas height.
+  const boardWidth = useCqw ? `width:calc(var(--canvas-h, 1080px) * ${rw / 1080});` : `width:${rw}px;`
+
+  // No PNG uploaded: built-in plate. Plate tone follows the digit colour so
+  // the countdown is always legible (dark digits → light glass, light → dark).
+  let plateClass = ''
+  if (!layoutBackgroundVisible(layout)) {
+    const lum = hexLuminance(color)
+    plateClass = lum !== null && lum < 0.4 ? ' countdown-board--plate countdown-board--plate-light' : ' countdown-board--plate countdown-board--plate-dark'
+  }
 
   return `
-    <div class="countdown-board" data-countdown-id="${graphicId}"
-      style="${boardWidth}aspect-ratio:${layout.refWidth}/${layout.refHeight};${bgAttr}">
-      <div class="countdown-time" data-format="${data.format || 'mm:ss'}"
-        style="font-size:${fontSize};color:${data.color || '#1d1d1f'};font-family:${ff}">
+    <div class="countdown-board${plateClass}" data-countdown-id="${escape(graphicId)}"
+      style="${boardWidth}aspect-ratio:${rw}/${rh};${bgAttr}">
+      <div class="countdown-time" data-format="${format}" data-text="${escape(text)}"
+        style="font-size:${fontSize};color:${color};font-family:${ff}">
         ${countdownDigitHtml(text)}
       </div>
     </div>
@@ -501,6 +627,12 @@ function safeCssColor(value, fallback = '#888888') {
   return /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : fallback
 }
 
+/** Any plain CSS colour (hex, rgb(), named…) but nothing that can break out of a style attribute. */
+function cssColorValue(value, fallback) {
+  const v = String(value ?? '').trim()
+  return v && /^[#a-z0-9(),.%\s-]+$/i.test(v) ? v : fallback
+}
+
 function f1Style(data = {}) {
   const s = data.style || {}
   return {
@@ -535,17 +667,17 @@ function buildF1Timing(data, graphicId) {
 function f1CurrentRows(graphic) {
   const d = graphic.data || {}
   if (d.source === 'multiviewer') {
-    return f1Live.get(graphic.id)?.rows || []
+    return asArray(f1Live.get(graphic.id)?.rows).filter((r) => r && typeof r === 'object')
   }
-  return d.drivers || []
+  return asArray(d.drivers).filter((r) => r && typeof r === 'object')
 }
 
 function f1SessionInfo(graphic) {
   const d = graphic.data || {}
   if (d.source === 'multiviewer') {
-    return f1Live.get(graphic.id)?.session || {}
+    return asObject(f1Live.get(graphic.id)?.session)
   }
-  return d.session || {}
+  return asObject(d.session)
 }
 
 // Blokjesvlag als inline SVG (currentColor volgt de tekstkleur van de rij)
@@ -1049,15 +1181,18 @@ function mountF1Timing(layer, graphic) {
 }
 
 function tickCountdownGraphic(layer, graphic) {
-  const d = graphic.data || {}
-  const node = layer.querySelector(`[data-countdown-id="${graphic.id}"] .countdown-time`)
+  const d = asObject(graphic.data)
+  const node = layer.querySelector('[data-countdown-id] .countdown-time')
   if (!node) return
   const ms = msUntilTarget(d.targetDateTime)
   if (d.hideWhenExpired && ms <= 0) {
     layer.querySelector('.graphic').innerHTML = '<div class="countdown-board countdown-board--empty"></div>'
     return
   }
-  const text = formatCountdown(ms, d.format || 'mm:ss')
+  const text = formatCountdown(ms, d.format === 'h:mm:ss' ? 'h:mm:ss' : 'mm:ss')
+  // Only touch the DOM when the visible text changes (no per-tick relayout)
+  if (node.dataset.text === text) return
+  node.dataset.text = text
   node.innerHTML = countdownDigitHtml(text)
 }
 
@@ -1109,7 +1244,7 @@ function animateClockPlate(layer, graphic) {
 }
 
 function graphicHtml(graphic) {
-  const d = graphic.data || {}
+  const d = asObject(graphic.data)
   switch (graphic.type) {
     case 'matchScoreboard':
       return buildMatchScoreboard(d, graphic.id)
@@ -1117,7 +1252,7 @@ function graphicHtml(graphic) {
     case 'composedScore':
       return buildMatchScoreboard(d, graphic.id)
     case 'lowerThird':
-      return `<p class="name">${escape(d.name)}</p><p class="meta">${escape(d.title)}</p>`
+      return `<p class="name">${escape(textOf(d.name))}</p>${d.title ? `<p class="meta">${escape(textOf(d.title))}</p>` : ''}`
     case 'lowerThirdShow':
       return buildLowerThirdShow(d)
     case 'quizShow':
@@ -1126,7 +1261,7 @@ function graphicHtml(graphic) {
       if (!d.src) return ''
       return `<img class="graphic-image" src="${assetUrl(d.src)}" alt="${escape(d.alt || '')}" />`
     case 'message':
-      return `<p class="text">${escape(d.text)}</p>`
+      return `<p class="text">${escape(textOf(d.text))}</p>`
     case 'customTicker':
       return buildCustomTicker(d, graphic.id)
     case 'streamCountdown':
@@ -1138,7 +1273,7 @@ function graphicHtml(graphic) {
     case 'clock':
       return `<span class="time">--:--</span>`
     default:
-      return `<span>${escape(graphic.name)}</span>`
+      return `<span>${escape(textOf(graphic.name))}</span>`
   }
 }
 
@@ -1188,10 +1323,13 @@ function updateLayerContent(layer, graphic) {
     updateHockeyScorebug(layer, graphic)
     return
   }
+  // Build first: if the builder throws, the last good frame (and its timers)
+  // stays on air instead of a half-torn-down layer.
+  const html = graphicHtml(graphic)
   stopCustomTicker(graphic.id)
   clearTimers(layer)
   applyLayerPosition(layer, graphic)
-  inner.innerHTML = graphicHtml(graphic)
+  inner.innerHTML = html
   rememberTransition(layer, graphic)
   applyScoreAnimations(layer, graphic)
   animateClockPlate(layer, graphic)
@@ -1199,8 +1337,14 @@ function updateLayerContent(layer, graphic) {
 }
 
 function layerPositionClass(graphic) {
+  // Match scoreboard with a PNG design positions itself on the full stage
+  // (strip placement or full frame); without one it is a built-in score bug
+  // that follows graphic.position like the other widgets.
   const usesStage =
-    graphic.type === 'matchScoreboard' && isStripLayout(graphic.data?.layout || {})
+    (graphic.type === 'matchScoreboard' ||
+      graphic.type === 'customScoreboard' ||
+      graphic.type === 'composedScore') &&
+    matchHasDesign(graphic.data)
   if (usesStage) return 'graphic-layer graphic-layer--stage'
   if (graphic.position === 'bottom-full') return 'graphic-layer graphic-layer--bottom'
   if (graphic.position === 'custom') return 'graphic-layer pos-custom'
@@ -1212,7 +1356,7 @@ function layerPositionClass(graphic) {
 function applyLayerPosition(layer, graphic) {
   layer.className = layerPositionClass(graphic)
   if (graphic.position === 'custom') {
-    const p = graphic.data?.placementFree || {}
+    const p = asObject(asObject(graphic.data).placementFree)
     layer.style.left = `${Number(p.x) || 50}%`
     layer.style.top = `${Number(p.y) || 50}%`
   } else {
@@ -1264,10 +1408,11 @@ function startClock(node, format) {
   if (!node) return
   const tick = () => {
     const now = new Date()
-    node.textContent =
+    const text =
       format === '12H'
         ? now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
         : now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+    if (node.textContent !== text) node.textContent = text
   }
   tick()
   node.dataset.timerId = String(setInterval(tick, 1000))
@@ -1276,168 +1421,331 @@ function startClock(node, format) {
 function clearTimers(root) {
   root.querySelectorAll('[data-timer-id]').forEach((node) => {
     clearInterval(Number(node.dataset.timerId))
+    delete node.dataset.timerId
   })
+}
+
+// ---------------------------------------------------------------------------
+// Fault isolation (QA-110): one broken graphic must never stop the others,
+// nor the clock/countdown timers. Errors are logged once per graphic + error.
+// ---------------------------------------------------------------------------
+
+const graphicErrors = new Map() // graphicId -> last logged error signature
+
+function reportGraphicError(graphic, phase, err) {
+  const id = graphic?.id || '(no id)'
+  const signature = `${phase}:${err?.message || err}`
+  if (graphicErrors.get(id) === signature) return
+  graphicErrors.set(id, signature)
+  console.error(
+    `[ProVerlay render] Skipping graphic "${id}" (${graphic?.type || 'unknown type'}) — ${phase} failed:`,
+    err
+  )
+}
+
+function clearGraphicError(id) {
+  graphicErrors.delete(id)
+}
+
+/** Run fn for one graphic; on error log once and return the fallback. */
+function guardGraphic(graphic, phase, fn, fallback) {
+  try {
+    return fn()
+  } catch (err) {
+    reportGraphicError(graphic, phase, err)
+    return fallback
+  }
+}
+
+function isGraphicRecord(g) {
+  return Boolean(g) && typeof g === 'object' && typeof g.id === 'string' && g.id !== ''
 }
 
 function canRenderGraphic(graphic) {
   if (!graphicShown(graphic)) return false
-  if (graphic.type === 'image' && !graphic.data?.src) return false
+  const data = asObject(graphic.data)
+  if (graphic.type === 'image' && !data.src) return false
   if (graphic.type === 'lowerThirdShow') {
-    const id = graphic.data?.activeEntryId
+    const id = data.activeEntryId
     if (!id) return false
-    return (graphic.data?.entries || []).some((e) => e.id === id)
+    return asArray(data.entries).some((e) => e && e.id === id)
   }
   if (graphic.type === 'quizShow') {
-    const id = graphic.data?.activeQuestionId
+    const id = data.activeQuestionId
     if (!id) return false
-    return (graphic.data?.questions || []).some((q) => q.id === id)
+    return asArray(data.questions).some((q) => q && q.id === id)
   }
   return true
 }
 
-function syncGraphics(graphics) {
+function syncGraphics(rawGraphics) {
+  const graphics = asArray(rawGraphics).filter(isGraphicRecord)
   lastGraphics = graphics
   let list = graphics
   if (isolateGraphicId) {
     list = graphics.filter((g) => g.id === isolateGraphicId)
   }
-  const visible = list.filter(canRenderGraphic)
+  const visible = list.filter((g) => guardGraphic(g, 'visibility check', () => canRenderGraphic(g), false))
   const nextIds = new Set(visible.map((g) => g.id))
+
+  // Forget state of graphics that no longer exist at all (deleted widgets)
+  const knownIds = new Set(graphics.map((g) => g.id))
+  for (const id of [...graphicErrors.keys()]) if (!knownIds.has(id)) graphicErrors.delete(id)
+  for (const id of [...f1Live.keys()]) if (!knownIds.has(id)) f1Live.delete(id)
 
   for (const [id, layer] of layers) {
     if (!nextIds.has(id)) {
       // Uit-animatie loopt al: niet opnieuw triggeren (zou de animatie
       // herstarten en zichtbaar haperen) en de bestaande timer laten staan.
       if (removalTimers.has(id)) continue
-      stopCustomTicker(id)
-      const out = layer.dataset.trOut || 'auto'
-      const duration = Number(layer.dataset.trDur) || TRANSITION_DEFAULT_MS
-      let wait = 0
-      skipEnterAnimation.add(id)
-      const f1Tower = layer.querySelector('.f1-tower')
-      if (out === 'auto' && f1Tower) {
-        wait = animateF1TowerOut(f1Tower)
-      } else if (out === 'auto') {
-        const board =
-          layer.querySelector('.match-board') || layer.querySelector('.hockey-bug')
-        if (board) board.classList.add('is-leaving')
-        else layer.querySelector('.graphic')?.classList.add('is-leaving')
-        wait = board ? 360 : 220
-      } else if (out !== 'cut') {
-        const target = transitionTarget(layer)
-        if (target) {
-          target.classList.remove('is-entering', 'tr-in-fade', 'tr-in-wipe')
-          target.style.setProperty('--tr-dur', `${duration}ms`)
-          target.classList.add(`tr-out-${out}`)
-          wait = duration + 40
-        }
-      }
-      removalTimers.set(
-        id,
-        setTimeout(() => {
-          removalTimers.delete(id)
-          skipEnterAnimation.delete(id)
-          stopCustomTicker(id)
-          clearTimers(layer)
-          layer.remove()
-          layers.delete(id)
-          for (const key of [...scoreMemory.keys()]) {
-            if (key.startsWith(`${id}:`)) scoreMemory.delete(key)
-          }
-        }, wait)
-      )
+      guardGraphic({ id, type: layer.dataset.type }, 'exit animation', () => scheduleLayerRemoval(id, layer))
     }
   }
 
   for (const graphic of visible) {
-    // Komt de graphic terug terwijl de uit-animatie nog loopt? Annuleer de
-    // geplande verwijdering en bouw de laag opnieuw op, anders verdwijnt de
-    // overlay alsnog zodra de oude timeout afgaat.
-    if (removalTimers.has(graphic.id)) {
-      clearTimeout(removalTimers.get(graphic.id))
-      removalTimers.delete(graphic.id)
-      const old = layers.get(graphic.id)
-      if (old) {
-        stopCustomTicker(graphic.id)
-        clearTimers(old)
-        old.remove()
-      }
-      layers.delete(graphic.id)
-    }
-    if (layers.has(graphic.id)) {
-      updateLayerContent(layers.get(graphic.id), graphic)
-      continue
-    }
-    const layer = renderGraphic(graphic)
-    stage.appendChild(layer)
-    layers.set(graphic.id, layer)
+    guardGraphic(graphic, 'render', () => {
+      upsertLayer(graphic)
+      clearGraphicError(graphic.id)
+    })
   }
+
+  updateEmptyHint(visible.length, graphics)
+}
+
+function removeLayerNow(id, layer) {
+  stopCustomTicker(id)
+  if (layer) {
+    clearTimers(layer)
+    layer.remove()
+  }
+  layers.delete(id)
+  for (const key of [...scoreMemory.keys()]) {
+    if (key.startsWith(`${id}:`)) scoreMemory.delete(key)
+  }
+}
+
+function scheduleLayerRemoval(id, layer) {
+  stopCustomTicker(id)
+  const out = layer.dataset.trOut || 'auto'
+  const duration = Number(layer.dataset.trDur) || TRANSITION_DEFAULT_MS
+  let wait = 0
+  skipEnterAnimation.add(id)
+  // Register the removal first: even if the exit animation code throws, the
+  // layer (and its timers) are still cleaned up.
+  const finish = () => {
+    removalTimers.delete(id)
+    skipEnterAnimation.delete(id)
+    removeLayerNow(id, layer)
+  }
+  removalTimers.set(id, setTimeout(finish, TRANSITION_DEFAULT_MS * 4))
+  const f1Tower = layer.querySelector('.f1-tower')
+  if (out === 'auto' && f1Tower) {
+    wait = animateF1TowerOut(f1Tower)
+  } else if (out === 'auto') {
+    const board = layer.querySelector('.match-board') || layer.querySelector('.hockey-bug')
+    if (board) board.classList.add('is-leaving')
+    else layer.querySelector('.graphic')?.classList.add('is-leaving')
+    wait = board ? 360 : 220
+  } else if (out !== 'cut') {
+    const target = transitionTarget(layer)
+    if (target) {
+      target.classList.remove('is-entering', 'tr-in-fade', 'tr-in-wipe')
+      target.style.setProperty('--tr-dur', `${duration}ms`)
+      target.classList.add(`tr-out-${out}`)
+      wait = duration + 40
+    }
+  }
+  clearTimeout(removalTimers.get(id))
+  removalTimers.set(id, setTimeout(finish, wait))
+}
+
+function upsertLayer(graphic) {
+  // Komt de graphic terug terwijl de uit-animatie nog loopt? Annuleer de
+  // geplande verwijdering en bouw de laag opnieuw op, anders verdwijnt de
+  // overlay alsnog zodra de oude timeout afgaat.
+  if (removalTimers.has(graphic.id)) {
+    clearTimeout(removalTimers.get(graphic.id))
+    removalTimers.delete(graphic.id)
+    removeLayerNow(graphic.id, layers.get(graphic.id))
+  }
+  if (layers.has(graphic.id)) {
+    updateLayerContent(layers.get(graphic.id), graphic)
+    return
+  }
+  let layer
+  try {
+    layer = renderGraphic(graphic)
+  } catch (err) {
+    // A runtime (ticker/F1) may already have started before the throw
+    stopCustomTicker(graphic.id)
+    throw err
+  }
+  layer.dataset.type = String(graphic.type || '')
+  stage.appendChild(layer)
+  layers.set(graphic.id, layer)
+}
+
+// ---------------------------------------------------------------------------
+// Clock / countdown ticks. Only text nodes whose text actually changes are
+// written, so a running clock costs no layout work between second changes.
+// ---------------------------------------------------------------------------
+
+function setTextIfChanged(node, text) {
+  if (node && node.textContent !== text) node.textContent = text
+}
+
+function tickMatchClock(graphic) {
+  const layer = layers.get(graphic.id)
+  try {
+    const pending = persistAutoStoppageIfNeeded(graphic)
+    pending?.catch?.((err) => reportGraphicError(graphic, 'auto stoppage', err))
+  } catch (err) {
+    reportGraphicError(graphic, 'auto stoppage', err)
+  }
+  if (!layer) return
+  const text = resolveBindText('clock', asObject(graphic.data))
+  layer.querySelectorAll('[data-bind="clock"]').forEach((node) => setTextIfChanged(node, text))
+}
+
+function tickHockeyClock(graphic) {
+  const layer = layers.get(graphic.id)
+  const bug = layer?.querySelector('[data-hockey-id]')
+  if (!bug) return
+  const clock = asObject(graphic.data).clock
+  const live = resolveLiveHockeyClock(clock)
+  bug.classList.toggle('hockey-bug--break', live.period === 'break')
+  setTextIfChanged(bug.querySelector('[data-bind="clock"]'), formatHockeyClock(clock))
 }
 
 function tickMatchClocks() {
   for (const graphic of cachedGraphics) {
-    if (!graphicShown(graphic) || !graphic.data?.clock?.running) continue
-    if (graphic.type === 'matchScoreboard') {
-      void persistAutoStoppageIfNeeded(graphic)
-      const layer = layers.get(graphic.id)
-      if (!layer) continue
-      const text = formatClock(graphic.data.clock)
-      layer.querySelectorAll('[data-bind="clock"]').forEach((node) => {
-        node.textContent = text
-      })
-      continue
-    }
-    if (graphic.type === 'hockeyScorebug') {
-      const layer = layers.get(graphic.id)
-      if (layer) updateHockeyScorebug(layer, graphic)
-    }
+    guardGraphic(graphic, 'clock tick', () => {
+      if (!graphicShown(graphic) || !asObject(asObject(graphic.data).clock).running) return
+      if (graphic.type === 'matchScoreboard') tickMatchClock(graphic)
+      else if (graphic.type === 'hockeyScorebug') tickHockeyClock(graphic)
+    })
   }
 }
 
 function tickCountdowns() {
   for (const graphic of cachedGraphics) {
-    if (!countdownShouldTick(graphic)) continue
-    const layer = layers.get(graphic.id)
-    if (layer) tickCountdownGraphic(layer, graphic)
+    guardGraphic(graphic, 'countdown tick', () => {
+      if (!countdownShouldTick(graphic)) return
+      const layer = layers.get(graphic.id)
+      if (layer) tickCountdownGraphic(layer, graphic)
+    })
   }
 }
 
-function ensureMatchClockTimer(graphics) {
+function ensureMatchClockTimer(rawGraphics) {
+  const graphics = asArray(rawGraphics).filter(isGraphicRecord)
   cachedGraphics = graphics
-  const needsMatch = graphics.some(
-    (g) =>
-      graphicShown(g) &&
-      g.data?.clock?.running &&
-      (g.type === 'matchScoreboard' || g.type === 'hockeyScorebug')
+  const needsMatch = graphics.some((g) =>
+    guardGraphic(
+      g,
+      'clock check',
+      () =>
+        graphicShown(g) &&
+        Boolean(asObject(asObject(g.data).clock).running) &&
+        (g.type === 'matchScoreboard' || g.type === 'hockeyScorebug'),
+      false
+    )
   )
   if (needsMatch && !matchClockTimer) {
-    // Hockey ring fills smoothly — 250ms; football text is fine at same cadence
+    // 250 ms keeps the displayed second within a quarter second of the
+    // server; ticks only write the DOM when the text changes.
     matchClockTimer = setInterval(tickMatchClocks, 250)
   } else if (!needsMatch && matchClockTimer) {
     clearInterval(matchClockTimer)
     matchClockTimer = null
   }
 
-  const needsCountdown = graphics.some(countdownShouldTick)
+  const needsCountdown = graphics.some((g) =>
+    guardGraphic(g, 'countdown check', () => countdownShouldTick(g), false)
+  )
   if (needsCountdown && !countdownTimer) {
-    countdownTimer = setInterval(tickCountdowns, 1000)
+    // 250 ms so the ceil-rounded countdown flips within ¼ s of the target second
+    countdownTimer = setInterval(tickCountdowns, 250)
   } else if (!needsCountdown && countdownTimer) {
     clearInterval(countdownTimer)
     countdownTimer = null
   }
 }
 
+// ---------------------------------------------------------------------------
+// Empty-output hint. Only when the page is opened from the dashboard preview
+// (?previewWindow=1 or ?hint=1) in a normal browser — never in OBS/vMix, so
+// the Browser Source render stays 100% transparent.
+// ---------------------------------------------------------------------------
+
+function hintAllowed() {
+  if (previewMode) return false
+  if (urlParams.get('hint') !== '1' && !previewWindow) return false
+  if (typeof window.obsstudio !== 'undefined') return false
+  if (/vmix|obs|xsplit|casparcg/i.test(navigator.userAgent)) return false
+  return true
+}
+
+const showEmptyHint = hintAllowed()
+let emptyHintEl = null
+
+function updateEmptyHint(visibleCount, graphics) {
+  if (!showEmptyHint) return
+  const shouldShow = visibleCount === 0
+  if (!shouldShow) {
+    emptyHintEl?.remove()
+    emptyHintEl = null
+    return
+  }
+  let title = 'Nothing is on air in this output'
+  let body = 'Take a graphic live in the dashboard and it appears here. In OBS or vMix this page stays fully transparent.'
+  if (isolateGraphicId) {
+    const g = graphics.find((item) => item.id === isolateGraphicId)
+    if (!g) {
+      title = 'This solo source no longer exists'
+      body = 'The graphic was deleted or belongs to another project. Copy a fresh solo URL from the dashboard.'
+    } else {
+      title = `Solo source: ${textOf(g.name) || g.type}`
+      body = g.soloVisible
+        ? 'Its solo output is on, but there is nothing to show yet — pick an entry or question in the dashboard.'
+        : 'Its solo output is off. Switch on “Solo source” for this graphic in the dashboard to see it here.'
+    }
+  } else if (graphics.some((g) => g.visible)) {
+    body = 'A live graphic has nothing to show yet — pick an entry or question in the dashboard. In OBS or vMix this page stays fully transparent.'
+  }
+  if (!emptyHintEl) {
+    emptyHintEl = document.createElement('div')
+    emptyHintEl.className = 'render-empty-hint'
+    emptyHintEl.setAttribute('role', 'status')
+    document.getElementById('preview-shell')?.appendChild(emptyHintEl)
+  }
+  emptyHintEl.innerHTML = `<strong>${escape(title)}</strong><span>${escape(body)}</span>`
+}
+
 async function applyState(state) {
-  applyServerTimeFromState(state)
-  applyCanvas(state)
-  applyBrand(state)
+  if (!state || typeof state !== 'object') return
+  try {
+    applyServerTimeFromState(state)
+    applyCanvas(state)
+    applyBrand(state)
+  } catch (err) {
+    console.error('[ProVerlay render] Could not apply canvas/brand settings:', err)
+  }
   const rev = (applyState._rev = (applyState._rev || 0) + 1)
-  await applyProjectFonts(state)
+  try {
+    await applyProjectFonts(state)
+  } catch (err) {
+    console.warn('[ProVerlay render] Project fonts unavailable, using fallbacks:', err)
+  }
   // Skip stale apply als er intussen een nieuwere stateChanged binnenkwam
   // (fonts laden async; anders kan een oudere paint over een nieuwere heen).
   if (rev !== applyState._rev) return
-  syncGraphics(state.graphics)
-  ensureMatchClockTimer(state.graphics)
+  try {
+    syncGraphics(state.graphics)
+  } finally {
+    // Timers keep running whatever happened above (QA-110)
+    ensureMatchClockTimer(state.graphics)
+  }
 }
 
 initRenderCompat()
@@ -1450,8 +1758,9 @@ socket.on('f1TimingUpdate', (payload) => {
   f1Live.set(payload.graphicId, payload)
   const graphic = cachedGraphics.find((g) => g.id === payload.graphicId)
   const layer = layers.get(payload.graphicId)
-  if (graphic && layer) updateF1Tower(layer, graphic)
+  if (graphic && layer) guardGraphic(graphic, 'F1 live update', () => updateF1Tower(layer, graphic))
 })
 fetch('/api/state')
   .then((r) => r.json())
   .then(applyState)
+  .catch((err) => console.error('[ProVerlay render] Initial state load failed:', err))
