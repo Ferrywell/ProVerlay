@@ -27,6 +27,7 @@ const NAV = [
   { id: 'dashboard', label: 'Dashboard', href: '/control', desktopOnly: true },
   { id: 'operator', label: 'Operator', href: '/operator' },
   { id: 'layout', label: 'Layout', href: '/layout' },
+  { id: 'data', label: 'Data', href: '/data', desktopOnly: true },
   { id: 'design', label: 'Design', href: '/design' }
 ]
 

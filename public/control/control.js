@@ -23,6 +23,7 @@ import { diffPatch, isEmptyPatch } from '/public/shared/patch-diff.js'
 import { createFormSession, saveFormSession } from '/public/control/settings-form.js'
 import { createImagePanel } from '/public/control/image-panel.js'
 import { noteActiveProject } from '/public/shared/active-project.js'
+import { resolveGraphicVariables, variableContext } from '/public/shared/variables.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import {
   formatCountdown,
@@ -177,6 +178,7 @@ const quizCorrect = document.getElementById('quiz-correct')
 const quizCancel = document.getElementById('quiz-cancel')
 const transitionPanel = document.getElementById('transition-panel')
 const imagePanelEl = document.getElementById('image-panel')
+const dataBindingNotice = document.getElementById('data-binding-notice')
 const transitionIn = document.getElementById('transition-in')
 const transitionOut = document.getElementById('transition-out')
 const transitionDuration = document.getElementById('transition-duration')
@@ -407,6 +409,7 @@ function hideAllInspectorPanels() {
   if (quizPanel) quizPanel.hidden = true
   if (transitionPanel) transitionPanel.hidden = true
   if (imagePanelEl) imagePanelEl.hidden = true
+  if (dataBindingNotice) dataBindingNotice.hidden = true
   if (dashboardOperatePanel) dashboardOperatePanel.hidden = true
 }
 
@@ -447,6 +450,7 @@ function showSettingsInspector(graphic) {
   const opening = settingsGraphicId !== graphic.id
   if (opening) closeSettingsSessions()
   settingsGraphicId = graphic.id
+  showDataBindingNotice(graphic)
   if (graphic.type === 'matchScoreboard') {
     if (widgetPanel) {
       widgetPanel.hidden = false
@@ -492,6 +496,19 @@ function showSettingsInspector(graphic) {
     transitionPanel.hidden = false
     transitionSession.sync(graphic)
   }
+}
+
+/** A list filled from a data source is edited in the source, not here: say so above the panel. */
+function showDataBindingNotice(graphic) {
+  if (!dataBindingNotice) return
+  const binding = graphic.data?.dataBinding
+  if (!binding) {
+    dataBindingNotice.hidden = true
+    return
+  }
+  const source = (currentState?.dataSources || []).find((s) => s.id === binding.sourceId)
+  dataBindingNotice.innerHTML = `This list is filled from the data source <strong>${escapeHtml(source?.name || binding.sourceId)}</strong>. Edit the rows there; changes here are replaced on the next update. <a href="/data#source-${encodeURIComponent(binding.sourceId)}">Open Data</a>`
+  dataBindingNotice.hidden = false
 }
 
 function showOperateInspector(graphic) {
@@ -1026,7 +1043,8 @@ function updateTickerPreview() {
     return
   }
   stopCustomTicker(TICKER_PREVIEW_ID)
-  const data = tickerDataFromForm(graphic)
+  // Same {{variable}} resolution as the render, so the preview matches the output.
+  const data = resolveGraphicVariables({ ...graphic, data: tickerDataFromForm(graphic) }, variableContext(currentState)).data
   root.innerHTML = buildTickerBoardHtml(data, {
     graphicId: TICKER_PREVIEW_ID,
     projectId: currentState?.projectId || activeProjectId()

@@ -15,6 +15,7 @@ import { createApiRouter } from './api.js'
 import { loadState, getState, onStateChange, resetState } from './state.js'
 import { initF1Timing, shutdownF1Timing } from './f1Timing.js'
 import { initImageTimers, shutdownImageTimers } from './imageWidget.js'
+import { initDataSources, shutdownDataSources } from './dataSources.js'
 import { detectDevice, preferredDashboard } from './device.js'
 import {
   ASSET_EXT_RE,
@@ -163,6 +164,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
   })
   app.get('/compose', sendPage('compose'))
   app.get('/project', sendPage('project'))
+  app.get('/data', sendPage('data'))
 
   app.get('/', (req, res) => {
     const device = detectDevice(req.headers['user-agent'] || '')
@@ -208,6 +210,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     })
     initF1Timing(io)
     initImageTimers()
+    await initDataSources(io)
     started = true
     await new Promise((resolve, reject) => {
       const onError = (err) => {
@@ -235,6 +238,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     started = false
     shutdownF1Timing()
     shutdownImageTimers()
+    shutdownDataSources()
     unsubscribe?.()
     unsubscribe = null
     unsubscribeProjects?.()

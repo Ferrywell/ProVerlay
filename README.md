@@ -48,6 +48,8 @@ runs on your own machine and network — no account, no cloud.
 - **Projects** with their own branding (colours, fonts), assets and widgets; export
   and import as a single `.proverlay` file.
 - **Scoreboard editor** to put live text fields on top of your own PNG design.
+- **Data sources:** names, titles, ticker lines and quiz questions from Google Sheets,
+  CSV or Excel, updated live and cached for offline use, plus `{{variables}}` in text.
 - **REST API and Socket.io** for your own automation.
 - **Desktop app** for macOS (Apple Silicon and Intel) and Windows (beta), with a
   menu-bar/tray icon; or run the server from source on any OS with Node.
@@ -202,6 +204,7 @@ See [SECURITY.md](SECURITY.md) for details and how to report a vulnerability.
 |----------|----------|
 | [User guide](docs/USER-GUIDE.md) | First show, step by step, plus troubleshooting |
 | [OBS and vMix](docs/OBS-VMIX.md) | Browser input setup, transparency, performance |
+| [Data sources](docs/DATA-SOURCES.md) | Google Sheets, CSV, Excel and `{{variables}}` |
 | [Desktop app](docs/APP.md) | Mac and Windows app, preferences, data folders, building the app |
 | [Companion](docs/COMPANION.md) | Stream Deck actions, feedbacks, presets |
 | [Architecture](docs/ARCHITECTURE.md) | Server, state, API |

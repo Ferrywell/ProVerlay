@@ -7,6 +7,7 @@ import crypto from 'crypto'
 import { BLANK_PROJECT, SEED_REGISTRY } from './projectSeed.js'
 import { getDataDir } from './paths.js'
 import { enqueueWrite, writeJsonAtomic, writeFileAtomic, renameWithRetry } from './writeQueue.js'
+import { DATA_DIR_NAME, DATA_FILE_RE, sanitizeImportedDataSources } from './dataFiles.js'
 import {
   CUSTOM_CSS_FILENAME,
   CUSTOM_CSS_MAX_BYTES,
@@ -31,7 +32,7 @@ async function openZip(filePath) {
   return unzipper.Open.file(filePath)
 }
 
-/** Asset types that may be uploaded, imported and served. No SVG/HTML: they can carry script. */
+/** Asset types that may be uploaded, imported and served. No HTML; SVG is served with a sandbox CSP (app.js). */
 export const ASSET_EXT_RE = /\.(png|apng|jpe?g|webp|gif|svg|ttf|otf|woff2?)$/i
 
 /** Zip import limits (zip-bomb protection). */
@@ -421,6 +422,17 @@ export async function duplicateProject(id, rawName) {
       const css = await readCustomCss(id)
       if (css) await writeFileAtomic(path.join(staging, CUSTOM_CSS_FILENAME), css)
 
+      // Data source files and caches (allow-listed names only)
+      const srcData = path.join(projectDir(id), DATA_DIR_NAME)
+      for (const file of await fs.readdir(srcData).catch(() => [])) {
+        if (!DATA_FILE_RE.test(file)) continue
+        const from = path.join(srcData, file)
+        const stat = await fs.lstat(from).catch(() => null)
+        if (!stat?.isFile()) continue
+        await fs.mkdir(path.join(staging, DATA_DIR_NAME), { recursive: true })
+        await fs.copyFile(from, path.join(staging, DATA_DIR_NAME, file))
+      }
+
       const newId = await uniqueProjectId(slugify(name), registry)
       await renameWithRetry(staging, projectDir(newId))
       staging = null
@@ -617,6 +629,14 @@ export async function exportProjectToZip(projectId, res) {
     }
   }
 
+  // Data source files and their offline caches travel with the project.
+  const data = path.join(projectDir(projectId), DATA_DIR_NAME)
+  for (const file of await fs.readdir(data).catch(() => [])) {
+    if (!DATA_FILE_RE.test(file)) continue
+    const stat = await fs.lstat(path.join(data, file)).catch(() => null)
+    if (stat?.isFile()) archive.file(path.join(data, file), { name: `${DATA_DIR_NAME}/${file}` })
+  }
+
   await archive.finalize()
 }
 
@@ -682,7 +702,7 @@ export async function importProjectFromZip(tempPath, originalName = 'import.prov
         throw badRequest('Invalid file: project.json is not valid JSON')
       }
       try {
-        projectData = validateProjectState(projectData)
+        projectData = sanitizeImportedDataSources(validateProjectState(projectData))
       } catch (err) {
         throw badRequest(`Invalid file: ${err.message}`)
       }
@@ -720,14 +740,17 @@ export async function importProjectFromZip(tempPath, originalName = 'import.prov
 
       const budget = { used: 0, max: IMPORT_LIMITS.maxTotalBytes }
       for (const file of files) {
-        if (file.type !== 'File' || !file.path.startsWith('assets/')) continue
+        if (file.type !== 'File') continue
         const name = path.basename(file.path)
-        if (!ASSET_EXT_RE.test(name) || name.startsWith('.')) continue
-        await pipeline(
-          file.stream(),
-          byteLimiter(budget),
-          createWriteStream(path.join(staging, 'assets', name))
-        )
+        let target = null
+        if (file.path.startsWith('assets/') && ASSET_EXT_RE.test(name) && !name.startsWith('.')) {
+          target = path.join(staging, 'assets', name)
+        } else if (file.path === `${DATA_DIR_NAME}/${name}` && DATA_FILE_RE.test(name)) {
+          await fs.mkdir(path.join(staging, DATA_DIR_NAME), { recursive: true })
+          target = path.join(staging, DATA_DIR_NAME, name)
+        }
+        if (!target) continue
+        await pipeline(file.stream(), byteLimiter(budget), createWriteStream(target))
       }
 
       const registry = await readRegistry()
