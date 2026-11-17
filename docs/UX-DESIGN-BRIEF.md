@@ -1,50 +1,68 @@
-# UX/UI Design Brief — ProVerlay (bijgewerkt)
+# UX and UI design brief
 
-## Design direction: Apple Tahoe
+The design direction for ProVerlay's control interfaces. Read this before changing
+the dashboard, operator, editor or project pages.
 
-- Licht thema (`#f5f5f7` achtergrond)
-- Glass panels met `backdrop-filter` blur
-- System font stack (SF Pro op Mac, Segoe UI op Windows)
-- Accent: `#007AFF`
-- Minimalistisch — veel witruimte, weinig visuele ruis
-- **Geen** donker broadcast/Holographics-esthetiek
+## Direction
 
-## Twee dashboards
+- Light theme with warm off-white backgrounds (`--pv-bg` in `public/shared/tahoe.css`).
+- Glass panels using `backdrop-filter` blur, with a solid fallback where blur is not
+  supported.
+- System font stack: SF Pro on macOS, Segoe UI on Windows.
+- One calm accent colour (`--pv-accent`).
+- Minimal: generous whitespace, little visual noise.
+- **Not** a dark broadcast-console look, and no template-SaaS dashboard patterns
+  (stat cards, fake charts, decorative sidebars).
+
+The render output (`/render`) is a separate concern: it is transparent and only shows
+the graphics, styled by the project brand.
+
+## Two control surfaces
 
 ### Dashboard (`/control`) — desktop
-- Overlay overzicht + branding editor
-- Link naar operator-paneel
-- Voor technische director / setup
+
+- Overview of the overlays in the active project; select one to operate it.
+- Project, network and branding setup.
+- Links to the operator, design hub, overlay layout and render preview.
+- For the technical director / person setting up the show.
 
 ### Operator (`/operator`) — touch
-- Grote knoppen (min 52px)
-- Score +/- , on air toggle
-- Safe area voor iPhone home indicator
-- Auto-default op phone/tablet via `/`
 
-## Device responsiveness
+- Large touch targets (at least 44 px).
+- Score ±, clock, on-air toggles.
+- Respects the iPhone/iPad safe areas (home indicator, notch).
+- Default on phones and tablets via `/`.
 
-Server detecteert User-Agent:
-- `phone` / `tablet` → redirect naar `/operator`
-- `desktop` → redirect naar `/control`
-- Override: `?view=control` of `?view=operator`
+## Device handling
 
-## Klant branding UI
+The server looks at the User-Agent:
 
-Dashboard bevat:
-- Brand preset dropdown (`data/brands/`)
-- Kleuren (primary, secondary, text, background)
-- Font family + optionele Google Fonts URL
-- Live sync naar render
+- phone / tablet → `/` redirects to `/operator` (and `/control` does too)
+- desktop → `/` redirects to `/control`
+- override on `/`: `?view=control` or `?view=operator`
 
-## Overlay design
+## Branding UI
 
-Render overlays gebruiken `state.brand` — geen losse theme-bestanden meer.
-Voetbalscore: compact scorebord, glass background, teamkleuren via brand.
+*Edit project* (`/project`) contains:
 
-## Deliverables locaties
+- a client preset dropdown (bundled presets from `templates/brands/`, your own from
+  `data/brands/`);
+- colours (primary, secondary, text, background) and an overlay size;
+- font family plus an optional web-font URL, and font files uploaded as assets;
+- changes sync live to the render.
 
-- `public/shared/tahoe.css` — design system
-- `public/control/` — dashboard
-- `public/operator/` — touch UI
-- `public/render/render.css` — overlay styling
+## Overlay styling
+
+Overlays use `state.brand` (CSS variables) and per-widget settings. The CSS files in
+`themes/` are legacy and are not loaded by the render.
+
+## Where things live
+
+| Area | Files |
+|------|-------|
+| Design system (tokens, components) | `public/shared/tahoe.css` |
+| Dashboard | `public/control/` |
+| Touch operator | `public/operator/` |
+| Project page | `public/project/` |
+| Scoreboard editor | `public/editor/` |
+| Overlay styling | `public/render/render.css` |

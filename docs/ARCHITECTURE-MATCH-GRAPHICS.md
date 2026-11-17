@@ -133,7 +133,7 @@ Existing projects without `clockPlate` continue using PNG crop if `clockPlateWid
 | 1 | ✅ Done | CSS clock pill (`layout.clockPlate`), vMix px compat |
 | 2 | ✅ Done | Team code/name editing from operate UI |
 | 3 | Planned | Preset registry (`sport` → element pack + clock rules) |
-| 3b | Planned | **Field hockey (veldhockey)** preset: quarters/halves, countdown option, no stoppage, optional PC binds — reuse `matchScoreboard`, do not fork a new type unless operate UI outgrows presets (see `docs/qa/ROBUSTNESS-PASS-2026-07-30.md`) |
+| 3b | ✅ Done (separate type) | **Field hockey**: shipped as the dedicated `hockeyScorebug` widget (Q1–Q4 countdown clock, team codes and colours) because its operate UI differs from the football strip. |
 | 4 | Planned | Basketball preset (quarters, shot clock bind) |
 | 5 | Planned | Esports scoreboard preset or dedicated type |
 | 6 | Future | Editor panel for `clockPlate` tuning |
@@ -148,7 +148,6 @@ Existing projects without `clockPlate` continue using PNG crop if `clockPlateWid
 | Match data/bindings | `public/shared/match-utils.js`, `public/shared/operate-match.js` |
 | Operate UI | `public/shared/operate-handlers.js`, `public/operator/operator.js` |
 | Defaults | `server/matchClock.js` |
-| Reference project | a football project with a PNG score strip |
 
 ## Related docs
 

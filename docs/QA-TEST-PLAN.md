@@ -1,117 +1,114 @@
-# QA Test Plan — ProVerlay (Beta Tester Brief)
+# Manual test plan
 
-## Jouw opdracht
+A checklist for testing ProVerlay by hand before a release or after a larger UI
+change. Automated tests run with `npm test`; this plan covers what they cannot:
+real browsers, OBS/vMix and touch devices.
 
-Schrijf en voer een gestructureerd testplan uit voor ProVerlay MVP v0.1.0. Documenteer alles in `docs/qa/` (lokaal, niet in git).
+## Test environment
 
-## Testomgeving
+| Item | Value |
+|------|-------|
+| Start | `npm ci && npm start` (or the Mac app) |
+| Dashboard | http://localhost:2014/control |
+| Operator | http://localhost:2014/operator |
+| Render | http://localhost:2014/render |
+| API | http://localhost:2014/api/state |
+| Data | `data/` (from source) or `~/Library/Application Support/ProVerlay/data` (Mac app) |
 
-| Item | Waarde |
-|------|--------|
-| App start | `npm install && npm start` |
-| Control URL | http://localhost:3100/control |
-| Render URL | http://localhost:3100/render |
-| API | http://localhost:3100/api/state |
-| Poort | 3100 |
-| State file | `data/show.json` |
+Tip: use a throwaway data folder so you start from a blank project:
+`PROVERLAY_DATA_DIR=$(mktemp -d) npm start`.
 
-## Testcategorieën
+## 1. Smoke (P0)
 
-### 1. Smoke tests (P0)
-- Server start zonder errors
-- `/control` laadt
-- `/render` laadt met transparante achtergrond
-- `GET /api/state` retourneert JSON
+- [ ] Server starts without errors and prints the dashboard/operator/render URLs
+- [ ] `/control` loads; the sync pill shows **Live sync**
+- [ ] `/render` loads with a transparent background
+- [ ] `GET /api/state` returns JSON
+- [ ] A fresh data folder starts with one blank project and no widgets
 
-### 2. Functional — Control UI (P0)
-- Elke graphic kan aan/uit
-- Live-status visueel zichtbaar in control
-- Styling wijzigingen (kleur, font, padding) reflecteren op render
-- "Kopieer render URL" werkt
+## 2. Dashboard (P0)
 
-### 3. Functional — Render engine (P0)
-- Lower third toont naam/title/company
-- Message toont tekst
-- Ticker scrollt
-- Clock tikt elke seconde
-- Countdown telt af
-- Image toont wanneer src gezet is
-- Meerdere graphics tegelijk zichtbaar
-- Hide animatie werkt
+- [ ] Every widget type in **Widget type** can be added and removed
+- [ ] **Go live** / off works for each widget; the live state is clearly visible
+- [ ] The solo button (next to the link icon) toggles the widget on `/render?graphic=<id>` only
+- [ ] The link icon copies the per-widget render URL; **Combined render URL** copies `/render`
+- [ ] Branding changes in *Edit project* (colours, font) show up on the render
 
-### 4. API (P1)
+## 3. Render (P0)
+
+- [ ] Match score: score and clock update, clock ticks while running
+- [ ] Hockey scorebug: quarter clock counts down, scores and team colours update
+- [ ] Ticker scrolls; empty ticker does not break the page
+- [ ] Stream countdown counts down; behaviour at 0 matches *Hide when expired*
+- [ ] Lower third / lower-thirds roster show name and title
+- [ ] Message shows its text
+- [ ] Quiz shows the question, reveal highlights the correct answer
+- [ ] F1 timing shows the tower with the manual list (see [F1-TIMING.md](F1-TIMING.md))
+- [ ] Several widgets visible at the same time without overlap glitches
+- [ ] In/out transitions play
+
+## 4. Real-time sync (P0)
+
+- [ ] Dashboard and render in two tabs: going live in the dashboard updates the render in < 500 ms
+- [ ] A change via the API updates both tabs
+- [ ] Two dashboards open at once stay in sync
+
+## 5. API (P1)
+
 ```bash
-# Toggle graphic
-curl -X POST http://localhost:3100/api/graphics/lt-host/toggle \
-  -H "Content-Type: application/json" \
-  -d '{"visible": true}'
+# Show a graphic on the combined output
+curl -X POST http://localhost:2014/api/graphics/<id>/toggle \
+  -H "Content-Type: application/json" -d '{"visible": true}'
 
-# Patch state
-curl -X PATCH http://localhost:3100/api/state \
-  -H "Content-Type: application/json" \
-  -d '{"settings": {"fontSize": 3}}'
+# Patch the project state
+curl -X PATCH http://localhost:2014/api/state \
+  -H "Content-Type: application/json" -d '{"settings": {"fontSize": 3}}'
+
+# Unknown id → 404
+curl -i -X POST http://localhost:2014/api/graphics/does-not-exist/toggle
 ```
 
-### 5. Real-time sync (P0)
-- Open control + render in twee browser tabs
-- Toggle in control → render update < 500ms
-- Toggle via API → beide tabs updaten
+## 6. Operator on a touch device (P1)
 
-### 6. OBS workflow (P1)
-- Browser Source met render URL
-- Transparante achtergrond
-- 1920x1080 canvas
-- Graphics over video zichtbaar
+- [ ] iPad/iPhone on the same Wi-Fi opens `http://<mac-ip>:2014/operator`
+- [ ] Opening `http://<mac-ip>:2014/` on the device lands on the operator
+- [ ] Score, clock and toggles work with touch; layout respects the safe areas
 
-### 7. Persistence (P1)
-- Wijzig state via control
-- Herstart server
-- State behouden in `data/show.json`
+## 7. OBS / vMix (P1)
 
-### 8. Companion (P2 — wanneer module klaar)
-- Verbinding met ProVerlay instance
-- Presets per graphic
-- Toggle via Stream Deck
-- Feedback toont actieve status
+- [ ] OBS Browser Source, 1920×1080: graphics over video, transparent background
+- [ ] vMix Web Browser input, 1920×1080: transparent, no scrollbars
+- [ ] A solo URL on a separate input positions independently
 
-### 9. Edge cases (P2)
-- Snel achter elkaar togglen (10x)
-- Lege ticker items
-- Countdown op 0
-- Ongeldige graphic ID via API → 404
-- Twee browser tabs control tegelijk
+See [OBS-VMIX.md](OBS-VMIX.md).
 
-## Deliverables (maak aan in `docs/qa/`)
+## 8. Persistence and projects (P1)
 
-1. **TEST-PLAN.md** — dit document uitgewerkt met test cases (ID, steps, expected)
-2. **ACCEPTANCE-CRITERIA.md** — MVP definition of done
-3. **BUG-REPORT-TEMPLATE.md**
-4. **TEST-RESULTS.md** — resultaten per run (datum, pass/fail)
-5. **BLOCKERS.md** — features die testen blokkeren
+- [ ] Change state, restart the server: state is kept
+- [ ] Create a project, switch with **Activate this project**, switch back
+- [ ] **Export** downloads a `.proverlay` file; **Import** creates a new project from it (not activated automatically) including its assets
 
-## Bug severity
+## 9. Companion (P2)
 
-| Level | Definitie |
-|-------|-----------|
-| Critical | Render werkt niet / data loss / crash |
-| High | Graphic type werkt niet / geen sync |
-| Medium | Styling bug / UX verwarring |
-| Low | Cosmetisch |
+- [ ] The module connects to ProVerlay (`npm run test:connection` in `companion/`)
+- [ ] Presets appear per graphic
+- [ ] Toggle from a (virtual) button; the feedback shows the on-air state
 
-## MVP Definition of Done
+See [COMPANION.md](COMPANION.md).
 
-- [ ] Alle P0 tests groen
-- [ ] 80%+ P1 tests groen
-- [ ] Geen open Critical/High bugs
-- [ ] OBS workflow gedocumenteerd en getest
-- [ ] Testresultaten gepubliceerd in `docs/qa/TEST-RESULTS.md`
+## 10. Edge cases (P2)
 
-## Vergelijking met Holographics
+- [ ] Toggle the same widget 10× quickly — final state is consistent
+- [ ] Server restart while the render is open — render reconnects and shows the current state
+- [ ] Port 2014 in use — the server exits with a clear message
 
-Test ook of ProVerlay dezelfde **workflow** ondersteunt:
-1. Render URL in OBS → ✅/❌
-2. Real-time toggle → ✅/❌
-3. Companion trigger → ✅/❌ (later)
-4. Multi-graphic → ✅/❌
+## Severity
 
-Noteer verschillen in een lokaal pariteitsdocument
+| Level | Definition |
+|-------|------------|
+| Critical | Render broken, data loss or crash |
+| High | A widget type does not work, or no sync |
+| Medium | Styling bug or confusing UX |
+| Low | Cosmetic |
+
+Report bugs with the [bug report template](https://github.com/Ferrywell/ProVerlay/issues/new?template=bug_report.yml).
