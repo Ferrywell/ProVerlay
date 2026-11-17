@@ -15,7 +15,16 @@ import { createApiRouter } from './api.js'
 import { loadState, getState, onStateChange, resetState } from './state.js'
 import { initF1Timing, shutdownF1Timing } from './f1Timing.js'
 import { detectDevice, preferredDashboard } from './device.js'
-import { ASSET_EXT_RE, assetsDir, projectExists, flushTouchProject, resetProjectsCache } from './projects.js'
+import {
+  ASSET_EXT_RE,
+  assetsDir,
+  projectExists,
+  flushTouchProject,
+  resetProjectsCache,
+  readCustomCss,
+  listProjects,
+  onProjectsChange
+} from './projects.js'
 import { setDataDir } from './paths.js'
 import { drainWrites } from './writeQueue.js'
 import { originGuard, socketAllowRequest } from './netSecurity.js'
@@ -94,6 +103,23 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
       .catch(next)
   })
 
+  // Per-project custom CSS (trusted local content, see customCss.js). Served
+  // next to assets/ so `url(assets/foo.png)` in the stylesheet resolves to
+  // the project's own assets.
+  app.get('/projects/:projectId/custom.css', (req, res, next) => {
+    const { projectId } = req.params
+    if (!isValidProjectId(projectId)) return res.status(404).end()
+    projectExists(projectId)
+      .then(async (exists) => {
+        if (!exists) return res.status(404).end()
+        const css = await readCustomCss(projectId)
+        if (!css) return res.status(404).type('text/plain').send('No custom CSS')
+        res.setHeader('Cache-Control', 'no-cache')
+        res.type('text/css; charset=utf-8').send(css)
+      })
+      .catch(next)
+  })
+
   app.get('/render', sendPage('render'))
   app.get('/render/:graphicId', (req, res) => {
     res.redirect(`/render?graphic=${encodeURIComponent(req.params.graphicId)}`)
@@ -126,7 +152,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     res.redirect(`/${dashboard}`)
   })
 
-  // API/JSON errors → JSON (geen HTML stack traces met filesystem-paden)
+  // API errors → JSON (never HTML stack traces with filesystem paths)
   app.use(errorHandler)
 
   // Read-only socket API: clients receive `stateChanged` and may ask for
@@ -148,6 +174,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
   })
 
   let unsubscribe = null
+  let unsubscribeProjects = null
   let started = false
 
   async function listen() {
@@ -155,6 +182,12 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     resetState()
     await loadState()
     unsubscribe = onStateChange((state) => io.emit('stateChanged', state))
+    // Project list changed (create/rename/duplicate/delete/import/activate).
+    unsubscribeProjects = onProjectsChange(() => {
+      listProjects()
+        .then((projects) => io.emit('projectsChanged', projects))
+        .catch((err) => console.error('[socket] projectsChanged failed:', err.message))
+    })
     initF1Timing(io)
     started = true
     await new Promise((resolve, reject) => {
@@ -184,6 +217,8 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     shutdownF1Timing()
     unsubscribe?.()
     unsubscribe = null
+    unsubscribeProjects?.()
+    unsubscribeProjects = null
     await flushTouchProject()
     await drainWrites()
   }

@@ -7,8 +7,11 @@ import {
   getProjectMeta,
   projectFile,
   quarantineFile,
+  readCustomCssVersion,
   readProjectData,
+  renameProjectEntry,
   setActiveProjectId,
+  writeCustomCss,
   writeProjectData,
   scheduleTouchProject
 } from './projects.js'
@@ -41,6 +44,8 @@ const BRAND_ID = /^[a-z0-9][a-z0-9-]*$/
 
 let state = null
 let activeProjectId = 'blank'
+let activeProjectName = ''
+let activeCustomCssVersion = ''
 const listeners = new Set()
 
 /* ------------------------------------------------------------- loading */
@@ -84,8 +89,12 @@ function describeLoadError(err) {
   return err?.message || 'unknown error'
 }
 
-function adopt(id, data) {
+/** Make `id` the in-memory active project (plus its display name and custom CSS version). */
+async function adopt(id, data) {
+  const meta = await getProjectMeta(id).catch(() => null)
   activeProjectId = id
+  activeProjectName = meta?.name || id
+  activeCustomCssVersion = await readCustomCssVersion(id)
   state = { ...data, projectId: id }
 }
 
@@ -98,7 +107,7 @@ async function loadStateUnlocked() {
   await ensureProjectsLayout()
   const wanted = await getActiveProjectId()
   try {
-    adopt(wanted, await loadProject(wanted))
+    await adopt(wanted, await loadProject(wanted))
     return state
   } catch (err) {
     console.error(`[state] active project "${wanted}" could not be loaded: ${describeLoadError(err)}`)
@@ -108,7 +117,7 @@ async function loadStateUnlocked() {
     try {
       const data = await loadProject('blank')
       await setActiveProjectId('blank')
-      adopt('blank', data)
+      await adopt('blank', data)
       console.error('[state] fell back to the "blank" project; the damaged project was left untouched on disk')
       return state
     } catch (err) {
@@ -123,7 +132,7 @@ async function loadStateUnlocked() {
   const fresh = structuredClone(BLANK_PROJECT)
   await writeJsonAtomic(blankFile, fresh)
   await setActiveProjectId('blank')
-  adopt('blank', fresh)
+  await adopt('blank', fresh)
   console.error('[state] recreated an empty "blank" project')
   return state
 }
@@ -136,6 +145,8 @@ export async function loadState() {
 export function resetState() {
   state = null
   activeProjectId = 'blank'
+  activeProjectName = ''
+  activeCustomCssVersion = ''
 }
 
 /**
@@ -157,7 +168,7 @@ export async function activateProject(id) {
       throw new HttpError(422, `Project "${id}" cannot be loaded: ${describeLoadError(err)}`)
     }
     const project = await setActiveProjectId(id)
-    adopt(id, data)
+    await adopt(id, data)
     notify()
     return project
   })
@@ -165,7 +176,43 @@ export async function activateProject(id) {
 
 export function getState() {
   if (!state) throw new Error('State not loaded')
-  return { ...state, projectId: activeProjectId, serverNow: Date.now() }
+  return {
+    ...state,
+    projectId: activeProjectId,
+    projectName: activeProjectName,
+    customCssVersion: activeCustomCssVersion,
+    serverNow: Date.now()
+  }
+}
+
+/**
+ * Rename a project (registry display name). When it is the active project,
+ * socket clients get a stateChanged with the new `projectName`.
+ */
+export async function renameProject(id, name) {
+  return enqueueWrite(async () => {
+    const entry = await renameProjectEntry(id, name)
+    if (state && id === activeProjectId) {
+      activeProjectName = entry.name
+      notify()
+    }
+    return entry
+  })
+}
+
+/**
+ * Save a project's custom.css. When it is the active project, socket clients
+ * get a stateChanged with the new `customCssVersion` so /render reloads it.
+ */
+export async function saveCustomCss(id, css) {
+  return enqueueWrite(async () => {
+    const result = await writeCustomCss(id, css)
+    if (state && id === activeProjectId && result.version !== activeCustomCssVersion) {
+      activeCustomCssVersion = result.version
+      notify()
+    }
+    return result
+  })
 }
 
 export function getActiveId() {
@@ -402,13 +449,16 @@ function notify() {
 }
 
 function stripMeta(stateObj) {
-  const { projectId, serverNow, ...rest } = stateObj
+  const { projectId, projectName, customCssVersion, serverNow, ...rest } = stateObj
   return rest
 }
 
 /** Remove runtime-only fields that must never be persisted to project.json. */
+const EPHEMERAL_KEYS = ['serverNow', 'projectName', 'customCssVersion']
+
 export function stripEphemeralFields(state) {
-  if (!state || state.serverNow == null) return state
-  const { serverNow: _drop, ...rest } = state
+  if (!state || !EPHEMERAL_KEYS.some((key) => Object.hasOwn(state, key))) return state
+  const rest = { ...state }
+  for (const key of EPHEMERAL_KEYS) delete rest[key]
   return rest
 }

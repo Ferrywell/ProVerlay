@@ -6,7 +6,13 @@ import path from 'path'
 import crypto from 'crypto'
 import { BLANK_PROJECT, SEED_REGISTRY } from './projectSeed.js'
 import { getDataDir } from './paths.js'
-import { enqueueWrite, writeJsonAtomic, renameWithRetry } from './writeQueue.js'
+import { enqueueWrite, writeJsonAtomic, writeFileAtomic, renameWithRetry } from './writeQueue.js'
+import {
+  CUSTOM_CSS_FILENAME,
+  CUSTOM_CSS_MAX_BYTES,
+  customCssVersion,
+  sanitizeCustomCss
+} from './customCss.js'
 import {
   HttpError,
   badRequest,
@@ -37,8 +43,32 @@ export const IMPORT_LIMITS = {
 
 const TOUCH_DEBOUNCE_MS = 5000
 
+/** Maximum length of a project's display name. */
+export const PROJECT_NAME_MAX = 120
+
 const registryPath = () => path.join(getDataDir(), 'registry.json')
 const projectsDir = () => path.join(getDataDir(), 'projects')
+const trashDir = () => path.join(getDataDir(), 'trash')
+
+/* Listeners for registry changes that clients care about (create, rename,
+ * duplicate, delete, import, activate). Not fired for updatedAt bumps. */
+const projectListeners = new Set()
+
+/** Subscribe to project list changes. Returns an unsubscribe function. */
+export function onProjectsChange(fn) {
+  projectListeners.add(fn)
+  return () => projectListeners.delete(fn)
+}
+
+function emitProjectsChanged() {
+  for (const fn of projectListeners) {
+    try {
+      fn()
+    } catch (err) {
+      console.error('[projects] listener failed:', err)
+    }
+  }
+}
 
 const BLANK_TEMPLATE = structuredClone(BLANK_PROJECT)
 
@@ -213,6 +243,7 @@ export async function setActiveProjectId(id) {
   }
   registry.activeProjectId = id
   await writeRegistry(registry)
+  emitProjectsChanged()
   return registry.projects.find((p) => p.id === id)
 }
 
@@ -312,8 +343,194 @@ export async function createProject(name, clientName = '') {
     }
     registry.projects.push(entry)
     await writeRegistry(registry)
+    emitProjectsChanged()
     return entry
   })
+}
+
+/** Validate a display name from a request body. */
+export function normalizeProjectName(value, { required = true } = {}) {
+  if (value === undefined || value === null) {
+    if (required) throw badRequest('Name is required')
+    return ''
+  }
+  if (typeof value !== 'string') throw badRequest('name: expected a string')
+  const name = value.replace(/\s+/g, ' ').trim()
+  if (!name && required) throw badRequest('Name is required')
+  if (name.length > PROJECT_NAME_MAX) throw badRequest(`Name is too long (max ${PROJECT_NAME_MAX} characters)`)
+  return name
+}
+
+/** Registry entry for `id`, or a 404. */
+function requireEntry(registry, id) {
+  if (!isValidProjectId(id)) throw new HttpError(404, 'Project not found')
+  const entry = registry.projects.find((p) => p.id === id)
+  if (!entry) throw new HttpError(404, 'Project not found')
+  return entry
+}
+
+/**
+ * Rename a project (display name only; the id and folder stay).
+ * Caller must hold the write queue (see state.renameProject, which also
+ * notifies socket clients when the active project is renamed).
+ */
+export async function renameProjectEntry(id, rawName) {
+  const name = normalizeProjectName(rawName)
+  const registry = await readRegistry()
+  const entry = requireEntry(registry, id)
+  entry.name = name
+  entry.updatedAt = new Date().toISOString()
+  await writeRegistry(registry)
+  emitProjectsChanged()
+  return { ...entry, active: registry.activeProjectId === id }
+}
+
+/**
+ * Copy a project (validated project.json, allow-listed assets, custom.css)
+ * to a new unique id. The copy is built in a staging folder and only renamed
+ * into place when complete. The new project is not activated.
+ */
+export async function duplicateProject(id, rawName) {
+  return enqueueWrite(async () => {
+    const registry = await readRegistry()
+    const source = requireEntry(registry, id)
+    const name = normalizeProjectName(rawName, { required: false }) || copyName(source.name, registry)
+    let data
+    try {
+      data = (await readProjectData(id)).data
+    } catch (err) {
+      if (err?.code === 'ENOENT') throw new HttpError(404, 'Project not found')
+      throw new HttpError(422, `Project "${source.name}" cannot be read, so it cannot be duplicated`)
+    }
+
+    let staging = path.join(projectsDir(), `.duplicate-${crypto.randomUUID()}`)
+    try {
+      await fs.mkdir(path.join(staging, 'assets'), { recursive: true })
+      const { projectId: _id, serverNow: _now, ...payload } = data
+      await writeJsonAtomic(path.join(staging, 'project.json'), payload)
+
+      const srcAssets = assetsDir(id)
+      const files = await fs.readdir(srcAssets).catch(() => [])
+      for (const file of files) {
+        if (!ASSET_EXT_RE.test(file) || file.startsWith('.')) continue
+        const from = path.join(srcAssets, file)
+        const stat = await fs.lstat(from).catch(() => null)
+        if (!stat?.isFile()) continue
+        await fs.copyFile(from, path.join(staging, 'assets', file))
+      }
+      const css = await readCustomCss(id)
+      if (css) await writeFileAtomic(path.join(staging, CUSTOM_CSS_FILENAME), css)
+
+      const newId = await uniqueProjectId(slugify(name), registry)
+      await renameWithRetry(staging, projectDir(newId))
+      staging = null
+
+      const now = new Date().toISOString()
+      const entry = { id: newId, name, createdAt: now, updatedAt: now }
+      registry.projects.push(entry)
+      await writeRegistry(registry)
+      emitProjectsChanged()
+      return { ...entry, active: false }
+    } finally {
+      if (staging) await fs.rm(staging, { recursive: true, force: true }).catch(() => {})
+    }
+  })
+}
+
+/** "Name copy", "Name copy 2", … (first one not used by another project). */
+function copyName(base, registry) {
+  const names = new Set(registry.projects.map((p) => p.name))
+  const first = `${base} copy`.slice(0, PROJECT_NAME_MAX)
+  if (!names.has(first)) return first
+  for (let n = 2; ; n++) {
+    const candidate = `${base.slice(0, PROJECT_NAME_MAX - 12)} copy ${n}`
+    if (!names.has(candidate)) return candidate
+  }
+}
+
+/**
+ * Delete a project by moving its folder to <dataDir>/trash/<id>-<timestamp>
+ * (never a hard delete). Refuses the active project and the last project.
+ */
+export async function deleteProject(id) {
+  return enqueueWrite(async () => {
+    const registry = await readRegistry()
+    const entry = requireEntry(registry, id)
+    if (registry.projects.length <= 1) {
+      throw new HttpError(409, 'The last project cannot be deleted.')
+    }
+    if (registry.activeProjectId === id) {
+      throw new HttpError(
+        409,
+        `"${entry.name}" is the active project. Activate another project before deleting it.`
+      )
+    }
+    const dir = projectDir(id)
+    let trashedTo = null
+    if (await pathExists(dir)) {
+      await fs.mkdir(trashDir(), { recursive: true })
+      trashedTo = path.join(trashDir(), `${id}-${timestamp()}`)
+      await renameWithRetry(dir, trashedTo)
+    }
+    registry.projects = registry.projects.filter((p) => p.id !== id)
+    try {
+      await writeRegistry(registry)
+    } catch (err) {
+      // Put the folder back so the registry and the disk stay consistent.
+      if (trashedTo) await renameWithRetry(trashedTo, dir).catch(() => {})
+      throw err
+    }
+    emitProjectsChanged()
+    return { ok: true, id, trash: trashedTo ? path.basename(trashedTo) : null }
+  })
+}
+
+/* ----------------------------------------------------------- custom CSS */
+
+export function customCssFile(id) {
+  return path.join(projectDir(id), CUSTOM_CSS_FILENAME)
+}
+
+/** A project's custom CSS ('' when it has none). */
+export async function readCustomCss(id) {
+  try {
+    return await fs.readFile(customCssFile(id), 'utf8')
+  } catch (err) {
+    if (err.code === 'ENOENT') return ''
+    throw err
+  }
+}
+
+/** Version hash of a project's custom CSS ('' when it has none or it is unreadable). */
+export async function readCustomCssVersion(id) {
+  return customCssVersion(await readCustomCss(id).catch(() => ''))
+}
+
+/**
+ * Validate, sanitize and store a project's custom CSS. An empty stylesheet
+ * removes the file. The previous version is kept as custom.css.bak.
+ * Caller must hold the write queue (see state.saveCustomCss).
+ * Returns { version, bytes, removedImports }.
+ */
+export async function writeCustomCss(id, raw) {
+  if (typeof raw !== 'string') throw badRequest('css: expected a string')
+  if (!(await projectExists(id))) throw new HttpError(404, 'Project not found')
+  const { css, removedImports } = sanitizeCustomCss(raw)
+  const bytes = Buffer.byteLength(css, 'utf8')
+  if (bytes > CUSTOM_CSS_MAX_BYTES) {
+    throw new HttpError(413, `Custom CSS is too large (max ${Math.round(CUSTOM_CSS_MAX_BYTES / 1024)} KB)`)
+  }
+  const file = customCssFile(id)
+  await fs.copyFile(file, `${file}.bak`).catch((err) => {
+    if (err.code !== 'ENOENT') console.warn(`[projects] could not back up custom.css of ${id}: ${err.code}`)
+  })
+  const empty = !css.trim()
+  if (empty) {
+    await fs.rm(file, { force: true })
+  } else {
+    await writeFileAtomic(file, css)
+  }
+  return { version: empty ? '' : customCssVersion(css), bytes: empty ? 0 : bytes, removedImports }
 }
 
 export async function saveAsset(projectId, filename, buffer) {
@@ -369,6 +586,8 @@ export async function exportProjectToZip(projectId, res) {
     { name: 'manifest.json' }
   )
   archive.file(projectFile(projectId), { name: 'project.json' })
+  const css = await readCustomCss(projectId)
+  if (css) archive.append(css, { name: CUSTOM_CSS_FILENAME })
 
   const assets = assetsDir(projectId)
   if (await pathExists(assets)) {
@@ -382,12 +601,12 @@ export async function exportProjectToZip(projectId, res) {
   await archive.finalize()
 }
 
-async function readEntryLimited(entry, limit) {
+async function readEntryLimited(entry, limit, label = 'project.json') {
   const chunks = []
   let size = 0
   for await (const chunk of entry.stream()) {
     size += chunk.length
-    if (size > limit) throw badRequest('Invalid file: project.json is too large')
+    if (size > limit) throw badRequest(`Invalid file: ${label} is too large`)
     chunks.push(chunk)
   }
   return Buffer.concat(chunks)
@@ -432,6 +651,7 @@ export async function importProjectFromZip(tempPath, originalName = 'import.prov
 
       const manifestEntry = files.find((f) => f.path === 'manifest.json')
       const projectEntry = files.find((f) => f.path === 'project.json')
+      const cssEntry = files.find((f) => f.path === CUSTOM_CSS_FILENAME && f.type === 'File')
       if (!projectEntry) throw badRequest('Invalid file: project.json missing')
 
       let projectData
@@ -453,7 +673,7 @@ export async function importProjectFromZip(tempPath, originalName = 'import.prov
         .replace(/\.zip$/i, '')
       if (manifestEntry) {
         try {
-          const buf = await readEntryLimited(manifestEntry, 1024 * 1024)
+          const buf = await readEntryLimited(manifestEntry, 1024 * 1024, 'manifest.json')
           const manifest = JSON.parse(buf.toString('utf8'))
           if (typeof manifest?.name === 'string' && manifest.name.trim()) {
             suggestedName = manifest.name.trim().slice(0, 120)
@@ -466,6 +686,18 @@ export async function importProjectFromZip(tempPath, originalName = 'import.prov
       staging = path.join(projectsDir(), `.import-${crypto.randomUUID()}`)
       await fs.mkdir(path.join(staging, 'assets'), { recursive: true })
       await writeJsonAtomic(path.join(staging, 'project.json'), projectData)
+
+      if (cssEntry) {
+        let rawCss
+        try {
+          rawCss = (await readEntryLimited(cssEntry, CUSTOM_CSS_MAX_BYTES, 'custom.css')).toString('utf8')
+        } catch (err) {
+          if (err instanceof HttpError) throw err
+          throw badRequest('Invalid file: custom.css could not be read')
+        }
+        const { css } = sanitizeCustomCss(rawCss)
+        if (css.trim()) await writeFileAtomic(path.join(staging, CUSTOM_CSS_FILENAME), css)
+      }
 
       const budget = { used: 0, max: IMPORT_LIMITS.maxTotalBytes }
       for (const file of files) {
@@ -492,6 +724,7 @@ export async function importProjectFromZip(tempPath, originalName = 'import.prov
       }
       registry.projects.push(entry)
       await writeRegistry(registry)
+      emitProjectsChanged()
       return entry
     } catch (err) {
       if (err instanceof HttpError) throw err

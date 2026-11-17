@@ -18,6 +18,8 @@ import {
   listBrands,
   applyBrand,
   activateProject,
+  renameProject,
+  saveCustomCss,
   applyScore,
   applyClock
 } from './state.js'
@@ -30,8 +32,13 @@ import {
   exportProjectToZip,
   importProjectFromZip,
   saveAsset,
-  listAssets
+  listAssets,
+  duplicateProject,
+  deleteProject,
+  projectExists,
+  readCustomCss
 } from './projects.js'
+import { CUSTOM_CSS_MAX_BYTES, customCssVersion } from './customCss.js'
 import { analyzeImageBuffer, buildGraphicDataFromCompose } from './composeAnalyze.js'
 import { createGraphicFromType } from './graphicDefaults.js'
 import { getLiveSnapshot, importDriversOnce } from './f1Timing.js'
@@ -141,13 +148,48 @@ export function createApiRouter({ getPort = () => Number(process.env.PORT || 201
     const temp = path.join(os.tmpdir(), `proverlay-import-${crypto.randomUUID()}.zip`)
     try {
       await fs.writeFile(temp, req.file.buffer)
-      // Import activeert bewust niet: de operator kiest zelf wanneer hij
-      // wisselt via "Activate this project" in het dashboard.
+      // Import never activates: the operator decides when to switch
+      // (switching projects during a live show must be a deliberate action).
       const project = await importProjectFromZip(temp, req.file.originalname)
       res.status(201).json(project)
     } finally {
       await fs.unlink(temp).catch(() => {})
     }
+  })
+
+  /** Rename: { name } changes the display name; the id (and folder) stay. */
+  router.patch('/projects/:id', async (req, res) => {
+    const id = requireProjectId(req.params.id)
+    const body = jsonBody(req)
+    res.json(await renameProject(id, body.name))
+  })
+
+  /** Copy project.json, assets and custom.css to a new project: { name? }. */
+  router.post('/projects/:id/duplicate', async (req, res) => {
+    const id = requireProjectId(req.params.id)
+    const body = jsonBody(req)
+    res.status(201).json(await duplicateProject(id, body.name))
+  })
+
+  /** Moves the folder to <dataDir>/trash/. 409 for the active or the last project. */
+  router.delete('/projects/:id', async (req, res) => {
+    const id = requireProjectId(req.params.id)
+    res.json(await deleteProject(id))
+  })
+
+  router.get('/projects/:id/custom-css', async (req, res) => {
+    const id = requireProjectId(req.params.id)
+    if (!(await projectExists(id))) throw new HttpError(404, 'Project not found')
+    const css = await readCustomCss(id)
+    res.json({ css, version: customCssVersion(css), maxBytes: CUSTOM_CSS_MAX_BYTES })
+  })
+
+  /** Save custom CSS: { css }. Empty string removes it. @import statements are stripped. */
+  router.put('/projects/:id/custom-css', async (req, res) => {
+    const id = requireProjectId(req.params.id)
+    const body = jsonBody(req)
+    const result = await saveCustomCss(id, body.css)
+    res.json({ ...result, maxBytes: CUSTOM_CSS_MAX_BYTES })
   })
 
   router.get('/projects/:id/assets', async (req, res) => {
@@ -348,7 +390,7 @@ export function createApiRouter({ getPort = () => Number(process.env.PORT || 201
     res.status(result.status).json(result.body)
   })
 
-  /** Probeert MultiViewer lokaal te openen (Mac/Windows/Linux); anders download-URL. */
+  /** Try to open MultiViewer locally (macOS/Windows/Linux); otherwise return the download URL. */
   router.post('/system/open-multiviewer', async (_req, res) => {
     const downloadUrl = 'https://multiviewer.app'
     try {
