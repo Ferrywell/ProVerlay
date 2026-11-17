@@ -304,11 +304,11 @@ export function elementBoxStyle(el, layout = {}, options = {}) {
 export function defaultStripSlots(refWidth = 1920, refHeight = 120) {
   const y = 50
   return [
-    { id: 'el-home-code', bind: 'homeCode', label: 'Thuis code', text: 'NED', x: 14, y, fontSize: Math.round(refHeight * 0.42), color: '#ffffff', anchor: 'center', fontFamily: '' },
-    { id: 'el-home-score', bind: 'homeScore', label: 'Thuis score', text: '0', x: 28, y, fontSize: Math.round(refHeight * 0.55), color: '#ffffff', anchor: 'center', minWidthCqw: (refHeight * 0.35 / refWidth) * 100, fontFamily: '' },
-    { id: 'el-away-score', bind: 'awayScore', label: 'Uit score', text: '0', x: 72, y, fontSize: Math.round(refHeight * 0.55), color: '#ffffff', anchor: 'center', minWidthCqw: (refHeight * 0.35 / refWidth) * 100, fontFamily: '' },
-    { id: 'el-away-code', bind: 'awayCode', label: 'Uit code', text: 'JAP', x: 86, y, fontSize: Math.round(refHeight * 0.42), color: '#ffffff', anchor: 'center', fontFamily: '' },
-    { id: 'el-clock', bind: 'clock', label: 'Speeltijd', text: '0:00', x: 96, y, fontSize: Math.round(refHeight * 0.4), color: '#ffffff', anchor: 'center-right', letterSpacing: '-0.04em', minWidthCqw: (refHeight * 0.55 / refWidth) * 100, fontFamily: '' }
+    { id: 'el-home-code', bind: 'homeCode', label: 'Home code', text: 'HOME', x: 14, y, fontSize: Math.round(refHeight * 0.42), color: '#ffffff', anchor: 'center', fontFamily: '' },
+    { id: 'el-home-score', bind: 'homeScore', label: 'Home score', text: '0', x: 28, y, fontSize: Math.round(refHeight * 0.55), color: '#ffffff', anchor: 'center', minWidthCqw: (refHeight * 0.35 / refWidth) * 100, fontFamily: '' },
+    { id: 'el-away-score', bind: 'awayScore', label: 'Away score', text: '0', x: 72, y, fontSize: Math.round(refHeight * 0.55), color: '#ffffff', anchor: 'center', minWidthCqw: (refHeight * 0.35 / refWidth) * 100, fontFamily: '' },
+    { id: 'el-away-code', bind: 'awayCode', label: 'Away code', text: 'AWAY', x: 86, y, fontSize: Math.round(refHeight * 0.42), color: '#ffffff', anchor: 'center', fontFamily: '' },
+    { id: 'el-clock', bind: 'clock', label: 'Clock', text: '0:00', x: 96, y, fontSize: Math.round(refHeight * 0.4), color: '#ffffff', anchor: 'center-right', letterSpacing: '-0.04em', minWidthCqw: (refHeight * 0.55 / refWidth) * 100, fontFamily: '' }
   ]
 }
 
@@ -319,7 +319,7 @@ export function renderUrl(graphicId, origin = window.location.origin) {
 export async function readImageDimensions(fileOrUrl) {
   return new Promise((resolve, reject) => {
     const img = new Image()
-    img.onerror = () => reject(new Error('Kon afbeelding niet laden'))
+    img.onerror = () => reject(new Error('Could not load the image'))
     if (fileOrUrl instanceof File) {
       const url = URL.createObjectURL(fileOrUrl)
       img.onload = () => {

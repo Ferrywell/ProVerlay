@@ -117,7 +117,7 @@ the server only stores `break`). With *includeBreaks* the order is Q1 → break 
 | `code_<id>_home` / `_away`                   | Team codes (match, hockey)                                       |
 | `score_<id>_home` / `_away`                  | Scores                                                           |
 | `clock_<id>`, `clock_<id>_running`           | Clock as on air, running flag                                    |
-| `period_<id>`                                | `1st half` … `Extra time 2`, `Q1` … `Q4`, `RUST` (hockey break)  |
+| `period_<id>`                                | `1st half` … `Extra time 2`, `Q1` … `Q4`, `BREAK` (hockey break) |
 | `countdown_<id>`                             | Remaining time (`M:SS` or `H:MM:SS`, like the render)            |
 | `ticker_<id>_current`, `ticker_<id>_enabled` | Enabled messages joined with ` • `, count of enabled messages    |
 | `speaker_<id>_name`, `speaker_<id>_title`    | Active speaker                                                   |
