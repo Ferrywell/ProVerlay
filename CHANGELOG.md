@@ -11,6 +11,11 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-17
+
+One operator panel everywhere, project management, dark mode, a complete Companion
+module and automated release builds.
+
 ### Added
 
 - One shared app header on every page (except `/render`): page title, a project chip to
@@ -18,12 +23,39 @@ material. The entries below are reconstructed from that history; the tags
   projects, consistent navigation, the connection pill and one "Preview" label everywhere.
 - Dark mode for all control pages, following the system setting or forced to Light/Dark
   from the header menu (stored per device). `/render` is unchanged.
+- Project management: rename, duplicate and delete projects from the Project page
+  (deleted projects move to a `trash` folder in the data directory; the active and the
+  last project cannot be deleted).
+- Custom CSS per project (`custom.css`, edited on the Project page), loaded by `/render`
+  after the built-in styles and applied live; included in `.proverlay` export/import.
+- Operator widget switcher: jump to one widget instead of scrolling through all of them;
+  `?focus=<id>` opens a single widget.
+- Companion module 1.0: actions for every widget type (score, clock, period, ticker,
+  countdown, lower thirds, quiz, message, brand colour), ON AIR and clock feedbacks,
+  live variables (scores, clocks, periods, ticker text, quiz) and presets per graphic.
+- Automated release builds: pushing a `v*` tag builds Apple Silicon and Intel Mac zips,
+  verifies them, writes `SHA256SUMS.txt` and publishes the GitHub release with notes
+  from this changelog. See [docs/RELEASING.md](docs/RELEASING.md).
 
 ### Changed
 
+- One operate card per widget type, shared by the dashboard, `/operator` and
+  `/operate/:id`, with the same labels and a "More controls" section on small screens.
+- Score and clock changes from the dashboard, operator and Companion use the atomic
+  `/score` and `/clock` endpoints; other edits send only the changed fields. Two
+  operators (or an iPad and a Stream Deck) no longer overwrite each other.
+- Edit settings saves only the fields you changed and keeps your unsaved edits when the
+  widget changes elsewhere.
 - The project chip and the dashboard's project list update live when a project is
   created, renamed, duplicated, deleted, imported or activated in another window.
 - On `/operator` the header no longer goes back to the Design setup page during a show.
+- New widgets get distinct default positions (countdown center, message above the
+  ticker, lower thirds bottom-left).
+- Server log output is in English.
+
+### Removed
+
+- The outdated `templates/football-score.md`.
 
 ## [0.7.0] - 2026-11-17
 
@@ -203,7 +235,8 @@ and a clean repository.
   operator, scoreboard editor, render page for OBS/vMix, project system with
   `.proverlay` export/import, and the Bitfocus Companion module.
 
-[Unreleased]: https://github.com/Ferrywell/ProVerlay/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Ferrywell/ProVerlay/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.8...v0.7.0
 [0.6.8]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.6...v0.6.7
