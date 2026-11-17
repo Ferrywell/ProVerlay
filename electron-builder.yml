@@ -28,9 +28,29 @@ mac:
       arch:
         - arm64
         - x64
-# Windows: prepared but not built yet (no CI job, no release asset)
+# Windows x64: NSIS installer, per-user by default (no admin rights needed).
+# `npm run dist:win` → dist/ProVerlay-win-x64-setup.exe. Unsigned unless the CSC_* /
+# WIN_CSC_* environment variables are set (see docs/RELEASING.md).
 win:
+  icon: build/icon.ico
+  executableName: ProVerlay
   target:
     - target: nsis
       arch:
         - x64
+nsis:
+  # Assisted installer: "Only for me" (default, %LOCALAPPDATA%\Programs\ProVerlay)
+  # or "Anyone who uses this computer" (asks for admin rights), changeable folder.
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: ProVerlay
+  runAfterFinish: true
+  # Projects live in the user-data folder (%APPDATA%), not in the install folder:
+  # an uninstall or update keeps them.
+  deleteAppDataOnUninstall: false
+  artifactName: ProVerlay-win-x64-setup.${ext}

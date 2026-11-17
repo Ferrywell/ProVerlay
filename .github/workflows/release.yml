@@ -1,10 +1,12 @@
 name: Release
 
-# Builds the Mac app (Apple Silicon + Intel) and publishes it as a GitHub release.
+# Builds the Mac app (Apple Silicon + Intel) and the Windows x64 installer and
+# publishes them as a GitHub release.
 #
 # - push of a tag vX.Y.Z      → build, verify, publish (create or update the release)
 # - workflow_dispatch (tag)    → rebuild an existing tag; dry_run builds without publishing
-# - pull_request (build files) → build + verify only; zips are kept as workflow artifacts
+# - pull_request (build files) → build + verify (+ Windows install smoke test) only;
+#                                the zips and the installer are kept as workflow artifacts
 #
 # See docs/RELEASING.md.
 
@@ -50,6 +52,7 @@ jobs:
       sha: ${{ steps.meta.outputs.sha }}
       publish: ${{ steps.meta.outputs.publish }}
       prerelease: ${{ steps.meta.outputs.prerelease }}
+      windows: ${{ steps.meta.outputs.windows }}
     steps:
       - name: Resolve tag
         id: tag
@@ -88,15 +91,20 @@ jobs:
           if [ -n "$TAG" ] && [ "$DRY_RUN" != "true" ]; then publish=true; fi
           prerelease=false
           if [[ "$version" == *-* ]]; then prerelease=true; fi
+          # Tags before the Windows build (v0.8.0 and older) have no dist:win script;
+          # rebuilding them skips the Windows job instead of failing the release.
+          windows=false
+          if [ -n "$(jq -r '.scripts["dist:win"] // empty' package.json)" ]; then windows=true; fi
           {
             echo "tag=${TAG:-v$version}"
             echo "version=$version"
             echo "sha=$(git rev-parse HEAD)"
             echo "publish=$publish"
             echo "prerelease=$prerelease"
+            echo "windows=$windows"
           } >> "$GITHUB_OUTPUT"
           echo "### ProVerlay v$version" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commit $(git rev-parse --short HEAD) · publish: $publish · prerelease: $prerelease" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit $(git rev-parse --short HEAD) · publish: $publish · prerelease: $prerelease · windows: $windows" >> "$GITHUB_STEP_SUMMARY"
 
   build:
     name: build (macOS arm64 + x64)
@@ -202,9 +210,136 @@ jobs:
           compression-level: 0
           retention-days: ${{ github.event_name == 'pull_request' && 5 || 14 }}
 
+  build-windows:
+    name: build (Windows x64)
+    needs: meta
+    if: needs.meta.outputs.windows == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      VERSION: ${{ needs.meta.outputs.version }}
+      # 'true'/'false' only — the secrets themselves are passed to the steps that use them.
+      HAS_PFX_SIGNING: ${{ secrets.WIN_CSC_LINK != '' && secrets.WIN_CSC_KEY_PASSWORD != '' }}
+      HAS_AZURE_SIGNING: ${{ secrets.AZURE_TENANT_ID != '' && secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_CLIENT_SECRET != '' && vars.AZURE_SIGNING_ENDPOINT != '' && vars.AZURE_SIGNING_ACCOUNT != '' && vars.AZURE_SIGNING_PROFILE != '' && vars.AZURE_SIGNING_PUBLISHER != '' }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.meta.outputs.sha }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Cache Electron downloads
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: electron-win-${{ hashFiles('package-lock.json') }}
+          restore-keys: electron-win-
+
+      # ── Windows code signing ───────────────────────────────────────────────
+      # Unsigned unless the secrets/variables in docs/RELEASING.md are configured.
+      # Never signs on pull requests. electron-builder signs ProVerlay.exe, the
+      # uninstaller and the installer itself.
+      - name: Resolve signing mode
+        id: signing
+        env:
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+        run: |
+          $mode = 'none'
+          if ($env:IS_PR -ne 'true') {
+            if ($env:HAS_AZURE_SIGNING -eq 'true') { $mode = 'azure' }
+            elseif ($env:HAS_PFX_SIGNING -eq 'true') { $mode = 'pfx' }
+          }
+          "mode=$mode" >> $env:GITHUB_OUTPUT
+          "Windows signing: $mode" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Build installer (unsigned)
+        if: steps.signing.outputs.mode == 'none'
+        run: npm run dist:win
+
+      - name: Build installer (signed with a certificate file)
+        if: steps.signing.outputs.mode == 'pfx'
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: npm run dist:win
+
+      - name: Build installer (signed with Azure Trusted Signing)
+        if: steps.signing.outputs.mode == 'azure'
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+          AZURE_SIGNING_PUBLISHER: ${{ vars.AZURE_SIGNING_PUBLISHER }}
+        # bash: PowerShell may swallow the `--` that hands the flags to electron-builder.
+        shell: bash
+        run: >-
+          npm run dist:win --
+          "-c.win.azureSignOptions.endpoint=$AZURE_SIGNING_ENDPOINT"
+          "-c.win.azureSignOptions.codeSigningAccountName=$AZURE_SIGNING_ACCOUNT"
+          "-c.win.azureSignOptions.certificateProfileName=$AZURE_SIGNING_PROFILE"
+          "-c.win.azureSignOptions.publisherName=$AZURE_SIGNING_PUBLISHER"
+      # ────────────────────────────────────────────────────────────────────────
+
+      - name: Verify installer
+        env:
+          REQUIRE_SIGNED: ${{ steps.signing.outputs.mode != 'none' }}
+        run: |
+          $verifyArgs = @('dist/ProVerlay-win-x64-setup.exe', '--version', $env:VERSION, '--app-dir', 'dist/win-unpacked')
+          if ($env:REQUIRE_SIGNED -eq 'true') { $verifyArgs += '--require-signed' }
+          node scripts/verify-win-installer.mjs @verifyArgs
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # ── Smoke test: install → run → uninstall on the runner ─────────────────
+      # scripts/smoke-test-win-installer.ps1 can be run by hand on any Windows PC.
+      - name: 'Smoke test: silent per-user install'
+        run: ./scripts/smoke-test-win-installer.ps1 -Phase install -Installer dist/ProVerlay-win-x64-setup.exe -Version $env:VERSION
+
+      - name: 'Smoke test: installed server (headless)'
+        run: ./scripts/smoke-test-win-installer.ps1 -Phase server -Version $env:VERSION
+
+      # Starting the full Electron app depends on the runner's desktop session, so a
+      # failure here is reported but does not fail the build.
+      - name: 'Smoke test: GUI app starts the server (non-blocking)'
+        continue-on-error: true
+        timeout-minutes: 5
+        run: ./scripts/smoke-test-win-installer.ps1 -Phase gui
+
+      - name: 'Smoke test: silent uninstall keeps user data'
+        run: ./scripts/smoke-test-win-installer.ps1 -Phase uninstall
+      # ────────────────────────────────────────────────────────────────────────
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ProVerlay-win-x64
+          path: dist/ProVerlay-win-x64-setup.exe
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: ${{ github.event_name == 'pull_request' && 5 || 14 }}
+
   assemble:
     name: checksums + release notes
-    needs: [meta, build]
+    needs: [meta, build, build-windows]
+    # build-windows is skipped (not failed) only for tags that predate it.
+    if: >-
+      !cancelled() && needs.build.result == 'success' &&
+      (needs.build-windows.result == 'success' ||
+       (needs.build-windows.result == 'skipped' && needs.meta.outputs.windows != 'true'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -218,14 +353,15 @@ jobs:
 
       - uses: actions/download-artifact@v7
         with:
-          pattern: ProVerlay-mac-*
+          pattern: ProVerlay-*
           path: release
           merge-multiple: true
 
       - name: Checksums
         working-directory: release
         run: |
-          sha256sum ProVerlay-mac-*.zip > SHA256SUMS.txt
+          shopt -s nullglob
+          sha256sum ProVerlay-mac-*.zip ProVerlay-win-*.exe > SHA256SUMS.txt
           cat SHA256SUMS.txt
           sha256sum --check SHA256SUMS.txt
 
@@ -259,7 +395,10 @@ jobs:
   publish:
     name: publish GitHub release
     needs: [meta, assemble]
-    if: needs.meta.outputs.publish == 'true'
+    # Explicit result check: a skipped build-windows (old tags) must not skip publishing.
+    if: >-
+      !cancelled() && needs.assemble.result == 'success' &&
+      needs.meta.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # The only job with write access. It runs no repository code: it downloads the
@@ -274,7 +413,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v7
         with:
-          pattern: ProVerlay-mac-*
+          pattern: ProVerlay-*
           path: release
           merge-multiple: true
 
@@ -287,7 +426,8 @@ jobs:
         run: |
           cp meta/SHA256SUMS.txt release/
           (cd release && sha256sum --check SHA256SUMS.txt)
-          assets=(release/ProVerlay-mac-*.zip release/SHA256SUMS.txt)
+          shopt -s nullglob
+          assets=(release/ProVerlay-mac-*.zip release/ProVerlay-win-*.exe release/SHA256SUMS.txt)
           if gh release view "$TAG" > /dev/null 2>&1; then
             echo "Release $TAG exists — replacing assets"
             gh release upload "$TAG" "${assets[@]}" --clobber
