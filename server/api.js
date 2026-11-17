@@ -71,6 +71,37 @@ export function wrapAsync(fn) {
   }
 }
 
+export const MULTIVIEWER_DOWNLOAD_URL = 'https://multiviewer.app'
+
+/**
+ * Open the MultiViewer desktop app on this machine (POST /api/system/open-multiviewer).
+ * Resolves to { ok: true, opened: true }, or to { ok: false, opened: false, url } with
+ * the download page when the app is not installed.
+ *
+ * Windows: `start multiviewer://` exits 0 even when nothing handles the protocol,
+ * so first check that the multiviewer: URL protocol is registered. HKCR merges the
+ * per-user (HKCU\Software\Classes) and machine-wide registrations; `reg query`
+ * exits non-zero when the key or its "URL Protocol" value is missing.
+ *
+ * `platform` and `exec` (execFile-style, promise-returning; no shell) are
+ * injectable for tests.
+ */
+export async function openMultiViewer({ platform = process.platform, exec = execFileAsync } = {}) {
+  try {
+    if (platform === 'darwin') {
+      await exec('open', ['-a', 'MultiViewer'])
+    } else if (platform === 'win32') {
+      await exec('reg', ['query', 'HKCR\\multiviewer', '/v', 'URL Protocol'], { windowsHide: true })
+      await exec('cmd', ['/c', 'start', '', 'multiviewer://'], { windowsHide: true })
+    } else {
+      await exec('xdg-open', ['multiviewer://'])
+    }
+    return { ok: true, opened: true }
+  } catch {
+    return { ok: false, opened: false, url: MULTIVIEWER_DOWNLOAD_URL }
+  }
+}
+
 function asyncRouter() {
   const router = express.Router()
   for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
@@ -392,21 +423,7 @@ export function createApiRouter({ getPort = () => Number(process.env.PORT || 201
 
   /** Try to open MultiViewer locally (macOS/Windows/Linux); otherwise return the download URL. */
   router.post('/system/open-multiviewer', async (_req, res) => {
-    const downloadUrl = 'https://multiviewer.app'
-    try {
-      if (process.platform === 'darwin') {
-        await execFileAsync('open', ['-a', 'MultiViewer'])
-      } else if (process.platform === 'win32') {
-        await execFileAsync('cmd', ['/c', 'start', '', 'multiviewer://'], {
-          windowsHide: true
-        })
-      } else {
-        await execFileAsync('xdg-open', ['multiviewer://'])
-      }
-      res.json({ ok: true, opened: true })
-    } catch {
-      res.json({ ok: false, opened: false, url: downloadUrl })
-    }
+    res.json(await openMultiViewer())
   })
 
   return router
