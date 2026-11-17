@@ -223,10 +223,17 @@ const STATE_KEY_TYPES = {
   brandId: 'string',
   brand: 'object',
   settings: 'object',
-  graphics: 'array'
+  graphics: 'array',
+  variables: 'object'
 }
 /** Runtime-only fields that clients may echo back; they are never stored. */
 const META_KEYS = new Set(['projectId', 'projectName', 'customCssVersion', 'serverNow'])
+/**
+ * Managed through /api/data-sources only (a linked file path or an allowed
+ * host must not be settable by any client on the network). Ignored in a
+ * PATCH /api/state body, so clients that echo the whole state keep working.
+ */
+const SERVER_MANAGED_KEYS = new Set(['dataSources', 'dataSettings', 'variableSource', 'sourceVariables'])
 
 /**
  * Validate and normalise a PATCH /api/state body. Returns the patch that
@@ -240,7 +247,7 @@ export function normalizeStatePatch(body, { knownTypes } = {}) {
   assertSafeKeys(body)
   const patch = {}
   for (const [key, value] of Object.entries(body)) {
-    if (META_KEYS.has(key)) continue
+    if (META_KEYS.has(key) || SERVER_MANAGED_KEYS.has(key)) continue
     if (key === 'colors') {
       if (!isPlainObject(value)) throw badRequest('colors: expected object')
       patch.brand = { ...(patch.brand || {}), colors: { ...(patch.brand?.colors || {}), ...value } }
@@ -256,6 +263,15 @@ export function normalizeStatePatch(body, { knownTypes } = {}) {
       patch.brand = deepMerge(patch.brand, value, 'brand')
     } else {
       patch[key] = value
+    }
+  }
+  if (patch.variables) {
+    const entries = Object.entries(patch.variables)
+    if (entries.length > 500) throw badRequest('variables: at most 500')
+    for (const [k, v] of entries) {
+      if (!/^[A-Za-z0-9_.-]{1,80}$/.test(k)) throw badRequest(`variables: "${k.slice(0, 40)}" is not a valid name`)
+      if (v !== null && typeof v === 'object') throw badRequest(`variables.${k}: expected text`)
+      patch.variables[k] = String(v ?? '').slice(0, 2000)
     }
   }
   if (patch.settings) {
@@ -293,10 +309,16 @@ export function validateProjectState(data) {
   if (out.graphics === undefined) out.graphics = []
   if (!Array.isArray(out.graphics)) throw badRequest('project.json: graphics must be an array')
   out.graphics.forEach((g, i) => validateGraphic(g, `graphics[${i}]`, { strictFields: false }))
-  for (const key of ['client', 'brand', 'settings']) {
+  for (const key of ['client', 'brand', 'settings', 'variables', 'sourceVariables', 'dataSettings']) {
     if (out[key] !== undefined && out[key] !== null && !isPlainObject(out[key])) {
       throw badRequest(`project.json: ${key} must be an object`)
     }
+  }
+  if (out.dataSources !== undefined && !Array.isArray(out.dataSources)) {
+    throw badRequest('project.json: dataSources must be an array')
+  }
+  if (out.variableSource !== undefined && out.variableSource !== null && !isPlainObject(out.variableSource)) {
+    throw badRequest('project.json: variableSource must be an object or null')
   }
   return out
 }

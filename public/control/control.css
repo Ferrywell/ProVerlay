@@ -928,3 +928,16 @@ code {
   min-width: 32px;
   padding-inline: 0.45rem;
 }
+
+/* Notice above Edit settings when the widget's list comes from a data source */
+.data-binding-notice {
+  margin: 0;
+  padding: var(--pv-space-sm) var(--pv-space-md);
+  font-size: 0.9rem;
+  border-left: 3px solid var(--pv-accent);
+}
+
+.data-binding-notice a {
+  margin-left: 0.35rem;
+  font-weight: 600;
+}

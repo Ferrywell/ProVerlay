@@ -30,6 +30,7 @@ import {
 } from '/public/shared/hockey-utils.js'
 import { reconnectAfterServerDisconnect } from '/public/shared/reconnect.js'
 import { activeImage, imageItems, imageSize, imageVariant } from '/public/shared/image-list.js'
+import { graphicUsesLiveVariables, resolveGraphicVariables, variableContext } from '/public/shared/variables.js'
 
 const stage = document.getElementById('stage')
 const layers = new Map()
@@ -1848,6 +1849,43 @@ function updateEmptyHint(visibleCount, graphics) {
   emptyHintEl.innerHTML = `<strong>${escape(title)}</strong><span>${escape(body)}</span>`
 }
 
+// ---------------------------------------------------------------------------
+// {{variables}} in text fields (public/shared/variables.js). Text is resolved
+// before the builders run, so every widget renders plain text as before.
+// {{time}}, {{date}} and {{clock}} change by themselves: a 1 s check rebuilds
+// only the layers whose resolved text changed. Tickers are left out of that
+// check (a rebuild restarts the scroll); they pick up new values with the
+// next state change.
+// ---------------------------------------------------------------------------
+
+let lastVariableState = null
+const liveResolved = new Map() // graphicId -> JSON of the resolved data last rendered
+
+function withVariables(state, graphics) {
+  const ctx = variableContext(state)
+  liveResolved.clear()
+  return asArray(graphics).map((g) => {
+    if (!isGraphicRecord(g)) return g
+    const resolved = resolveGraphicVariables(g, ctx)
+    if (resolved !== g && graphicUsesLiveVariables(g)) liveResolved.set(g.id, JSON.stringify(resolved.data))
+    return resolved
+  })
+}
+
+function refreshLiveVariables() {
+  if (!lastVariableState || !liveResolved.size) return
+  const ctx = variableContext(lastVariableState)
+  for (const g of asArray(lastVariableState.graphics)) {
+    if (!isGraphicRecord(g) || !liveResolved.has(g.id) || g.type === 'customTicker') continue
+    if (!layers.has(g.id) || removalTimers.has(g.id)) continue
+    const resolved = resolveGraphicVariables(g, ctx)
+    const json = JSON.stringify(resolved.data)
+    if (json === liveResolved.get(g.id)) continue
+    liveResolved.set(g.id, json)
+    guardGraphic(resolved, 'live variables', () => upsertLayer(resolved))
+  }
+}
+
 async function applyState(state) {
   if (!state || typeof state !== 'object') return
   try {
@@ -1871,7 +1909,8 @@ async function applyState(state) {
   // (fonts laden async; anders kan een oudere paint over een nieuwere heen).
   if (rev !== applyState._rev) return
   try {
-    syncGraphics(state.graphics)
+    lastVariableState = state
+    syncGraphics(withVariables(state, state.graphics))
   } finally {
     // Timers keep running whatever happened above (QA-110)
     ensureMatchClockTimer(state.graphics)
@@ -1880,6 +1919,7 @@ async function applyState(state) {
 
 initRenderCompat()
 setupPreviewWindow()
+setInterval(refreshLiveVariables, 1000)
 
 const socket = reconnectAfterServerDisconnect(io())
 socket.on('stateChanged', applyState)

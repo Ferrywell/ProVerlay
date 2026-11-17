@@ -174,6 +174,13 @@ and hockey scorebug at the top center, the stream countdown in the center, the t
 along the bottom, a message just above the ticker, lower thirds bottom left and the quiz
 on the left. You can change any of these in **Edit settings** or `/layout`.
 
+### Data from a spreadsheet
+
+Names, titles, ticker lines, quiz questions and image lists can come from a Google
+Sheet, a CSV or an Excel file, and text fields can use variables such as
+`{{event.title}}` or `{{home.score}}`. Open **Data** in the header. See
+[DATA-SOURCES.md](DATA-SOURCES.md).
+
 ### Custom CSS per project
 
 For a look the settings cannot give you (a client-specific scorebug, other corner radii,

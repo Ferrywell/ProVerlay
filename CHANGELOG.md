@@ -22,6 +22,18 @@ material. The entries below are reconstructed from that history; the tags
   transition; images are decoded before they go on air. Optional auto-hide and a
   carousel. PNG, WebP, JPEG, SVG and animated GIF/APNG; SVG files are served with a
   sandbox CSP.
+- **Data sources and variables** (#27): a Data page (`/data`) for Google Sheets
+  (polled, no login), CSV (`,` `;` tab, BOM, quoting) and Excel `.xlsx` files, uploaded
+  or linked on the ProVerlay computer (re-read on save). Each source shows its status
+  and a preview, is cached in the project for offline use and travels with an export.
+  A source can fill the lower-thirds roster, a ticker, a quiz or an image list (the
+  item on air stays on air when its row changes; optionally hold changes while on
+  air). `{{variables}}` in the text of messages, lower thirds, quiz and ticker:
+  project variables, variables from a key/value source, and built-ins (date, time,
+  scorebug teams, score, clock, period). Sheet links are fetched over https from
+  Google Sheets only unless other hosts are allowed on the ProVerlay computer, never
+  from private addresses, with a timeout and a 5 MB limit. New dependency:
+  `read-excel-file` (MIT) for `.xlsx`.
 - Companion module 1.1.0: *Image: show image*, *next / previous image* and *hide*
   actions, an *image on air* feedback, an `image_<id>_name` variable and presets.
 

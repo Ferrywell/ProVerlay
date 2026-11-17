@@ -26,6 +26,7 @@ and play them out to OBS or vMix through a browser source.
 | `/project` | Edit project: canvas, branding, assets | Desktop |
 | `/design` | Setup hub for custom designs | Desktop |
 | `/layout` | Overlay layout: free placement of widgets | Desktop |
+| `/data` | Data sources (Google Sheets, CSV, Excel) and `{{variables}}` | Desktop |
 | `/editor` | WYSIWYG scoreboard editor (PNG + text fields) | Desktop |
 | `/compose` | Import a design (PNG → widget), beta | Desktop |
 | `/render` | Output for OBS / vMix | Browser source |

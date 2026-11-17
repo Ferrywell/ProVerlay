@@ -58,6 +58,21 @@ import {
   stepImage,
   updateImage
 } from './imageWidget.js'
+import {
+  addLinkedFileSource,
+  addUploadedSource,
+  addUrlSource,
+  deleteSource,
+  getSourceTable,
+  listDataSources,
+  refreshSource,
+  replaceUploadedFile,
+  setAllowedHosts,
+  setGraphicBinding,
+  setVariableSource,
+  setVariables,
+  updateSource
+} from './dataSources.js'
 import { HttpError, badRequest, isPlainObject, isValidProjectId } from './validation.js'
 
 const execFileAsync = promisify(execFile)
@@ -137,6 +152,18 @@ function jsonBody(req) {
 function requireProjectId(id) {
   if (!isValidProjectId(id)) throw new HttpError(404, 'Project not found')
   return id
+}
+
+/** True when the request comes from the ProVerlay computer itself (loopback). */
+export function isLocalRequest(req) {
+  const addr = String(req.socket?.remoteAddress || '').replace(/^::ffff:/, '')
+  return addr === '127.0.0.1' || addr === '::1' || addr.startsWith('127.')
+}
+
+function requireLocal(req, what) {
+  if (!isLocalRequest(req)) {
+    throw new HttpError(403, `${what} can only be changed on the ProVerlay computer itself, not from another device`)
+  }
 }
 
 function requireGraphic(id) {
@@ -465,6 +492,86 @@ export function createApiRouter({ getPort = () => Number(process.env.PORT || 201
     const graphic = await showImage(req.params.id, req.params.imageId)
     if (!graphic) return res.status(404).json({ error: 'Image not found' })
     res.json(graphic)
+  })
+
+  /* --------------------------------------------------------- data sources */
+
+  router.get('/data-sources', (_req, res) => {
+    res.json(listDataSources())
+  })
+
+  /** Upload a CSV or Excel file as a new source (multipart `file`, optional `name`). */
+  router.post('/data-sources/upload', upload.single('file'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file received' })
+    const source = await addUploadedSource(req.file.originalname, req.file.buffer, req.body?.name)
+    res.status(201).json({ source, ...listDataSources() })
+  })
+
+  /** `{ url, name?, pollMs? }` (Google Sheet) or `{ path, name? }` (file on this computer). */
+  router.post('/data-sources', async (req, res) => {
+    const body = jsonBody(req)
+    let source
+    if (typeof body.path === 'string') {
+      requireLocal(req, 'Linked files')
+      source = await addLinkedFileSource(body.path, body.name)
+    } else if (typeof body.url === 'string') {
+      source = await addUrlSource(body.url, body.name, body.pollMs)
+    } else {
+      throw badRequest('Give a sheet link (url) or a file path (path)')
+    }
+    res.status(201).json({ source, ...listDataSources() })
+  })
+
+  router.patch('/data-sources/:id', async (req, res) => {
+    const source = await updateSource(req.params.id, jsonBody(req))
+    res.json({ source, ...listDataSources() })
+  })
+
+  router.delete('/data-sources/:id', async (req, res) => {
+    await deleteSource(req.params.id)
+    res.json(listDataSources())
+  })
+
+  router.post('/data-sources/:id/refresh', async (req, res) => {
+    const status = await refreshSource(req.params.id)
+    res.json({ status, ...listDataSources() })
+  })
+
+  /** New file for an uploaded source (multipart `file`). */
+  router.post('/data-sources/:id/file', upload.single('file'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file received' })
+    const status = await replaceUploadedFile(req.params.id, req.file.originalname, req.file.buffer)
+    res.json({ status, ...listDataSources() })
+  })
+
+  /** First rows of a source (preview). */
+  router.get('/data-sources/:id/rows', (req, res) => {
+    const table = getSourceTable(req.params.id)
+    if (!table) return res.status(404).json({ error: 'No data loaded for this source yet' })
+    const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 20))
+    res.json({ headers: table.headers, rows: table.rows.slice(0, limit), total: table.rows.length, fetchedAt: table.fetchedAt })
+  })
+
+  /** Allowed hosts for sheet links besides Google Sheets. */
+  router.put('/data-settings', async (req, res) => {
+    requireLocal(req, 'Allowed hosts')
+    const allowedHosts = await setAllowedHosts(jsonBody(req).allowedHosts)
+    res.json({ allowedHosts, ...listDataSources() })
+  })
+
+  /** Fill a widget's list from a source: `{ sourceId, columns }`, or `{ sourceId: null }` to unlink. */
+  router.put('/graphics/:id/data-binding', async (req, res) => {
+    res.json(await setGraphicBinding(req.params.id, jsonBody(req)))
+  })
+
+  /** Project variables (replaces the whole set): `{ variables: { key: value } }`. */
+  router.put('/variables', async (req, res) => {
+    res.json({ variables: await setVariables(jsonBody(req).variables) })
+  })
+
+  /** Variables from a source: `{ sourceId, keyColumn, valueColumn }`, or `{ sourceId: null }`. */
+  router.put('/variable-source', async (req, res) => {
+    res.json(await setVariableSource(jsonBody(req)))
   })
 
   /* ------------------------------------------------------------------ F1 */
