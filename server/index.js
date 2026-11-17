@@ -26,7 +26,7 @@ function printBanner(port) {
   console.log(`  Editor:    http://localhost:${port}/editor`)
   console.log(`  Render:    http://localhost:${port}/render`)
   console.log(`  Project:   ${getState().projectId}`)
-  console.log('  Netwerk (gebruik http, geen https):')
+  console.log('  Network (use http, not https):')
   for (const { url } of net.urls.lan.filter((u) => u.path === 'operator')) {
     console.log(`    Operator: ${url}`)
   }
