@@ -25,9 +25,9 @@
         </span>
       </a>
       <div class="header-meta">
-        <div id="connection-status" class="pill pill--sync is-connected" role="status">
-          <span class="status-dot"></span>
-          <span class="status-label">Live sync</span>
+        <div id="connection-status" class="pill pill--sync is-connecting" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span class="status-label">Connecting…</span>
         </div>
         <div class="header-meta__group">
           <a class="button button--secondary" href="/operator">Operator</a>
@@ -45,7 +45,7 @@
       <section class="glass panel panel--overlays">
         <div class="panel-head">
           <h2>Overlays</h2>
-          <p>Activate graphics for your stream. <strong>Go live</strong> shows on the combined Browser Source (<code>/render</code>). Use <strong>Solo source</strong> for a separate OBS/vMix layer (e.g. countdown) so you can position it in that program.</p>
+          <p><strong>Go live</strong> puts a graphic <strong>ON AIR</strong> on the combined Browser Source (<code>/render</code>). Use the <strong>Solo source</strong> toggle for a separate OBS/vMix layer (e.g. countdown) that you position in that program.</p>
         </div>
         <div class="overlay-toolbar">
           <label class="field field--inline">
@@ -499,7 +499,7 @@
 
         <section class="glass panel panel--note">
           <h3>Operator &amp; render</h3>
-          <p>Control match clock and score via <a href="/operator">operator</a> on mobile. Per overlay: click the <strong>link icon</strong> next to the name to copy the standalone render URL (<code>?graphic=…</code>). The header button copies <strong>All overlays (render)</strong> for one combined OBS source.</p>
+          <p>Control match clock and score via <a href="/operator">operator</a> on mobile. Per overlay: click the <strong>link icon</strong> next to the name to copy the standalone render URL (<code>?graphic=…</code>). The header button <strong>Combined render URL</strong> copies the one combined OBS source.</p>
         </section>
       </aside>
     </main>

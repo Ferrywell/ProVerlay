@@ -2,7 +2,7 @@
 <html lang="en" class="operate-root">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>ProVerlay — Operate</title>
     <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
@@ -32,9 +32,9 @@
     </header>
 
     <div class="pv-sync-bar">
-      <div class="pill pill--sync is-connected" id="connection-status" role="status">
-        <span class="status-dot"></span>
-        <span class="status-label">Live sync</span>
+      <div class="pill pill--sync is-connecting" id="connection-status" role="status" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-label">Connecting…</span>
       </div>
     </div>
 

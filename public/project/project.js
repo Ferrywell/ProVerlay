@@ -201,18 +201,31 @@ function fillBrandForm(state) {
   brandForm.secondary.value = hexFromColor(colors.secondary || '#5856d6')
   brandForm.text.value = hexFromColor(colors.text || '#1d1d1f')
   brandForm.background.value = hexFromColor(colors.background || '#ffffff')
-  if (brandPreset && state.brandId) brandPreset.value = state.brandId
+  if (brandPreset) brandPreset.value = state.brandId || ''
 }
 
 async function loadBrandPresets(state) {
   if (!brandPreset) return
   const res = await fetch('/api/brands')
   const brands = await res.json()
-  brandPreset.innerHTML = brands.map((b) => `<option value="${b.id}">${b.name}</option>`).join('')
-  if (state?.brandId) brandPreset.value = state.brandId
+  // Default is "None": a preset only applies when the user picks one.
+  brandPreset.innerHTML = [
+    '<option value="">None</option>',
+    ...brands.map((b) => `<option value="${escapeHtml(b.id)}">${escapeHtml(b.name)}</option>`)
+  ].join('')
+  brandPreset.value = state?.brandId || ''
+}
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
 }
 
 brandPreset?.addEventListener('change', async () => {
+  if (!brandPreset.value) return
   setStatus('Applying preset…')
   try {
     const res = await fetch(`/api/brands/${brandPreset.value}/apply`, { method: 'POST' })

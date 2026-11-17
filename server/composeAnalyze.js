@@ -108,7 +108,7 @@ export async function analyzeImageBuffer(buffer, { widgetType = 'matchScoreboard
     ocrAvailable: false,
     hint: regions.length
       ? null
-      : 'Automatische tekstdetectie volgt in een volgende update. Voeg velden handmatig toe of open daarna de editor.'
+      : 'Automatic text detection is not available yet. Add fields manually, or adjust them in the editor afterwards.'
   }
 }
 

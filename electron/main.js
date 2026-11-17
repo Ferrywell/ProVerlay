@@ -106,11 +106,11 @@ function createTray() {
   tray.setToolTip('ProVerlay')
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Dashboard openen', click: () => showDashboard() },
+      { label: 'Open Dashboard', click: () => showDashboard() },
       { label: 'Operator in browser', click: () => shell.openExternal(`${BASE_URL}/operator`) },
       { type: 'separator' },
       {
-        label: 'Render-URL kopiëren (OBS/vMix)',
+        label: 'Copy render URL (OBS/vMix)',
         click: () => clipboard.writeText(`${BASE_URL}/render`)
       },
       { type: 'separator' },
@@ -130,8 +130,8 @@ app.whenReady().then(async () => {
   const ok = await startServer()
   if (!ok) {
     dialog.showErrorBox(
-      'ProVerlay kon niet starten',
-      `De server reageert niet op poort ${PORT}. Controleer of een ander programma deze poort gebruikt.`
+      'ProVerlay could not start',
+      `The server is not responding on port ${PORT}. Check whether another program is using this port.`
     )
     app.quit()
     return
