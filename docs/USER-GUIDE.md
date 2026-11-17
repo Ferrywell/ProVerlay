@@ -6,7 +6,9 @@ adding widgets, getting them into OBS or vMix and controlling them from an iPad.
 - [1. First start](#1-first-start)
 - [2. The screens](#2-the-screens)
 - [3. Create a project](#3-create-a-project)
+- [Manage projects (rename, duplicate, delete)](#manage-projects-rename-duplicate-delete)
 - [4. Add widgets](#4-add-widgets)
+  - [Custom CSS per project](#custom-css-per-project)
 - [5. Connect OBS or vMix](#5-connect-obs-or-vmix)
 - [6. Go live](#6-go-live)
 - [7. Operator on iPad or iPhone](#7-operator-on-ipad-or-iphone)
@@ -78,6 +80,22 @@ A project holds everything for one show or client: widgets, branding and assets
 You can also just keep working in the default **New client** project; projects are
 only a way to keep shows apart.
 
+### Manage projects (rename, duplicate, delete)
+
+The **Projects** list at the top of the project page (`/project`, or **Edit client —
+branding & assets** in the dashboard) shows every project:
+
+- **Activate** switches the whole show (dashboard, operator, render) to that project.
+- **Rename** changes the display name. The project's id (its folder name) stays the
+  same, so URLs and Companion buttons keep working.
+- **Duplicate** copies the widgets, branding, assets and custom CSS into a new project,
+  e.g. to prepare next week's match from this week's. The copy is not activated.
+- **Delete** asks for confirmation and then moves the project folder to the `trash`
+  folder in the ProVerlay data directory instead of erasing it, so nothing is lost
+  if you delete the wrong project.
+  The **active** project and the **last** project cannot be deleted: activate another
+  project first.
+
 ## 4. Add widgets
 
 In the dashboard, choose a **Widget type** and click **Add widget**.
@@ -100,6 +118,48 @@ typography and so on. **Overlay layout** (`/layout`) lets you drag widgets to a 
 position on the canvas.
 
 For custom score strips, see [DESIGN-PNG-WORKFLOW.md](DESIGN-PNG-WORKFLOW.md).
+
+New widgets get a default position that does not collide with the others: match score
+and hockey scorebug at the top center, the stream countdown in the center, the ticker
+along the bottom, a message just above the ticker, lower thirds bottom left and the quiz
+on the left. You can change any of these in **Edit settings** or `/layout`.
+
+### Custom CSS per project
+
+For a look the settings cannot give you (a client-specific scorebug, other corner radii,
+a background plate), every project can have its own stylesheet. Open the project page
+(`/project`) and scroll to **Custom CSS**:
+
+1. Type or paste CSS in the editor and click **Save CSS** (or press ⌘S / Ctrl+S).
+2. Every open render (OBS, vMix, previews) picks up the change within a second; no
+   need to refresh the browser source.
+3. Leave the editor empty and save to remove the custom CSS again.
+
+Example: give the hockey clock a project asset as background (upload `plate.png` under
+**Assets** first):
+
+```css
+.hockey-clock {
+  background: url(assets/plate.png) center / cover !important;
+}
+.graphic--message .text {
+  border-radius: 0;
+  font-weight: 800;
+}
+```
+
+Good to know:
+
+- The stylesheet is loaded after ProVerlay's own CSS, so equal selectors win. Use
+  `!important` when a built-in rule is more specific.
+- **Class names and variables** under the editor lists the main class names
+  (`.graphic--<type>`, `.match-board`, `.hockey-clock`, …) and CSS variables
+  (`--primary`, `--brand-font`, …). Each overlay layer also carries
+  `data-id="<widget id>"` to target one specific widget.
+- Use `url(assets/<file>)` for project assets. `@import` is removed when you save.
+  Avoid links to websites so the overlay keeps working without internet.
+- The limit is 200 KB. Custom CSS is part of `.proverlay` exports and of **Duplicate**.
+- Custom CSS can change or hide anything on the render output; only use CSS you trust.
 
 ## 5. Connect OBS or vMix
 
@@ -151,7 +211,7 @@ graphics, scores, clocks, countdowns and speakers, plus automatic presets. See
 ## 9. Export and import projects
 
 Projects can move between computers as a single `.proverlay` file (a zip with the
-project settings and all its assets).
+project settings, its custom CSS and all its assets).
 
 - **Export:** activate the project, then **Project & network → Export**. The browser
   downloads `<project-name>.proverlay`.

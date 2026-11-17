@@ -55,9 +55,31 @@ project is loaded and served as "the state".
 }
 ```
 
-`GET /api/state` adds two runtime-only fields: `projectId` (active project)
-and `serverNow` (server clock in ms, used by clients to sync running clocks).
-They are never persisted.
+`GET /api/state` (and every `stateChanged`) adds runtime-only fields that are
+never persisted (clients may echo them back in a `PATCH /api/state`; they are
+ignored):
+
+- `projectId`: the active project's id
+- `projectName`: the active project's display name from the registry
+  (changes on rename)
+- `customCssVersion`: short hash of the active project's `custom.css`, `''`
+  when it has none (changes on every save; /render reloads the sheet)
+- `serverNow`: server clock in ms, used by clients to sync running clocks
+
+### Project folder
+
+```
+<dataDir>/
+  registry.json              { activeProjectId, projects: [{ id, name, createdAt, updatedAt }] }
+  projects/<id>/
+    project.json             the state (+ project.json.bak, previous save)
+    custom.css               optional per-project stylesheet (+ custom.css.bak)
+    assets/                  uploaded images and fonts
+  trash/<id>-<timestamp>/    deleted projects (moved, never hard-deleted)
+```
+
+The id is a slug fixed at creation; the display `name` lives in the registry
+and can be renamed freely.
 
 ### Graphic types
 
@@ -89,7 +111,24 @@ Every graphic has an optional top-level `transition` object that controls show/h
 
 ### Positions
 
-`bottom-left`, `bottom-center`, `bottom-full`, `top-left`, `top-center`, `top-right`
+`center`, `top-left`, `top-center`, `top-right`, `bottom-left`,
+`bottom-center`, `bottom-full`, and `custom` (free placement from
+`data.placementFree` `{ x, y }` in percent, set by the layout editor).
+
+Defaults for new widgets (`server/graphicDefaults.js`) are chosen so widgets
+that are live together do not overlap:
+
+| Type | Default |
+|------|---------|
+| `matchScoreboard`, `hockeyScorebug` | `top-center` (alternatives for one show) |
+| `streamCountdown` | `center` |
+| `customTicker` | `bottom-full` |
+| `message` | `custom` at x 50 %, y 82 % (bottom center, above the ticker) |
+| `lowerThird`, `lowerThirdShow` | `bottom-left` |
+| `quizShow` | `top-left` (the panel is placed by `data.panel`, left side) |
+| `f1Timing` | `custom` (left side) |
+
+Existing widgets keep their stored position.
 
 ## Routes (UI)
 
@@ -154,14 +193,39 @@ server (`<type-slug>-<8 hex>`).
 | GET | `/api/projects` | Registry entries with an `active` flag |
 | POST | `/api/projects` | `{ name, clientName? }` (strings) → new project (201) |
 | POST | `/api/projects/:id/activate` | Load + validate, then make active; returns `{ ...project, state }`. 404 unknown id, 422 damaged project (active project unchanged) |
-| GET | `/api/projects/active/export` | Download the active project as `.proverlay` (zip) |
+| PATCH | `/api/projects/:id` | `{ name }` → rename (display name only; the id and folder stay). Returns the entry. When it is the active project, a `stateChanged` with the new `projectName` goes out |
+| POST | `/api/projects/:id/duplicate` | `{ name? }` → copy `project.json`, assets and `custom.css` to a new, inactive project with a new unique id (201). Default name `"<name> copy"` |
+| DELETE | `/api/projects/:id` | Move the folder to `<dataDir>/trash/<id>-<timestamp>` and remove it from the registry. **409** for the active project or the last remaining project |
+| GET | `/api/projects/:id/custom-css` | `{ css, version, maxBytes }` |
+| PUT | `/api/projects/:id/custom-css` | `{ css }` → save (empty string removes it). `@import` statements are removed. Returns `{ version, bytes, removedImports, maxBytes }`. **413** above 200 KB |
+| GET | `/api/projects/active/export` | Download the active project as `.proverlay` (zip, includes `custom.css`) |
 | POST | `/api/projects/import` | multipart `file` (`.proverlay`) → new, inactive project (201) |
 | GET | `/api/projects/:id/assets` | List assets |
 | POST | `/api/projects/:id/assets` | multipart `file` → upload an asset |
 | POST | `/api/projects/:id/analyze-image` | multipart PNG/WebP → region analysis (compose) |
 | POST | `/api/projects/:id/compose-widget` | Create a widget from a composed PNG |
 | GET | `/projects/:id/assets/<file>` | Serve an asset (static) |
+| GET | `/projects/:id/custom.css` | Serve the project's custom CSS (`text/css`, `nosniff`, `no-cache`); 404 when it has none |
 
+All project routes return 404 for ids that are not a registered slug (no
+path traversal). Rename, duplicate, delete and custom CSS saves run in the
+write queue like every other write.
+
+### Custom CSS
+
+An optional per-project stylesheet (`projects/<id>/custom.css`, max 200 KB)
+for client-specific looks without forking the code. /render links it for the
+active project after the built-in stylesheets, as
+`/projects/<id>/custom.css?v=<customCssVersion>`, and swaps it when
+`customCssVersion` changes. Because it is served next to `assets/`, relative
+URLs such as `url(assets/plate.png)` resolve to the project's own assets.
+
+Custom CSS is **trusted local content**: it is written by the operator and
+can restyle (or hide) anything on the render output. The server only removes
+`@import` statements (also escaped spellings like `@\69mport`) on save and
+on import, so a stylesheet cannot pull in remote CSS. Remote `url()`
+references are not blocked; avoid them so overlays keep working offline.
+It is included in `.proverlay` exports and imports.
 Asset types (upload, import, serving): `png`, `jpg`, `jpeg`, `webp`, `gif`,
 `ttf`, `otf`, `woff`, `woff2`. SVG and HTML are refused because they can
 carry script. Uploads are capped at 25 MB.
@@ -225,7 +289,8 @@ Read-only. All writes use REST.
 
 | Event | Direction | Payload |
 |-------|-----------|---------|
-| `stateChanged` | server → client | full state, sent on connect and after every change |
+| `stateChanged` | server → client | full state, sent on connect and after every change (also on rename of the active project and on custom CSS saves) |
+| `projectsChanged` | server → client | project list (as `GET /api/projects`) after create, rename, duplicate, delete, import or activate |
 | `getState` | client → server | ack(state) |
 | `f1TimingUpdate` | server → client | `{ graphicId, rows, session, status }` |
 
@@ -288,6 +353,7 @@ Shape (v1.0):
 3. For each visible graphic: mount DOM layer at position
 4. On hide: play leave animation, remove layer
 5. Theme via CSS variables on `:root`
+6. Link the active project's `custom.css` last (when `customCssVersion` is set)
 
 ## Companion integration
 
