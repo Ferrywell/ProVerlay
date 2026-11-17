@@ -11,6 +11,11 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-17
+
+An Image widget for pre-designed graphics, data from Google Sheets, CSV and Excel with
+`{{variables}}` in text fields, and the F1 timing tower moved behind an experimental flag.
+
 ### Added
 
 - **Image widget** (#26) for graphics designed elsewhere: PNG lower thirds, logo bugs,
@@ -337,7 +342,8 @@ and a clean repository.
   operator, scoreboard editor, render page for OBS/vMix, project system with
   `.proverlay` export/import, and the Bitfocus Companion module.
 
-[Unreleased]: https://github.com/Ferrywell/ProVerlay/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Ferrywell/ProVerlay/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.8...v0.7.0
