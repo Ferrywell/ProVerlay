@@ -231,12 +231,39 @@
   --pv-shadow-group: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+/* color-scheme drives the native parts Chromium draws itself: scrollbars,
+   form controls and <select> popups. It follows the same choice as the
+   tokens: data-theme on <html> when set, the system setting otherwise. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+  }
+}
+
 :root[data-theme='light'] {
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
+}
+
+/* The popup list of a native <select> (Windows/Linux) is painted from the
+   option colours; without them it can stay white in the dark theme. */
+select option,
+select optgroup {
+  background-color: var(--pv-bg-solid);
+  color: var(--pv-text);
+}
+
+select option:disabled {
+  color: var(--pv-text-tertiary);
 }
 
 /* Embedded /render previews keep their transparent canvas in dark mode:
@@ -1391,8 +1418,13 @@ input[type='color']:focus-visible {
 }
 
 /* ---- Desktop app (Electron, hidden title bar) ---- */
-/* The app header is the window drag area. Only macOS draws the traffic
-   lights inside the page, so only there is space reserved on the left. */
+/* The app header is the window drag area.
+   - macOS draws the traffic lights inside the page: space on the left.
+   - Windows/Linux draw the caption buttons (minimise/maximise/close) over
+     the top-right of the page (titleBarOverlay, Window Controls Overlay):
+     space on the right. The width comes from env(titlebar-area-*), which is
+     0 when there is no overlay (e.g. a popup with a normal frame).
+     --pv-caption-inset can be set by hand to simulate it in a browser. */
 .is-electron .pv-app-header {
   -webkit-app-region: drag;
   user-select: none;
@@ -1402,6 +1434,14 @@ input[type='color']:focus-visible {
   padding-left: 84px;
 }
 
+.is-electron:not(.is-macos) {
+  --pv-caption-inset: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+}
+
+.is-electron:not(.is-macos) .pv-app-header {
+  padding-right: max(var(--pv-space-xl), calc(var(--pv-caption-inset) + var(--pv-space-md)));
+}
+
 .is-electron .pv-app-header a,
 .is-electron .pv-app-header button,
 .is-electron .pv-app-header select,
@@ -1409,6 +1449,13 @@ input[type='color']:focus-visible {
 .is-electron .pv-app-header label,
 .is-electron .pv-app-header .pill,
 .is-electron .pv-popover {
+  -webkit-app-region: no-drag;
+}
+
+/* While a header menu is open the header is not a drag area, so a click on
+   an empty part of it reaches the page and closes the menu
+   (app-header.js). */
+.is-electron.pv-popover-open .pv-app-header {
   -webkit-app-region: no-drag;
 }
 

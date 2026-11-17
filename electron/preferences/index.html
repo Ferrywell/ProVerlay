@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; form-action 'none'; base-uri 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Preferences</title>
+    <link rel="stylesheet" href="preferences.css" />
+  </head>
+  <body>
+    <form class="prefs" id="prefs-form" novalidate>
+      <div class="prefs__alert" id="prefs-alert" role="alert" hidden></div>
+
+      <section class="prefs__group" aria-labelledby="server-heading">
+        <h2 class="prefs__heading" id="server-heading">Server</h2>
+        <div class="prefs__row prefs__row--field">
+          <label class="prefs__label" for="port">Port</label>
+          <input
+            class="prefs__input"
+            id="port"
+            name="port"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="5"
+            aria-describedby="port-hint port-error"
+          />
+        </div>
+        <p class="prefs__error" id="port-error" hidden></p>
+        <p class="prefs__hint" id="port-hint">
+          OBS, vMix, Companion and devices on your network connect to this port. Default 2014.
+        </p>
+        <!-- Space reserved (visibility, not display) so Save does not move while typing. -->
+        <p class="prefs__hint prefs__hint--note is-invisible" id="port-change-note">
+          Saving restarts the server on the new port. Update the URL in OBS/vMix browser sources and the port in
+          Companion.
+        </p>
+      </section>
+
+      <section class="prefs__group" aria-labelledby="startup-heading">
+        <h2 class="prefs__heading" id="startup-heading">Startup</h2>
+        <label class="prefs__row prefs__row--check">
+          <input type="checkbox" id="open-dashboard" name="openDashboardOnStart" />
+          <span>Open the dashboard when ProVerlay starts</span>
+        </label>
+        <label class="prefs__row prefs__row--check">
+          <input type="checkbox" id="start-at-login" name="startAtLogin" aria-describedby="login-hint" />
+          <span>Start ProVerlay when you log in</span>
+        </label>
+        <p class="prefs__hint" id="login-hint" hidden></p>
+      </section>
+
+      <div class="prefs__actions">
+        <span class="prefs__status" id="prefs-status" role="status" aria-live="polite"></span>
+        <button type="button" class="prefs__button" id="cancel">Cancel</button>
+        <button type="submit" class="prefs__button prefs__button--primary" id="save">Save</button>
+      </div>
+    </form>
+    <script src="preferences.js"></script>
+  </body>
+</html>
