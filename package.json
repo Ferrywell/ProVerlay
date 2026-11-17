@@ -12,7 +12,9 @@
     "generate:seed": "node scripts/generate-seed-data.mjs",
     "dist:mac": "node scripts/generate-seed-data.mjs && electron-builder --mac dir --arm64 && node scripts/package-mac-app.mjs arm64",
     "dist:mac:x64": "node scripts/generate-seed-data.mjs && electron-builder --mac dir --x64 && node scripts/package-mac-app.mjs x64",
-    "changelog": "node scripts/changelog-section.mjs"
+    "changelog": "node scripts/changelog-section.mjs",
+    "dist:win": "node scripts/generate-seed-data.mjs && electron-builder --win nsis --x64 --publish never",
+    "icon:win": "node scripts/generate-win-icon.mjs"
   },
   "engines": {
     "node": ">=22"
@@ -27,7 +29,9 @@
   "devDependencies": {
     "ag-psd": "^30.1.1",
     "electron": "^42.4.0",
-    "electron-builder": "^26.15.2"
+    "electron-builder": "^26.15.2",
+    "png-to-ico": "^3.0.2",
+    "pngjs": "^7.0.0"
   },
   "author": "ProductionPro <hello@productionpro.nl> (https://productionpro.nl)",
   "license": "GPL-3.0-only",
