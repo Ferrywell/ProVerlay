@@ -79,7 +79,9 @@ The in-animation is staggered: P1 appears first, the rest follow shortly after
 the operator show a status dot — green when live timing is coming in, red when there
 is no data (with an error message) — plus a top-5 preview. There is also an
 **Open MultiViewer** button (starts the app locally via
-`POST /api/system/open-multiviewer`) and a dismissible setup tip reminding you that
+`POST /api/system/open-multiviewer`; when MultiViewer is not installed it offers the
+download page instead — on Windows ProVerlay checks that the `multiviewer://` protocol
+is registered before launching it) and a dismissible setup tip reminding you that
 **Live Timing** / **Replay Live Timing** must be on.
 
 Styling via `data.style` (`widthPx`, `rowHeightPx`, `rowGapPx`, `borderRadiusPx`,

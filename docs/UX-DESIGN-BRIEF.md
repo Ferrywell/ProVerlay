@@ -12,7 +12,9 @@ the dashboard, operator, editor or project pages.
   use a token so both themes work. `/render` has no theme.
 - Glass panels using `backdrop-filter` blur, with a solid fallback where blur is not
   supported.
-- System font stack: SF Pro on macOS, Segoe UI on Windows.
+- System font stack for the control UIs: SF Pro on macOS, Segoe UI on Windows. The
+  render output is different: it uses the project's brand font, by default the bundled
+  Inter, so overlays look the same on every machine.
 - One calm accent colour (`--pv-accent`).
 - Minimal: generous whitespace, little visual noise.
 - **Not** a dark broadcast-console look, and no template-SaaS dashboard patterns

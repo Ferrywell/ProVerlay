@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Live broadcast graphics for OBS and vMix.</strong><br>
-  Build overlays on your Mac, operate them from an iPad or Stream Deck, play them out through one browser source.
+  Build overlays on your Mac or PC, operate them from an iPad or Stream Deck, play them out through one browser source.
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://github.com/Ferrywell/ProVerlay/releases/latest"><img src="https://img.shields.io/github/v/release/Ferrywell/ProVerlay?label=release&color=378add" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-378add" alt="License: GPL-3.0"></a>
-  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%C2%B7%20Intel-1d1d1f?logo=apple" alt="macOS Apple Silicon and Intel">
+  <img src="https://img.shields.io/badge/platform-macOS%20%C2%B7%20Windows-1d1d1f" alt="macOS and Windows">
   <img src="https://img.shields.io/badge/output-OBS%20%C2%B7%20vMix-3b6d11" alt="OBS and vMix">
   <img src="https://img.shields.io/badge/Stream%20Deck-Companion-6e6e73" alt="Bitfocus Companion">
 </p>
@@ -51,8 +51,10 @@ runs on your own machine and network — no account, no cloud.
 - **F1 timing** from a running [MultiViewer](https://multiviewer.app) instance, or
   manual.
 - **REST API and Socket.io** for your own automation.
-- **Mac app** (Apple Silicon and Intel) with a menu-bar icon; or run the server from source on
-  any OS with Node.
+- **Desktop app** for macOS (Apple Silicon and Intel) and Windows (beta), with a
+  menu-bar/tray icon; or run the server from source on any OS with Node.
+- **Same output on every OS:** new projects use the bundled Inter font, so overlays look
+  identical in OBS and vMix on a Mac and on a PC.
 
 ## How it works
 
@@ -82,20 +84,43 @@ A Node server (Express + Socket.io) on port **2014** keeps the state of the acti
 project and pushes every change to all connected screens. On a phone or tablet, `/`
 opens the operator automatically.
 
-## Quick start — Mac app
+## Download
 
-1. **Download the latest release** from the
-   [releases page](https://github.com/Ferrywell/ProVerlay/releases):
-   `ProVerlay-mac-arm64.zip` for Apple Silicon (M1 and later) or
-   `ProVerlay-mac-x64.zip` for Intel Macs. `SHA256SUMS.txt` lets you check the
-   download (`shasum -a 256 -c --ignore-missing SHA256SUMS.txt`).
-2. Unzip and move `ProVerlay.app` to **Applications**.
-3. The first time: **right-click → Open → Open**. If macOS still refuses:
+From the [latest release](https://github.com/Ferrywell/ProVerlay/releases/latest):
+
+| Platform | File | Status |
+|----------|------|--------|
+| macOS, Apple Silicon (M1 and later) | [`ProVerlay-mac-arm64.zip`](https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip) | stable |
+| macOS, Intel | [`ProVerlay-mac-x64.zip`](https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-x64.zip) | stable |
+| Windows 10/11, x64 | [`ProVerlay-win-x64-setup.exe`](https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-win-x64-setup.exe) | **beta** — not yet tested on much real hardware |
+| Checksums | [`SHA256SUMS.txt`](https://github.com/Ferrywell/ProVerlay/releases/latest/download/SHA256SUMS.txt) | |
+
+Check a download with `shasum -a 256 -c --ignore-missing SHA256SUMS.txt` (macOS) or
+`Get-FileHash .\ProVerlay-win-x64-setup.exe -Algorithm SHA256` (Windows PowerShell).
+
+### Mac app
+
+1. Unzip and move `ProVerlay.app` to **Applications**.
+2. The first time: **right-click → Open → Open**. If macOS still refuses:
    `xattr -cr /Applications/ProVerlay.app` (the app is ad-hoc signed, not notarized).
 
 The dashboard opens in the app window; closing the window keeps the server running
-for OBS/vMix. Quit from the menu-bar icon or with Cmd+Q. More in
-[docs/APP.md](docs/APP.md).
+for OBS/vMix. Quit from the menu-bar icon or with Cmd+Q.
+
+### Windows app (beta)
+
+1. Run `ProVerlay-win-x64-setup.exe`. It is not code-signed yet, so SmartScreen shows
+   *"Windows protected your PC"*: click **More info → Run anyway**.
+2. Keep **Only for me** (no administrator rights needed).
+3. When Windows Defender Firewall asks, allow ProVerlay on **Private networks** so an
+   iPad or Stream Deck on your network can connect. OBS/vMix on the same PC work
+   either way.
+
+The dashboard opens in the app window and ProVerlay lives in the notification area
+(tray); click the icon to reopen the dashboard. Projects are kept in
+`%APPDATA%\ProVerlay\data`, also when you uninstall. Port problems, firewall and
+SmartScreen: [docs/USER-GUIDE.md](docs/USER-GUIDE.md#10-troubleshooting). More about
+both apps in [docs/APP.md](docs/APP.md).
 
 ## Quick start — from source
 
@@ -127,7 +152,7 @@ runs on another computer. Details, solo layers and troubleshooting:
 ## Operator on iPad
 
 Put the iPad on the **same Wi-Fi** as the computer running ProVerlay and open
-`http://<mac-ip>:2014/operator` (http, not https). The dashboard lists the right
+`http://<computer-ip>:2014/operator` (http, not https). The dashboard lists the right
 addresses under **Project & network → Network**.
 
 ## Companion (Stream Deck)
@@ -148,9 +173,11 @@ project on another machine. Imported projects are not activated until you click
 ## Platforms
 
 - **Server and browser UIs:** run anywhere Node 22 runs (macOS, Windows, Linux).
-- **Desktop app:** macOS on Apple Silicon and Intel. A Windows app is planned
-  (`electron-builder.yml` already has a Windows target) but is not built or tested
-  yet.
+- **Desktop app:** macOS on Apple Silicon and Intel; Windows 10/11 x64 as a per-user
+  installer. Windows is **beta** until it has been tested on more real hardware —
+  please report problems in the [issues](https://github.com/Ferrywell/ProVerlay/issues).
+- **Output:** OBS (macOS, Windows) and vMix (Windows). The render uses the bundled
+  Inter font by default, so the same project looks the same on every OS.
 
 ## Where your data lives
 
@@ -158,6 +185,7 @@ project on another machine. Imported projects are not activated until you click
 |----------------|----------|
 | From source | `data/` in the repository — created on first start, gitignored |
 | Mac app | `~/Library/Application Support/ProVerlay/data` |
+| Windows app | `%APPDATA%\ProVerlay\data` |
 | Custom | set `PROVERLAY_DATA_DIR` |
 
 New installs start with one blank project. Bundled brand presets live in
@@ -176,7 +204,7 @@ See [SECURITY.md](SECURITY.md) for details and how to report a vulnerability.
 |----------|----------|
 | [User guide](docs/USER-GUIDE.md) | First show, step by step, plus troubleshooting |
 | [OBS and vMix](docs/OBS-VMIX.md) | Browser input setup, transparency, performance |
-| [Desktop app](docs/APP.md) | Mac app, data folders, building the app |
+| [Desktop app](docs/APP.md) | Mac and Windows app, preferences, data folders, building the app |
 | [Companion](docs/COMPANION.md) | Stream Deck actions, feedbacks, presets |
 | [F1 timing](docs/F1-TIMING.md) | F1 tower with MultiViewer |
 | [Architecture](docs/ARCHITECTURE.md) | Server, state, API |
@@ -197,7 +225,7 @@ ProVerlay/
 ├── public/render/     # Output page for OBS/vMix
 ├── public/editor/     # Scoreboard editor
 ├── public/shared/     # Shared UI code and design tokens
-├── electron/          # Mac app shell
+├── electron/          # Desktop app shell (macOS, Windows)
 ├── companion/         # Bitfocus Companion module (MIT)
 ├── templates/brands/  # Bundled brand presets
 ├── docs/              # Documentation
@@ -221,3 +249,7 @@ WARRANTY. See [LICENSE](LICENSE) for the full text.
 
 The Companion module in [`companion/`](companion/) is licensed separately under the
 [MIT license](companion/LICENSE), as required for the Bitfocus module store.
+
+The bundled [Inter](https://github.com/rsms/inter) font in
+[`public/shared/fonts/`](public/shared/fonts/) is © The Inter Project Authors and
+licensed under the [SIL Open Font License 1.1](public/shared/fonts/OFL.txt).
