@@ -16,6 +16,7 @@ export const TYPE_LABELS = {
   lowerThirdShow: 'Lower thirds roster',
   quizShow: 'Quiz',
   message: 'Message',
+  image: 'Image',
   f1Timing: 'F1 timing tower',
 }
 
@@ -104,6 +105,8 @@ export function graphicsSignature(state) {
         item.push((Array.isArray(data.questions) ? data.questions : []).map((q) => [q?.id, q?.question || '']))
       } else if (g.type === 'customTicker') {
         item.push(tickerMessages(data).map((m) => [m.id, m.text]))
+      } else if (g.type === 'image') {
+        item.push(imageItems(g).map((img) => [img.id, img.name || img.src || '']))
       }
       return item
     }),
@@ -312,6 +315,16 @@ export function stepEntryId(entries, activeId, direction, { wrap = true } = {}) 
   return entries[next].id
 }
 
+/* ----------------------------------------------------------------- image */
+
+export function imageItems(graphic) {
+  return (Array.isArray(graphic?.data?.images) ? graphic.data.images : []).filter((img) => img && img.id)
+}
+
+export function imageLabel(img) {
+  return String(img?.name || img?.src || img?.id || '')
+}
+
 export function quizQuestions(graphic) {
   return (Array.isArray(graphic?.data?.questions) ? graphic.data.questions : []).filter((q) => q && q.id)
 }
@@ -359,6 +372,17 @@ export function questionChoices(state) {
     }
   }
   return choices.length ? choices : [{ id: '', label: 'No quiz questions in the active project' }]
+}
+
+export function imageChoices(state) {
+  const choices = []
+  for (const g of graphicsOf(state)) {
+    if (g.type !== 'image') continue
+    for (const img of imageItems(g)) {
+      choices.push({ id: joinRef(g.id, img.id), label: `${graphicLabel(g)}: ${truncate(imageLabel(img), 60)}` })
+    }
+  }
+  return choices.length ? choices : [{ id: '', label: 'No images in the active project' }]
 }
 
 export function tickerMessageChoices(state) {

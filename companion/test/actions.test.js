@@ -194,6 +194,22 @@ test('lower thirds: show, next, previous, hide', async () => {
   assert.deepEqual(await run(self, 'lower_third_hide', { graphic: IDS.roster }), [['hide', IDS.roster]])
 })
 
+test('image: show, next, previous, hide', async () => {
+  const self = fakeSelf()
+  assert.deepEqual(await run(self, 'image_show', { image: `${IDS.image}|img-1` }), [['showImage', IDS.image, 'img-1']])
+  assert.deepEqual(await run(self, 'image_step', { graphic: IDS.image, direction: 'next', wrap: true }), [
+    ['stepImage', IDS.image, 'next', true],
+  ])
+  assert.deepEqual(await run(self, 'image_step', { graphic: IDS.image, direction: 'previous', wrap: false }), [
+    ['stepImage', IDS.image, 'previous', false],
+  ])
+  assert.deepEqual(await run(self, 'image_hide', { graphic: IDS.image }), [['hide', IDS.image]])
+  // Wrong widget type or an empty list: no API call.
+  assert.deepEqual(await run(self, 'image_step', { graphic: IDS.roster, direction: 'next', wrap: true }), [])
+  self.state.graphics.find((g) => g.id === IDS.image).data.images = []
+  assert.deepEqual(await run(self, 'image_step', { graphic: IDS.image, direction: 'next', wrap: true }), [])
+})
+
 test('quiz: show question, reveal, toggle, hide', async () => {
   const self = fakeSelf()
   assert.deepEqual(await run(self, 'quiz_show', { question: `${IDS.quiz}|q-2` }), [

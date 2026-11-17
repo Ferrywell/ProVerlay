@@ -8,6 +8,7 @@ import {
 import { escapeHtml } from '/public/shared/operate-ui.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
+import { noteActiveProject } from '/public/shared/active-project.js'
 import { sharedSocket, wireConnectionState } from '/public/shared/connection.js'
 
 const root = document.getElementById('operator-root')
@@ -130,6 +131,7 @@ function render() {
 
 function applyState(state) {
   applyServerTimeFromState(state)
+  noteActiveProject(state)
   currentState = state
   render()
 }

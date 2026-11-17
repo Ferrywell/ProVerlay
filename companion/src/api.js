@@ -110,4 +110,14 @@ export class ProVerlayApi {
   showEntry(id, entryId) {
     return this.request('POST', `/api/graphics/${enc(id)}/entries/${enc(entryId)}/show`, {})
   }
+
+  /** Image widget: put one image on air. */
+  showImage(id, imageId) {
+    return this.request('POST', `/api/graphics/${enc(id)}/images/${enc(imageId)}/show`, {})
+  }
+
+  /** Image widget: next/previous image on air (computed on the server). */
+  stepImage(id, direction, wrap = true) {
+    return this.request('POST', `/api/graphics/${enc(id)}/images/step`, { direction, wrap })
+  }
 }

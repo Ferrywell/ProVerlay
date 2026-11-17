@@ -131,6 +131,6 @@ export function patchData(id, data) {
   return enqueue(id, () => patchGraphic(id, { data }))
 }
 
-export function postEndpoint(id, path, failureText) {
-  return postGraphic(id, path, {}, failureText)
+export function postEndpoint(id, path, failureText, body = {}) {
+  return postGraphic(id, path, body, failureText)
 }

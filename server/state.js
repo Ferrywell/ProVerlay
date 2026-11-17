@@ -22,6 +22,7 @@ import {
   normalizeTickerMessagesInput
 } from './tickerMessages.js'
 import { penaltiesFeatureEnabled } from '../public/shared/match-utils.js'
+import { migrateLegacyImages } from './imageMigration.js'
 import { enqueueWrite, writeJsonAtomic } from './writeQueue.js'
 import {
   HttpError,
@@ -54,6 +55,7 @@ function applyMigrations(data) {
   let migrated = migrateStateTickers(data)
   migrated = migrateGraphicsSolo(migrated)
   migrated = migratePenaltiesDisabled(migrated)
+  migrated = migrateLegacyImages(migrated)
   migrated = stripEphemeralFields(migrated)
   return migrated
 }

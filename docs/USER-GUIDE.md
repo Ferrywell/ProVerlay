@@ -141,6 +141,7 @@ In the dashboard, choose a **Widget type** and click **Add widget**.
 | Lower thirds | A roster of people; put one on air with a click |
 | Quiz | Multiple-choice question with answer reveal |
 | Message | A text message, e.g. for a break |
+| Image | Pre-designed graphics from a designer: PNG lower thirds, logos, sponsor boards, full-screen slides |
 
 Select a widget to see its **Live controls** (score, clock, texts) in the side panel.
 Use **Edit settings** on the widget for its configuration: position, transition,
@@ -148,6 +149,25 @@ typography and so on. **Overlay layout** (`/layout`) lets you drag widgets to a 
 position on the canvas.
 
 For custom score strips, see [DESIGN-PNG-WORKFLOW.md](DESIGN-PNG-WORKFLOW.md).
+
+### Image: pre-designed graphics
+
+Add an **Image** widget and open **Edit settings**. Drop your files on the drop zone (or
+choose several at once): PNG, WebP, JPEG, SVG and animated GIF/APNG work. The files are
+stored in the project, so they go along with an export. Reorder them with ↑ ↓.
+
+- **Placement:** *Free placement* uses the overlay position and a size (original, fit
+  canvas width, fit canvas, or a percentage of the canvas width). *Lower-third slot*
+  puts every image in the same spot at the bottom left. *Full screen* fills the canvas
+  (good for full-frame PNGs with transparency).
+- **Live controls:** tap a thumbnail to put it on air, tap it again to take it off.
+  **Next** / **Previous** step through the list. Switching while on air fades (or wipes,
+  see *Transition*) from one image to the next.
+- **Hide after** takes the image off air after a number of seconds. The **carousel**
+  rotates through the list while the widget is on air, e.g. for sponsor boards.
+
+Sizes follow the canvas size, so a 4K canvas shows 4K images: export your designs at the
+canvas resolution for the sharpest result.
 
 New widgets get a default position that does not collide with the others: match score
 and hockey scorebug at the top center, the stream countdown in the center, the ticker

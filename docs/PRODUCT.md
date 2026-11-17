@@ -62,6 +62,7 @@ on a phone or tablet redirects to `/operator`.
 | `streamCountdown` | Stream countdown | no | Countdown to the stream start |
 | `lowerThird` | Lower third (single) | no | One name/title lower third |
 | `message` | Message | no | Text message / break slide |
+| `image` | Image | yes | Pre-designed graphics (PNG lower thirds, logos, sponsor boards, full-screen slides): a list with one image on air, Next/Previous, optional auto-hide and carousel |
 
 "On operator" is set per widget type when the widget is created.
 

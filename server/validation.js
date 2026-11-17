@@ -5,7 +5,9 @@
  * graphics stays an array of objects with a stable id/type, containers never
  * flip between object and array, and prototype keys are never merged.
  */
+import nodePath from 'path'
 import { isTrustedHostname } from './netSecurity.js'
+import { IMAGE_FILE_RE, MAX_IMAGES } from '../public/shared/image-list.js'
 
 export class HttpError extends Error {
   constructor(status, message) {
@@ -116,6 +118,40 @@ const GRAPHIC_FIELD_TYPES = {
 
 const SCORE_TYPES = new Set(['matchScoreboard', 'hockeyScorebug'])
 
+/** A file name in the project's assets folder (no paths, image types only). */
+export function cleanImageSrc(value, where = 'src') {
+  const src = typeof value === 'string' ? value.trim() : ''
+  if (!src || nodePath.basename(src) !== src || src.startsWith('.') || !IMAGE_FILE_RE.test(src)) {
+    throw badRequest(`${where}: expected an image file name from the project assets (png, jpg, webp, gif, svg)`)
+  }
+  return src
+}
+
+/** Checks on a (partial) image widget data payload (PATCH /api/graphics/:id). */
+function validateImageData(data, where = 'data') {
+  if (data.images !== undefined) {
+    if (!Array.isArray(data.images)) throw badRequest(`${where}.images: expected an array`)
+    if (data.images.length > MAX_IMAGES) throw badRequest(`${where}.images: at most ${MAX_IMAGES} images`)
+    const ids = new Set()
+    data.images.forEach((img, i) => {
+      if (!img || typeof img !== 'object' || Array.isArray(img)) throw badRequest(`${where}.images[${i}]: expected an object`)
+      if (typeof img.id !== 'string' || !img.id) throw badRequest(`${where}.images[${i}].id: expected a non-empty string`)
+      if (ids.has(img.id)) throw badRequest(`${where}.images[${i}].id: duplicate id`)
+      ids.add(img.id)
+      cleanImageSrc(img.src, `${where}.images[${i}].src`)
+    })
+  }
+  if (data.activeImageId !== undefined && data.activeImageId !== null && typeof data.activeImageId !== 'string') {
+    throw badRequest(`${where}.activeImageId: expected a string or null`)
+  }
+  for (const key of ['autoHideMs']) {
+    const v = data[key]
+    if (v !== undefined && (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 3_600_000)) {
+      throw badRequest(`${where}.${key}: expected milliseconds between 0 and 3600000`)
+    }
+  }
+}
+
 /** Type-specific checks on a (partial) graphic.data payload. */
 function validateGraphicData(type, data, path = 'data') {
   if (!isPlainObject(data)) return
@@ -132,6 +168,7 @@ function validateGraphicData(type, data, path = 'data') {
   if (type === 'customTicker') expectType(data.messages, 'array', `${path}.messages`)
   if (type === 'lowerThirdShow') expectType(data.entries, 'array', `${path}.entries`)
   if (type === 'quizShow') expectType(data.questions, 'array', `${path}.questions`)
+  if (type === 'image') validateImageData(data, path)
   if (type === 'f1Timing') {
     expectType(data.drivers, 'array', `${path}.drivers`)
     expectType(data.multiviewer, 'object', `${path}.multiviewer`)

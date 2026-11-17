@@ -29,6 +29,7 @@ import {
   resolveLiveHockeyClock
 } from '/public/shared/hockey-utils.js'
 import { reconnectAfterServerDisconnect } from '/public/shared/reconnect.js'
+import { activeImage, imageItems, imageSize, imageVariant } from '/public/shared/image-list.js'
 
 const stage = document.getElementById('stage')
 const layers = new Map()
@@ -639,6 +640,11 @@ function mountGraphicRuntime(layer, graphic) {
   }
   if (graphic.type === 'clock') {
     startClock(inner.querySelector('.time'), graphic.data?.format)
+  }
+  if (graphic.type === 'image') {
+    // Remember the markup so later state updates only touch the image when it changed.
+    const img = inner.querySelector('.graphic-image')
+    if (img) img.dataset.html = buildImage(graphic.data)
   }
 }
 
@@ -1287,8 +1293,7 @@ function graphicHtml(graphic) {
     case 'quizShow':
       return buildQuizShow(d)
     case 'image':
-      if (!d.src) return ''
-      return `<img class="graphic-image" src="${assetUrl(d.src)}" alt="${escape(d.alt || '')}" />`
+      return buildImage(d)
     case 'message':
       return `<p class="text">${escape(textOf(d.text))}</p>`
     case 'customTicker':
@@ -1304,6 +1309,86 @@ function graphicHtml(graphic) {
     default:
       return `<span>${escape(textOf(graphic.name))}</span>`
   }
+}
+
+// ---------------------------------------------------------------------------
+// Image widget: a list of pre-designed graphics, one on air at a time.
+// Free placement at original size renders the same <img> as the old single
+// image widget. Switching images while on air crossfades (or wipes) in place.
+// ---------------------------------------------------------------------------
+
+function imageElementHtml(img, data) {
+  const { mode, percent } = imageSize(data)
+  const modeClass = mode === 'original' ? '' : ` graphic-image--${mode}`
+  const style = mode === 'percent' ? ` style="width:calc(var(--canvas-w, 1920px) * ${percent / 100})"` : ''
+  return `<img class="graphic-image${modeClass}" src="${assetUrl(img.src)}" alt="${escape(img.alt || '')}" data-image-id="${escape(img.id)}"${style} />`
+}
+
+function buildImage(data) {
+  const img = activeImage(data)
+  return img ? imageElementHtml(img, data) : ''
+}
+
+function updateImageLayer(inner, graphic, tr) {
+  const img = activeImage(graphic.data)
+  if (!img) return
+  const html = imageElementHtml(img, graphic.data)
+  const current = [...inner.querySelectorAll('.graphic-image')].find((el) => !el.classList.contains('is-leaving'))
+  if (current?.dataset.imageId === img.id) {
+    // Same picture: only refresh when its size/alt/file changed.
+    if (current.dataset.html !== html) {
+      inner.innerHTML = html
+      inner.firstElementChild.dataset.html = html
+    }
+    return
+  }
+  const template = document.createElement('template')
+  template.innerHTML = html.trim()
+  const next = template.content.firstElementChild
+  next.dataset.html = html
+  inner.querySelectorAll('.graphic-image.is-leaving').forEach((el) => el.remove())
+  if (!current || tr.in === 'cut') {
+    inner.replaceChildren(next)
+    return
+  }
+  const kind = tr.in === 'wipe' ? 'wipe' : 'fade'
+  next.style.setProperty('--tr-dur', `${tr.duration}ms`)
+  next.classList.add(`tr-in-${kind}`)
+  current.classList.add('is-leaving')
+  current.style.setProperty('--tr-dur', `${tr.duration}ms`)
+  if (kind === 'fade') current.classList.add('tr-out-fade')
+  inner.appendChild(next)
+  setTimeout(() => current.remove(), tr.duration + 60)
+}
+
+const imageLoads = new Map() // asset URL -> Promise (kept, so the browser keeps the decoded image)
+const IMAGE_DECODE_TIMEOUT_MS = 2500
+
+function loadImage(url) {
+  if (!imageLoads.has(url)) {
+    const img = new Image()
+    const done = new Promise((resolve) => {
+      img.onload = () => resolve(img)
+      img.onerror = () => resolve(null)
+    })
+    img.src = url
+    const decoded = done.then((loaded) => (loaded && loaded.decode ? loaded.decode().then(() => loaded, () => loaded) : loaded))
+    imageLoads.set(url, decoded)
+  }
+  return imageLoads.get(url)
+}
+
+async function preloadImagesForState(state) {
+  const urgent = []
+  for (const g of asArray(state?.graphics)) {
+    if (!g || g.type !== 'image') continue
+    for (const img of imageItems(g.data).slice(0, 100)) {
+      const pending = loadImage(assetUrl(img.src))
+      if (img.id === g.data?.activeImageId && canRenderGraphic(g)) urgent.push(pending)
+    }
+  }
+  if (!urgent.length) return
+  await Promise.race([Promise.all(urgent), new Promise((r) => setTimeout(r, IMAGE_DECODE_TIMEOUT_MS))])
 }
 
 const TRANSITION_DEFAULT_MS = 450
@@ -1352,6 +1437,12 @@ function updateLayerContent(layer, graphic) {
     updateHockeyScorebug(layer, graphic)
     return
   }
+  if (graphic.type === 'image' && inner.querySelector('.graphic-image')) {
+    applyLayerPosition(layer, graphic)
+    const tr = rememberTransition(layer, graphic)
+    updateImageLayer(inner, graphic, tr)
+    return
+  }
   // Build first: if the builder throws, the last good frame (and its timers)
   // stays on air instead of a half-torn-down layer.
   const html = graphicHtml(graphic)
@@ -1375,6 +1466,11 @@ function layerPositionClass(graphic) {
       graphic.type === 'composedScore') &&
     matchHasDesign(graphic.data)
   if (usesStage) return 'graphic-layer graphic-layer--stage'
+  if (graphic.type === 'image') {
+    const variant = imageVariant(graphic.data)
+    if (variant === 'fullScreen') return 'graphic-layer graphic-layer--stage'
+    if (variant === 'lowerThirdSlot') return 'graphic-layer pos-bottom-left graphic-layer--lt-slot'
+  }
   if (graphic.position === 'bottom-full') return 'graphic-layer graphic-layer--bottom'
   if (graphic.position === 'custom') return 'graphic-layer pos-custom'
   return `graphic-layer ${POSITION_CLASS[graphic.position] || 'pos-top-center'}`
@@ -1384,7 +1480,8 @@ function layerPositionClass(graphic) {
 // her-toepassen op bestaande lagen, niet alleen bij aanmaak.
 function applyLayerPosition(layer, graphic) {
   layer.className = layerPositionClass(graphic)
-  if (graphic.position === 'custom') {
+  const freePlacement = graphic.type !== 'image' || imageVariant(graphic.data) === 'free'
+  if (graphic.position === 'custom' && freePlacement) {
     const p = asObject(asObject(graphic.data).placementFree)
     layer.style.left = `${Number(p.x) || 50}%`
     layer.style.top = `${Number(p.y) || 50}%`
@@ -1493,7 +1590,7 @@ function isGraphicRecord(g) {
 function canRenderGraphic(graphic) {
   if (!graphicShown(graphic)) return false
   const data = asObject(graphic.data)
-  if (graphic.type === 'image' && !data.src) return false
+  if (graphic.type === 'image' && !activeImage(data)) return false
   if (graphic.type === 'lowerThirdShow') {
     const id = data.activeEntryId
     if (!id) return false
@@ -1767,6 +1864,9 @@ async function applyState(state) {
   } catch (err) {
     console.warn('[ProVerlay render] Project fonts unavailable, using fallbacks:', err)
   }
+  // Images that are about to go (or are) on air are decoded first, so a take
+  // never shows a half-loaded picture. The rest of each list loads in the background.
+  await preloadImagesForState(state)
   // Skip stale apply als er intussen een nieuwere stateChanged binnenkwam
   // (fonts laden async; anders kan een oudere paint over een nieuwere heen).
   if (rev !== applyState._rev) return

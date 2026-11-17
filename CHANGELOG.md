@@ -11,6 +11,25 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+### Added
+
+- **Image widget** (#26) for graphics designed elsewhere: PNG lower thirds, logo bugs,
+  sponsor boards, full-screen slides. One widget holds a list of images; upload several
+  at once (drag-and-drop), reorder, and put one on air with a tap or step through with
+  Next/Previous from the dashboard, the operator and Companion. Placement: free (position
+  presets or the layout editor, original size / fit width / fit canvas / percentage),
+  a lower-third slot, or full screen. Switching images crossfades with the widget's
+  transition; images are decoded before they go on air. Optional auto-hide and a
+  carousel. PNG, WebP, JPEG, SVG and animated GIF/APNG; SVG files are served with a
+  sandbox CSP.
+- Companion module 1.1.0: *Image: show image*, *next / previous image* and *hide*
+  actions, an *image on air* feedback, an `image_<id>_name` variable and presets.
+
+### Changed
+
+- Old single-image widgets (`{ src, alt }`) are migrated on load to the new Image widget
+  with that one image on air; they render exactly as before.
+
 ## [0.9.0] - 2026-11-17
 
 First Windows release (beta), the same overlay output on every OS, and fixes from a
