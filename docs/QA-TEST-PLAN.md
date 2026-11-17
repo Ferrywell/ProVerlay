@@ -8,12 +8,12 @@ real browsers, OBS/vMix and touch devices.
 
 | Item | Value |
 |------|-------|
-| Start | `npm ci && npm start` (or the Mac app) |
+| Start | `npm ci && npm start` (or the Mac or Windows app) |
 | Dashboard | http://localhost:2014/control |
 | Operator | http://localhost:2014/operator |
 | Render | http://localhost:2014/render |
 | API | http://localhost:2014/api/state |
-| Data | `data/` (from source) or `~/Library/Application Support/ProVerlay/data` (Mac app) |
+| Data | `data/` (from source), `~/Library/Application Support/ProVerlay/data` (Mac app) or `%APPDATA%\ProVerlay\data` (Windows app) |
 
 Tip: use a throwaway data folder so you start from a blank project:
 `PROVERLAY_DATA_DIR=$(mktemp -d) npm start`.
@@ -79,8 +79,26 @@ curl -i -X POST http://localhost:2014/api/graphics/does-not-exist/toggle
 - [ ] OBS Browser Source, 1920×1080: graphics over video, transparent background
 - [ ] vMix Web Browser input, 1920×1080: transparent, no scrollbars
 - [ ] A solo URL on a separate input positions independently
+- [ ] A new project renders in Inter: the same line breaks and widths in OBS on macOS
+      and in OBS/vMix on Windows (compare screenshots of the same project)
 
 See [OBS-VMIX.md](OBS-VMIX.md).
+
+### Windows app (beta)
+
+- [ ] `ProVerlay-win-x64-setup.exe`: SmartScreen *More info → Run anyway*, install
+      *Only for me* without admin rights; Start menu and desktop shortcuts work
+- [ ] First start: firewall notice, then the Windows Defender Firewall prompt; allow
+      *Private networks*; an iPad on the same network opens `/operator`
+- [ ] Tray icon: click opens the dashboard, menu copies the render URL, quit stops the
+      server
+- [ ] Preferences: change the port, the server restarts on it; *Start ProVerlay when
+      you log in* survives a sign-out
+- [ ] Port taken or inside `netsh interface ipv4 show excludedportrange protocol=tcp`:
+      clear error with a way to choose another port
+- [ ] Uninstall keeps `%APPDATA%\ProVerlay\data`; reinstall shows the same projects
+- [ ] F1 widget → **Open MultiViewer** without MultiViewer installed offers the download
+      link; with MultiViewer installed it opens the app
 
 ## 8. Persistence and projects (P1)
 

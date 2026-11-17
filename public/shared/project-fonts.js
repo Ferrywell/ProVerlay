@@ -1,3 +1,33 @@
+/**
+ * Default brand font for new projects: Inter, bundled under /public/shared/fonts/
+ * so overlays render the same in OBS and vMix on macOS and Windows.
+ * Keep in sync with BLANK_PROJECT in server/projectSeed.js.
+ */
+export const DEFAULT_BRAND_FONT = "'Inter', system-ui, sans-serif"
+
+/** Previous default: the OS UI font (SF Pro on a Mac, Segoe UI or Arial on Windows). */
+export const SYSTEM_BRAND_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif"
+
+const BUNDLED_FONTS_HREF = '/public/shared/fonts/inter.css'
+
+/**
+ * Make sure the bundled Inter @font-face is available on this page (idempotent).
+ * /render and /editor link it in their HTML; other pages that preview brand
+ * text (dashboard ticker/countdown previews) get it from here.
+ */
+export function ensureBundledFonts() {
+  if (typeof document === 'undefined') return
+  const existing = [...document.querySelectorAll('link[rel="stylesheet"]')].some((l) =>
+    (l.getAttribute('href') || '').startsWith(BUNDLED_FONTS_HREF)
+  )
+  if (existing) return
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = BUNDLED_FONTS_HREF
+  link.dataset.pvBundledFonts = ''
+  document.head.prepend(link)
+}
+
 export function fontFamilyFromFilename(filename = '') {
   return filename.replace(/\.(ttf|otf|woff2?)$/i, '').replace(/[-_]+/g, ' ').trim()
 }
@@ -89,6 +119,7 @@ export async function fetchProjectFontAssets(projectId) {
 }
 
 export function injectProjectFontFaces(fonts = [], brand = {}) {
+  ensureBundledFonts()
   const styleId = 'project-font-faces'
   let style = document.getElementById(styleId)
   if (!style) {
@@ -132,10 +163,14 @@ export function projectFontOptions(fonts = [], { includeBrand = true, brandFamil
     seen.add(brandFamily)
   }
 
-  options.push({
-    value: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-    label: 'System (SF Pro)'
-  })
+  for (const option of [
+    { value: DEFAULT_BRAND_FONT, label: 'Inter (bundled)' },
+    { value: SYSTEM_BRAND_FONT, label: 'System font (differs per OS)' }
+  ]) {
+    if (seen.has(option.value)) continue
+    seen.add(option.value)
+    options.push(option)
+  }
 
   for (const font of fonts) {
     const meta = resolveFontFaceMeta(font.filename, font.url)
@@ -157,6 +192,7 @@ export function fillFontSelect(select, options, selected = '') {
 }
 
 export function injectBrandFontFace(brand = {}) {
+  ensureBundledFonts()
   const styleId = 'brand-font-face'
   let style = document.getElementById(styleId)
   if (!brand.fontUrl?.match(/\.(ttf|otf|woff2?)$/i)) {
@@ -178,5 +214,5 @@ export function injectBrandFontFace(brand = {}) {
 export function resolveElementFontFamily(el, brandFamily = '') {
   if (el?.fontFamily?.trim()) return resolveRenderFontFamily(el.fontFamily.trim())
   if (brandFamily?.trim()) return brandFamily.trim()
-  return "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif"
+  return DEFAULT_BRAND_FONT
 }

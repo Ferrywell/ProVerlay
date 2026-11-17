@@ -1,7 +1,7 @@
 {
   "id": "demo-club",
   "name": "Demo Club",
-  "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
+  "fontFamily": "'Inter', system-ui, sans-serif",
   "fontUrl": "",
   "colors": {
     "primary": "#007AFF",

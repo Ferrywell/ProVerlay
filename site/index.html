@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ProVerlay — live broadcast graphics voor OBS en vMix</title>
-<meta name="description" content="ProVerlay is een lokale graphics-server voor live producties: bouw overlays op je Mac, bedien ze vanaf iPad of Stream Deck en speel ze uit via één Browser Source in OBS of vMix.">
+<meta name="description" content="ProVerlay is een lokale graphics-server voor live producties: bouw overlays op je Mac of Windows-pc, bedien ze vanaf iPad of Stream Deck en speel ze uit via één Browser Source in OBS of vMix.">
 <meta property="og:title" content="ProVerlay — live broadcast graphics">
 <meta property="og:description" content="Scorebugs, tickers, lower thirds en timing towers. Bedienen vanaf iPad of Stream Deck, uitspelen in OBS of vMix.">
 <meta property="og:image" content="https://ferrywell.github.io/ProVerlay/assets/screen-dashboard.webp">
@@ -96,6 +96,7 @@ h1 .soft{color:var(--text-3)}
 .lede{max-width:680px;margin:0 auto;color:var(--text-2);font-size:clamp(17px,2vw,20px)}
 .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:30px 0 18px}
 .intel-link{margin:-6px 0 18px;font-size:14px;color:var(--text-2)}
+@media (max-width:600px){#hero-cta .btn{width:100%;justify-content:center}}
 .checks{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;color:var(--text-2);font-size:14px;list-style:none;padding:0;margin:0}
 .checks li::before{content:"✓";color:var(--live);font-weight:700;margin-right:7px}
 
@@ -290,6 +291,11 @@ pre .s{color:#a5d6a7}
 .install .card{padding:24px}
 .install .n{font:700 13px var(--mono);color:var(--accent)}
 .install p{color:var(--text-2);margin:6px 0 0;font-size:15.5px}
+.install ol{color:var(--text-2);margin:6px 0 0;padding-left:1.2em;font-size:15.5px;display:grid;gap:6px}
+.install ol li::marker{color:var(--text-3);font:600 13px var(--mono)}
+.badge{display:inline-block;vertical-align:2px;margin-left:6px;font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-tint);padding:4px 6px;border-radius:6px}
+.btn .badge{margin-left:0;vertical-align:1px}
+.btn-primary .badge{color:#fff;background:rgba(255,255,255,.22)}
 .notes{display:grid;gap:12px;margin-top:18px}
 .note{padding:16px 20px;border-radius:14px;border:1px solid var(--line);background:var(--bg-2);color:var(--text-2);font-size:15px}
 .note b{color:var(--text)}
@@ -340,7 +346,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <a class="icon-btn" href="https://github.com/Ferrywell/ProVerlay" aria-label="ProVerlay op GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
       </a>
-      <a class="btn btn-primary" href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">Download</a>
+      <a class="btn btn-primary" data-dl href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">Download</a>
     </div>
   </div>
 </nav>
@@ -348,17 +354,20 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 <main id="top">
 <header class="hero">
   <div class="wrap">
-    <span class="pill"><span class="dot"></span>v0.8.0 · open source · Mac-app voor Apple Silicon en Intel</span>
+    <span class="pill"><span class="dot"></span>open source · Mac en nu ook Windows (beta)</span>
     <h1>Graphics live.<br><span class="soft">Binnen 30 seconden.</span></h1>
-    <p class="lede">ProVerlay is een lokale graphics-server voor live producties. Bouw je overlays op de Mac, bedien ze vanaf iPad of Stream Deck en speel ze uit via één Browser Source in OBS of vMix.</p>
-    <div class="cta">
-      <a class="btn btn-primary btn-lg" href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">
+    <p class="lede">ProVerlay is een lokale graphics-server voor live producties. Bouw je overlays op je Mac of Windows-pc, bedien ze vanaf iPad of Stream Deck en speel ze uit via één Browser Source in OBS of vMix.</p>
+    <div class="cta" id="hero-cta">
+      <a class="btn btn-primary btn-lg" data-os="mac" href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></svg>
         <span>Download voor Mac<small>Apple Silicon · ProVerlay-mac-arm64.zip</small></span>
       </a>
-      <a class="btn btn-ghost btn-lg" href="https://github.com/Ferrywell/ProVerlay">Bekijk op GitHub</a>
+      <a class="btn btn-ghost btn-lg" data-os="win" href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-win-x64-setup.exe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></svg>
+        <span>Download voor Windows <span class="badge">beta</span><small>Windows 10/11 · ProVerlay-win-x64-setup.exe</small></span>
+      </a>
     </div>
-    <p class="intel-link">Mac met Intel-processor? <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-x64.zip">Download de Intel-versie</a></p>
+    <p class="intel-link">Mac met Intel-processor? <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-x64.zip">Download de Intel-versie</a> · Of <a href="https://github.com/Ferrywell/ProVerlay">bekijk de code op GitHub</a></p>
     <ul class="checks">
       <li>Werkt in OBS en vMix</li>
       <li>Bediening vanaf iPad of iPhone</li>
@@ -610,25 +619,37 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   <div class="wrap">
     <p class="eyebrow">Installeren</p>
     <h2>In een minuut draaien.</h2>
-    <p class="sub">De Mac-app bevat de server, alle schermen en een leeg startproject. Er is een versie voor Apple Silicon en een voor Intel-Macs.</p>
+    <p class="sub">De app bevat de server, alle schermen en een leeg startproject. Voor de Mac is er een versie voor Apple Silicon en een voor Intel; voor Windows een installer (beta).</p>
     <div class="install">
-      <div class="card"><span class="n">01</span><h3>Downloaden</h3><p>Haal <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">ProVerlay-mac-arm64.zip</a> (Apple Silicon) of <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-x64.zip">ProVerlay-mac-x64.zip</a> (Intel) uit de laatste release, pak hem uit en sleep <code>ProVerlay.app</code> naar Programma's.</p></div>
-      <div class="card"><span class="n">02</span><h3>Eerste keer openen</h3><p>De app is niet door Apple genotariseerd. Klik daarom met rechts op de app, kies <b>Open</b> en bevestig met <b>Open</b>.</p></div>
-      <div class="card"><span class="n">03</span><h3>Koppelen</h3><p>Voeg de render toe in OBS of vMix en open het operator-adres op je iPad. Het dashboard toont de juiste netwerkadressen.</p></div>
+      <div class="card" id="install-mac"><span class="n">MAC</span><h3>Mac-app</h3>
+        <ol>
+          <li>Haal <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">ProVerlay-mac-arm64.zip</a> (Apple Silicon) of <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-x64.zip">ProVerlay-mac-x64.zip</a> (Intel), pak hem uit en sleep <code>ProVerlay.app</code> naar Programma's.</li>
+          <li>De app is niet door Apple genotariseerd: klik de eerste keer met rechts op de app, kies <b>Open</b> en bevestig met <b>Open</b>.</li>
+        </ol>
+      </div>
+      <div class="card" id="install-windows"><span class="n">WINDOWS</span><h3>Windows-app <span class="badge">beta</span></h3>
+        <ol>
+          <li>Haal <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-win-x64-setup.exe">ProVerlay-win-x64-setup.exe</a> (Windows 10/11, 64-bit) en start hem.</li>
+          <li>De installer is nog niet ondertekend. Zegt SmartScreen dat Windows je pc heeft beschermd, klik dan <b>Meer informatie</b> → <b>Toch uitvoeren</b>.</li>
+          <li>Installeer alleen voor jezelf (standaard, geen beheerdersrechten nodig). Vraagt de Windows Firewall om toegang, sta dan <b>particuliere netwerken</b> toe.</li>
+        </ol>
+      </div>
+      <div class="card"><span class="n">DAN</span><h3>Koppelen</h3><p>Voeg de render toe in OBS of vMix en open het operator-adres op je iPad. Het dashboard toont de juiste netwerkadressen.</p></div>
     </div>
     <div class="table-wrap">
       <table class="urls">
         <thead><tr><th>Scherm</th><th>Adres</th><th>Voor</th></tr></thead>
         <tbody>
-          <tr><td><b>Dashboard</b></td><td><code>http://localhost:2014/control</code></td><td>Mac: project, widgets, instellingen</td></tr>
-          <tr><td><b>Operator</b></td><td><code>http://&lt;mac-ip&gt;:2014/operator</code></td><td>iPad of iPhone op hetzelfde netwerk</td></tr>
-          <tr><td><b>Render</b></td><td><code>http://localhost:2014/render</code></td><td>OBS Browser Source / vMix Web Browser</td></tr>
+          <tr><td><b>Dashboard</b></td><td><code>http://localhost:2014/control</code></td><td>Mac of pc: project, widgets, instellingen</td></tr>
+          <tr><td><b>Operator</b></td><td><code>http://&lt;ip-van-je-computer&gt;:2014/operator</code></td><td>iPad of iPhone op hetzelfde netwerk</td></tr>
+          <tr><td><b>Render</b></td><td><code>http://127.0.0.1:2014/render</code></td><td>OBS Browser Source / vMix Web Browser</td></tr>
         </tbody>
       </table>
     </div>
     <div class="notes">
       <div class="note"><b>Geblokkeerd door macOS?</b> Voer in Terminal <code>xattr -cr /Applications/ProVerlay.app</code> uit en open de app opnieuw.</div>
-      <div class="note"><b>Je data</b> staat in <code>~/Library/Application Support/ProVerlay/data</code>. Verwijder je de app, dan blijven je projecten daar bewaard.</div>
+      <div class="note"><b>Windows is in beta.</b> De Windows-app is nog weinig op echte hardware getest. Loop je ergens tegenaan? Meld het via <a href="https://github.com/Ferrywell/ProVerlay/issues">GitHub Issues</a>.</div>
+      <div class="note"><b>Je data</b> staat op de Mac in <code>~/Library/Application Support/ProVerlay/data</code> en op Windows in <code>%APPDATA%\ProVerlay\data</code>. Verwijder je de app, dan blijven je projecten daar bewaard.</div>
     </div>
     <div class="card" style="padding:24px;margin-top:18px">
       <h3>Vanaf de broncode</h3>
@@ -646,11 +667,11 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <p class="eyebrow">FAQ</p>
     <h2>Vragen &amp; troubleshooting</h2>
     <details><summary>Ik zie een witte achtergrond in vMix of OBS.</summary><p>Controleer dat je de <code>/render</code>-URL laadt en niet <code>/control</code>. Zet in vMix geen achtergrondkleur op de input en gebruik 1920×1080. De render-pagina zelf is altijd transparant.</p></details>
-    <details><summary>De iPad kan de operator niet openen.</summary><p>Mac en iPad moeten op hetzelfde netwerk zitten. Gebruik het <code>http://</code>-adres met het IP van je Mac dat het dashboard toont (geen https). Sta inkomende verbindingen toe als de macOS-firewall erom vraagt.</p></details>
-    <details><summary>Poort 2014 is al in gebruik.</summary><p>Er draait waarschijnlijk al een ProVerlay-instantie. Sluit die af, of start de server vanaf de broncode op een andere poort met de omgevingsvariabele <code>PORT</code>.</p></details>
+    <details><summary>De iPad kan de operator niet openen.</summary><p>Computer en iPad moeten op hetzelfde netwerk zitten. Gebruik het <code>http://</code>-adres met het IP van je computer dat het dashboard toont (geen https). Sta inkomende verbindingen toe als de macOS-firewall erom vraagt. Op Windows sta je ProVerlay toe op <b>particuliere netwerken</b> en zet je het netwerk zelf op <i>Privé</i>; heb je de vraag weggeklikt, ga dan naar <i>Windows-beveiliging → Firewall- en netwerkbeveiliging → Een app toestaan via firewall</i>.</p></details>
+    <details><summary>Poort 2014 is al in gebruik.</summary><p>Er draait waarschijnlijk al een ProVerlay-instantie. Sluit die af, of kies in de app een andere poort via <b>Voorkeuren</b> (vanaf de broncode: de omgevingsvariabele <code>PORT</code>). Op Windows met Hyper-V, WSL of Docker kan Windows de poort ook zelf gereserveerd hebben; <code>netsh interface ipv4 show excludedportrange protocol=tcp</code> toont welke poorten bezet zijn.</p></details>
     <details><summary>Eén render voor alles, of een bron per graphic?</summary><p>Gebruik waar het kan één gecombineerde <code>/render</code>: dat kost het minste geheugen. Wil je een graphic los positioneren of op een eigen laag zetten, kopieer dan de solo-URL via het link-icoon op de kaart (<code>/render?graphic=…</code>).</p></details>
-    <details><summary>Werkt ProVerlay op Windows?</summary><p>De server en alle schermen draaien op elk systeem met Node.js, dus ook op Windows via <code>npm start</code>. De kant-en-klare app is er nu voor Macs met Apple Silicon en Intel; een Windows-app staat op de roadmap.</p></details>
-    <details><summary>Heb ik internet nodig tijdens de show?</summary><p>Nee. Alles draait lokaal op je Mac en je eigen netwerk. Alleen de F1 timing tower in live-modus heeft MultiViewer nodig.</p></details>
+    <details><summary>Werkt ProVerlay op Windows?</summary><p>Ja, als beta. Download <a href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-win-x64-setup.exe">ProVerlay-win-x64-setup.exe</a> (Windows 10/11, 64-bit): de installer zet de app alleen voor jouw account neer, zonder beheerdersrechten. Omdat hij nog niet ondertekend is, waarschuwt SmartScreen; kies <b>Meer informatie</b> → <b>Toch uitvoeren</b>. ProVerlay staat daarna in het systeemvak naast de klok. Nieuwe projecten gebruiken het meegeleverde lettertype Inter, dus je graphics zien er in OBS en vMix op Windows precies zo uit als op de Mac. De server draait daarnaast op elk systeem met Node.js via <code>npm start</code>.</p></details>
+    <details><summary>Heb ik internet nodig tijdens de show?</summary><p>Nee. Alles draait lokaal op je computer en je eigen netwerk. Alleen de F1 timing tower in live-modus heeft MultiViewer nodig.</p></details>
     <details><summary>Kan ik een show meenemen naar een andere computer?</summary><p>Ja. Exporteer het actieve project als <code>.proverlay</code>-bestand en importeer het op de andere machine. Assets, fonts en instellingen gaan mee.</p></details>
     <details><summary>Kan ik mijn eigen ontwerp gebruiken?</summary><p>Ja. Exporteer je ontwerp als PNG, importeer het via <i>Create from design</i> en zet er met de editor live tekstvelden op voor score, namen of klok.</p></details>
   </div>
@@ -662,7 +683,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <h2>Klaar om live te gaan?</h2>
       <p>Download de app, zet de render in je mixer en geef de iPad aan je operator.</p>
       <div class="cta" style="margin:0">
-        <a class="btn btn-primary btn-lg" href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">Download ProVerlay</a>
+        <a class="btn btn-primary btn-lg" data-dl href="https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-mac-arm64.zip">Download ProVerlay</a>
         <a class="btn btn-ghost btn-lg" href="https://github.com/Ferrywell/ProVerlay/releases">Alle releases</a>
       </div>
     </div>
@@ -687,6 +708,18 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     root.dataset.theme = dark ? 'light' : 'dark';
     try { localStorage.setItem('pv-theme', root.dataset.theme); } catch (e) {}
   });
+
+  // Windows visitors: Windows download first (the Mac links stay one click away)
+  if (/Windows/i.test(navigator.userAgent)) {
+    const winUrl = 'https://github.com/Ferrywell/ProVerlay/releases/latest/download/ProVerlay-win-x64-setup.exe';
+    document.querySelectorAll('a[data-dl]').forEach((a) => { a.href = winUrl; });
+    const cta = document.getElementById('hero-cta');
+    const mac = cta.querySelector('[data-os="mac"]');
+    const win = cta.querySelector('[data-os="win"]');
+    mac.classList.replace('btn-primary', 'btn-ghost');
+    win.classList.replace('btn-ghost', 'btn-primary');
+    cta.prepend(win);
+  }
 
   // example brand switcher
   const sc = document.getElementById('showcase');

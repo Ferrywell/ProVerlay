@@ -12,7 +12,8 @@ export const BLANK_PROJECT = {
   brandId: null,
   brand: {
     name: '',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
+    // Bundled in public/shared/fonts/ so new projects look the same on macOS and Windows
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontUrl: '',
     colors: {
       primary: '#007AFF',

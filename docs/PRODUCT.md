@@ -1,7 +1,7 @@
 # ProVerlay — product overview
 
-ProVerlay is a local tool for live broadcast graphics: you set up overlays on a Mac
-(or any machine that runs Node), operate them from a phone, tablet or Stream Deck,
+ProVerlay is a local tool for live broadcast graphics: you set up overlays on a Mac or
+Windows PC (or any machine that runs Node), operate them from a phone, tablet or Stream Deck,
 and play them out to OBS or vMix through a browser source.
 
 ## Principles
@@ -68,8 +68,10 @@ on a phone or tablet redirects to `/operator`.
 ## Platform
 
 - Server: Node.js (`npm start`), browser UIs, port **2014**.
-- Desktop app: macOS on Apple Silicon and Intel ([APP.md](APP.md)). A Windows build is planned;
-  the server already runs anywhere Node runs.
+- Desktop app: macOS on Apple Silicon and Intel, and Windows 10/11 x64 (beta)
+  ([APP.md](APP.md)). The server also runs from source anywhere Node runs.
+- Render output uses the bundled Inter font by default, so overlays look the same on
+  every OS.
 - Output hosts: [OBS](https://obsproject.com) Browser Source and
   [vMix](https://www.vmix.com) Web Browser — see [OBS-VMIX.md](OBS-VMIX.md).
 
