@@ -1,29 +1,38 @@
+// Quick check that a ProVerlay server is reachable the way the module talks to it:
+// a socket.io connection (stateChanged) plus the REST API.
+// Usage: PROVERLAY_HOST=127.0.0.1 PROVERLAY_PORT=2014 npm run test:connection
 import { io } from 'socket.io-client'
 
 const host = process.env.PROVERLAY_HOST || '127.0.0.1'
 const port = process.env.PROVERLAY_PORT || '2014'
 const url = `http://${host}:${port}`
 
-const socket = io(url)
+const socket = io(url, { reconnection: false, timeout: 5000 })
 
-socket.on('connect', async () => {
-  console.log('Connected to ProVerlay')
+const timer = setTimeout(() => finish(1, 'Timeout waiting for ProVerlay'), 6000)
 
-  const response = await fetch(`${url}/api/state`)
-  const state = await response.json()
-  console.log(`Graphics: ${state.graphics.length}`)
-  console.log(`Visible: ${state.graphics.filter((g) => g.visible).length}`)
-
+function finish(code, message) {
+  clearTimeout(timer)
+  if (message) (code ? console.error : console.log)(message)
   socket.disconnect()
-  process.exit(0)
+  process.exitCode = code
+}
+
+socket.on('stateChanged', async (state) => {
+  console.log(`Connected to ProVerlay at ${url} (socket.io)`)
+  try {
+    const response = await fetch(`${url}/api/state`)
+    if (!response.ok) {
+      finish(1, `GET /api/state failed: HTTP ${response.status}`)
+      return
+    }
+    const rest = await response.json()
+    console.log(`Project: ${rest.client?.name || rest.projectId}`)
+    console.log(`Graphics: ${rest.graphics.length} (on air: ${state.graphics.filter((g) => g.visible).length})`)
+    finish(0)
+  } catch (err) {
+    finish(1, `GET /api/state failed: ${err.message}`)
+  }
 })
 
-socket.on('connect_error', (error) => {
-  console.error('Connection failed:', error.message)
-  process.exit(1)
-})
-
-setTimeout(() => {
-  console.error('Timeout waiting for ProVerlay')
-  process.exit(1)
-}, 5000)
+socket.on('connect_error', (error) => finish(1, `Connection failed: ${error.message}`))
