@@ -1,0 +1,217 @@
+/* Preferences window. Loaded from file:// so it works even when the server
+   could not start; the tokens mirror public/shared/tahoe.css. The window
+   follows the app theme through nativeTheme (prefers-color-scheme). */
+:root {
+  color-scheme: light dark;
+  --bg: #fafaf9;
+  --group: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
+  --separator: rgba(60, 60, 67, 0.12);
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --field: #ffffff;
+  --field-border: rgba(0, 0, 0, 0.16);
+  --accent: #0a66c2;
+  --accent-ring: rgba(10, 102, 194, 0.3);
+  --accent-fill: #0a66c2;
+  --accent-fill-hover: #08539e;
+  --button: rgba(120, 120, 128, 0.12);
+  --button-hover: rgba(120, 120, 128, 0.2);
+  --danger: #c0392b;
+  --danger-tint: rgba(192, 57, 43, 0.1);
+  --warning: #8a5300;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui,
+    sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161618;
+    --group: #1f1f22;
+    --border: rgba(255, 255, 255, 0.08);
+    --separator: rgba(255, 255, 255, 0.12);
+    --text: #f5f5f7;
+    --text-secondary: #a8a8ad;
+    --field: #2a2a2e;
+    --field-border: rgba(255, 255, 255, 0.16);
+    --accent: #5eacff;
+    --accent-ring: rgba(94, 172, 255, 0.4);
+    --accent-fill: #0b6bcb;
+    --accent-fill-hover: #1a78d6;
+    --button: rgba(120, 120, 128, 0.3);
+    --button-hover: rgba(120, 120, 128, 0.42);
+    --danger: #ff7a6e;
+    --danger-tint: rgba(255, 105, 97, 0.16);
+    --warning: #ffb547;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+.prefs {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.prefs__alert {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--danger-tint);
+  color: var(--text);
+}
+
+.prefs__alert strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--danger);
+}
+
+.prefs__group {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--group);
+}
+
+.prefs__heading {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.prefs__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.prefs__row--field {
+  justify-content: space-between;
+}
+
+.prefs__label {
+  font-weight: 500;
+}
+
+.prefs__row--check {
+  cursor: default;
+}
+
+.prefs__row--check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent-fill);
+}
+
+.prefs__row--check input:disabled + span {
+  color: var(--text-secondary);
+}
+
+.prefs__input {
+  width: 96px;
+  padding: 5px 8px;
+  border: 1px solid var(--field-border);
+  border-radius: 7px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.prefs__input:focus-visible,
+.prefs__button:focus-visible,
+.prefs__row--check input:focus-visible {
+  outline: 3px solid var(--accent-ring);
+  outline-offset: 1px;
+}
+
+.prefs__input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.prefs__hint,
+.prefs__error {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.prefs__hint--note {
+  color: var(--warning);
+}
+
+.prefs__error {
+  color: var(--danger);
+}
+
+.prefs__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.prefs__status {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.prefs__button {
+  min-width: 80px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--button);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+}
+
+.prefs__button:hover:not(:disabled) {
+  background: var(--button-hover);
+}
+
+.prefs__button--primary {
+  background: var(--accent-fill);
+  color: #ffffff;
+}
+
+.prefs__button--primary:hover:not(:disabled) {
+  background: var(--accent-fill-hover);
+}
+
+.prefs__button:disabled {
+  opacity: 0.55;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Hidden but still taking its space (the port-change note). */
+.is-invisible {
+  visibility: hidden;
+}

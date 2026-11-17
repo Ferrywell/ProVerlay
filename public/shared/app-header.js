@@ -76,6 +76,12 @@ export function applyTheme(theme) {
   const root = document.documentElement
   if (theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme)
   else root.removeAttribute('data-theme')
+  // Desktop app: keep the window chrome (caption buttons) in step.
+  try {
+    window.proverlayDesktop?.setTheme(theme)
+  } catch {
+    /* bridge unavailable: chrome follows the OS theme */
+  }
 }
 
 export function setThemePreference(theme) {
@@ -92,12 +98,19 @@ export function setThemePreference(theme) {
 
 let openPopover = null
 
+// Desktop app: the header is a window drag area, and the OS swallows clicks
+// on it (no pointer events reach the page). While a popover is open the
+// header stops being draggable (tahoe.css `.pv-popover-open`), so a click on
+// an empty part of it reaches the pointerdown handler below and closes it.
+const POPOVER_OPEN_CLASS = 'pv-popover-open'
+
 function closePopover({ restoreFocus = false } = {}) {
   if (!openPopover) return
   const { panel, trigger } = openPopover
   panel.hidden = true
   trigger.setAttribute('aria-expanded', 'false')
   openPopover = null
+  document.documentElement.classList.remove(POPOVER_OPEN_CLASS)
   if (restoreFocus) trigger.focus()
 }
 
@@ -117,6 +130,7 @@ function togglePopover(trigger, panel, { onOpen } = {}) {
   panel.hidden = false
   trigger.setAttribute('aria-expanded', 'true')
   openPopover = { panel, trigger }
+  document.documentElement.classList.add(POPOVER_OPEN_CLASS)
   const items = menuItems(panel)
   const current = items.find((item) => item.getAttribute('aria-checked') === 'true') || items[0]
   current?.focus()
@@ -151,6 +165,10 @@ document.addEventListener('pointerdown', (event) => {
   if (openPopover.panel.contains(event.target) || openPopover.trigger.contains(event.target)) return
   closePopover()
 })
+
+// Switching to another window (or clicking into an embedded preview) closes
+// the menu too, like a native menu.
+window.addEventListener('blur', () => closePopover())
 
 /* ------------------------------------------------------- confirm dialog */
 
@@ -422,9 +440,23 @@ function wireProjects(chip) {
   return { applyProjects, applyState, loadProjects }
 }
 
+/** Desktop app only: port / startup settings live in the app's Preferences window. */
+function addDesktopPreferences(panel) {
+  const desktop = window.proverlayDesktop
+  if (!desktop || typeof desktop.openPreferences !== 'function') return
+  const separator = el('div', { class: 'pv-popover__separator', role: 'separator' })
+  const item = el('button', { type: 'button', class: 'pv-popover__item', role: 'menuitem' }, 'App preferences…')
+  item.addEventListener('click', () => {
+    closePopover()
+    desktop.openPreferences()
+  })
+  panel.append(separator, item)
+}
+
 function wireMenu(menu) {
   const button = menu.querySelector('#pv-app-menu-button')
   const panel = menu.querySelector('.pv-app-menu__panel')
+  addDesktopPreferences(panel)
   button.addEventListener('click', () => togglePopover(button, panel))
   wirePopoverKeys(panel)
   panel.addEventListener('click', (event) => {
