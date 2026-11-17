@@ -139,32 +139,72 @@ h1, h2, h3 {
 }
 
 .overlay-card.is-selected {
-  border-color: rgba(55, 138, 221, 0.45);
-  box-shadow: inset 0 0 0 2px rgba(55, 138, 221, 0.15);
+  border-color: rgba(10, 102, 194, 0.5);
+  box-shadow: inset 0 0 0 2px rgba(10, 102, 194, 0.15);
   background: var(--pv-bg-solid);
 }
 
+/* ON AIR: unmistakable card highlight in the shared on-air colour. */
 .overlay-card.is-live {
-  border-color: rgba(59, 109, 17, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(59, 109, 17, 0.2);
+  border-color: var(--pv-on-air);
+  box-shadow:
+    inset 4px 0 0 var(--pv-on-air),
+    0 0 0 1px var(--pv-on-air-ring);
+  background: linear-gradient(90deg, var(--pv-on-air-tint), transparent 45%), var(--pv-bg-solid);
+}
+
+.overlay-card.is-live.is-selected {
+  box-shadow:
+    inset 4px 0 0 var(--pv-on-air),
+    0 0 0 1px var(--pv-on-air-ring),
+    0 0 0 4px rgba(10, 102, 194, 0.22);
 }
 
 .overlay-card-body {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  text-align: left;
   cursor: pointer;
-  font: inherit;
-  color: inherit;
   width: 100%;
 }
 
-.overlay-card-body:focus-visible {
+.overlay-card__select {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pv-space-sm);
+  min-width: 0;
+  min-height: 2.25rem;
+  margin: 0;
+  padding: 0.15rem 0.35rem 0.15rem 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.overlay-card__select .overlay-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overlay-card__select:focus-visible,
+.overlay-standalone-link:focus-visible,
+.overlay-solo-toggle:focus-visible {
   outline: 2px solid var(--pv-accent);
   outline-offset: 2px;
-  border-radius: 6px;
+}
+
+.overlay-card__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pv-space-xs);
+  margin-left: auto;
+}
+
+.overlay-empty {
+  margin-top: var(--pv-space-xs);
 }
 
 .overlay-card__meta {
@@ -219,9 +259,9 @@ h1, h2, h3 {
 }
 
 .overlay-solo-toggle:hover {
-  border-color: var(--pv-danger);
-  color: var(--pv-danger);
-  background: var(--pv-danger-tint);
+  border-color: var(--pv-text-secondary);
+  color: var(--pv-text);
+  background: var(--pv-gray-fill);
 }
 
 .overlay-standalone-link.is-copied {
@@ -229,10 +269,11 @@ h1, h2, h3 {
   color: var(--pv-success-text);
 }
 
+/* Solo source is secondary to ON AIR: neutral dark, never the on-air red. */
 .overlay-solo-toggle.is-live {
-  border-color: rgba(192, 57, 43, 0.65);
+  border-color: var(--pv-text);
   color: #fff;
-  background: var(--pv-danger);
+  background: var(--pv-text);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
@@ -246,9 +287,8 @@ h1, h2, h3 {
   cursor: wait;
 }
 
-.overlay-card.is-solo-live {
-  border-color: rgba(192, 57, 43, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(192, 57, 43, 0.18);
+.overlay-card.is-solo-live:not(.is-live) {
+  border-color: var(--pv-border-strong);
 }
 
 .overlay-standalone-link svg,
@@ -310,7 +350,7 @@ h1, h2, h3 {
 }
 
 .overlay-card__live .button {
-  min-width: 5.75rem;
+  min-width: 7.5rem;
 }
 
 .side-stack {

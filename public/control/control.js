@@ -33,6 +33,15 @@ import {
   wireOperateSection
 } from '/public/shared/operate-handlers.js'
 import { defaultHockeyTypography, resolveHockeyTypography } from '/public/shared/hockey-utils.js'
+import { showToast, showErrorToast, withPending, copyTextWithFallback } from '/public/shared/toast.js'
+import { wireConnectionState } from '/public/shared/connection.js'
+import {
+  findOnAirOverlaps,
+  overlapWarningText,
+  liveButtonClass,
+  liveButtonLabel,
+  syncLiveButton
+} from '/public/shared/on-air.js'
 
 const TYPE_LABELS = {
   matchScoreboard: 'Match score',
@@ -57,32 +66,6 @@ if (detectClientDevice() !== 'desktop') {
   window.location.replace('/operator')
 }
 
-async function copyToClipboard(text) {
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text)
-      return true
-    } catch {
-      // Permission denied (e.g. non-secure context) — fall back to execCommand.
-    }
-  }
-  const ta = document.createElement('textarea')
-  ta.value = text
-  ta.setAttribute('readonly', '')
-  ta.style.position = 'fixed'
-  ta.style.left = '-9999px'
-  document.body.appendChild(ta)
-  ta.select()
-  let ok = false
-  try {
-    ok = document.execCommand('copy')
-  } catch {
-    ok = false
-  }
-  document.body.removeChild(ta)
-  return ok
-}
-
 function wireGraphicsListActions() {
   if (!graphicsList || graphicsList.dataset.urlActionsWired === '1') return
   graphicsList.dataset.urlActionsWired = '1'
@@ -95,19 +78,16 @@ function wireGraphicsListActions() {
       const graphicId = standaloneLink.closest('[data-graphic-id]')?.dataset.graphicId
       if (!graphicId) return
       const url = renderUrl(graphicId)
-      const copied = await copyToClipboard(url)
+      // Over LAN http the clipboard API is often blocked: fall back to a
+      // selectable URL field in a toast instead of window.prompt.
+      const copied = await copyTextWithFallback(url, {
+        successMessage: 'Solo Browser Source URL copied',
+        fallbackMessage: 'Clipboard unavailable — copy the solo Browser Source URL:'
+      })
       if (copied) {
         standaloneLink.classList.add('is-copied')
-        standaloneLink.title = 'URL copied'
-      } else {
-        // Clipboard geblokkeerd: toon de URL zodat de operator hem zelf kan kopiëren.
-        standaloneLink.title = 'Copy blocked — URL shown in prompt'
-        window.prompt('Copy solo URL:', url)
+        setTimeout(() => standaloneLink.classList.remove('is-copied'), 1500)
       }
-      setTimeout(() => {
-        standaloneLink.classList.remove('is-copied')
-        standaloneLink.title = 'Copy solo URL (?graphic=…)'
-      }, 1500)
       return
     }
 
@@ -130,7 +110,7 @@ function wireGraphicsListActions() {
         )
       })
     } catch (err) {
-      console.error(err)
+      showErrorToast(`Could not change the solo source: ${err.message || 'request failed'}`)
       soloToggle.disabled = false
     }
   })
@@ -255,7 +235,7 @@ async function loadProjects({ select } = {}) {
     projectSwitcher.innerHTML = projects
       .map((p) => {
         const isActive = p.active || p.id === activeId
-        return `<option value="${p.id}">${p.name}${isActive ? ' — active' : ''}</option>`
+        return `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}${isActive ? ' — active' : ''}</option>`
       })
       .join('')
     if (!projects.length) {
@@ -382,14 +362,6 @@ projectImport?.addEventListener('change', async () => {
   }
 })
 
-function setConnectionStatus(connected) {
-  if (!connectionStatus) return
-  connectionStatus.classList.toggle('is-connected', connected)
-  connectionStatus.classList.toggle('is-offline', !connected)
-  const label = connectionStatus.querySelector('.status-label')
-  if (label) label.textContent = connected ? 'Live sync' : 'Offline'
-}
-
 function getSelectedGraphic() {
   return (currentState?.graphics || []).find((g) => g.id === selectedGraphicId) || null
 }
@@ -485,7 +457,7 @@ function showOperateInspector(graphic) {
   if (!section || section.dataset.type !== graphic.type) {
     dashboardOperateRoot.innerHTML = operateShellHtml(graphic, { embedded: true })
     section = dashboardOperateRoot.querySelector(`[data-graphic-id="${graphic.id}"]`)
-    wireOperateSection(dashboardOperateRoot, getGraphicById)
+    wireOperateSection(dashboardOperateRoot, getGraphicById, { onWentLive: warnIfOverlapping })
   }
 
   refreshOperateSection(section, graphic)
@@ -658,7 +630,9 @@ function refreshInspector() {
     updateSidePanelFocus('empty')
     if (inspectorEmpty) inspectorEmpty.hidden = false
     if (inspectorEmptyText) {
-      inspectorEmptyText.textContent = 'Select an overlay to operate it during the show.'
+      inspectorEmptyText.textContent = currentState?.graphics?.length
+        ? 'Select an overlay to operate it during the show.'
+        : 'Live controls appear here once you add a widget.'
     }
     return
   }
@@ -673,45 +647,79 @@ function refreshInspector() {
   showOperateInspector(graphic)
 }
 
+function renderEmptyGraphics() {
+  graphicsList.innerHTML = `
+    <section class="empty-state overlay-empty">
+      <p class="empty-state__title">No widgets yet — add your first graphic</p>
+      <p>Pick a widget type above and choose <strong>Add widget</strong>, or turn a PNG design into a widget with <strong>Create from design</strong>.</p>
+      <div class="action-group">
+        <button type="button" class="button button--primary" data-empty-add>Add widget</button>
+        <a class="button button--secondary" href="/compose">Create from design</a>
+      </div>
+    </section>`
+  graphicsList.querySelector('[data-empty-add]')?.addEventListener('click', () => widgetAdd?.click())
+}
+
+/** Non-blocking warning when a graphic goes on air on top of another on-air graphic. */
+function warnIfOverlapping(graphic) {
+  if (!graphic) return
+  const others = (currentState?.graphics || []).filter((g) => g.id !== graphic.id)
+  const overlaps = findOnAirOverlaps(graphic, others)
+  if (overlaps.length) {
+    showToast(overlapWarningText(graphic, overlaps), { type: 'warning', duration: 8000 })
+  }
+}
+
+async function setGraphicOnAir(graphic, button) {
+  const next = !graphic.visible
+  const updated = await withPending(button, () => toggleGraphic(graphic.id, next))
+  if (!updated) return
+  if (button?.isConnected) syncLiveButton(button, updated.visible)
+  if (updated.visible) warnIfOverlapping({ ...graphic, ...updated })
+}
+
 function renderGraphics() {
   graphicsList.innerHTML = ''
+  if (!currentState.graphics.length) {
+    renderEmptyGraphics()
+    return
+  }
   for (const graphic of currentState.graphics) {
     const card = document.createElement('article')
-    card.className = `overlay-card${graphic.visible ? ' is-live' : ''}${graphic.soloVisible ? ' is-solo-live' : ''}${selectedGraphicId === graphic.id ? ' is-selected' : ''}`
+    const isSelected = selectedGraphicId === graphic.id
+    card.className = `overlay-card${graphic.visible ? ' is-live' : ''}${graphic.soloVisible ? ' is-solo-live' : ''}${isSelected ? ' is-selected' : ''}`
     card.dataset.graphicId = graphic.id
 
+    const name = escapeHtml(graphic.name || graphic.id)
+    const typeLabel = escapeHtml(TYPE_LABELS[graphic.type] || graphic.type)
+
+    // The card body is a plain container: selection happens through a real
+    // <button>, and the URL / solo controls are sibling buttons (no nesting).
     const body = document.createElement('div')
     body.className = 'overlay-card-body'
-    body.setAttribute('role', 'button')
-    body.tabIndex = 0
-    const typeLabel = TYPE_LABELS[graphic.type] || graphic.type
     body.innerHTML = `
       <div class="overlay-card__meta">
-        <span class="pill pill--type pill--type-${graphic.type}">${typeLabel}</span>
-        <div class="overlay-card__title-row">
-          <div class="overlay-name">${graphic.name}</div>
-          <div class="overlay-card__url-actions">
-            <button type="button" class="overlay-standalone-link" title="Copy solo Browser Source URL (separate OBS/vMix layer)" aria-label="Copy solo URL for ${graphic.name}">
-              ${STANDALONE_LINK_ICON}
-            </button>
-            <button type="button" class="overlay-solo-toggle${graphic.soloVisible ? ' is-live' : ''}" title="${graphic.soloVisible ? 'Turn off solo Browser Source' : 'Solo on — separate Browser Source'}" aria-label="${graphic.soloVisible ? 'Hide solo output' : 'Show on solo Browser Source'}" aria-pressed="${graphic.soloVisible}">
-              ${SOLO_TOGGLE_ICON}
-            </button>
-          </div>
+        <button type="button" class="overlay-card__select" aria-pressed="${isSelected}" title="Show live controls for ${name}">
+          <span class="pill pill--type pill--type-${graphic.type}">${typeLabel}</span>
+          <span class="overlay-name">${name}</span>
+        </button>
+        <div class="overlay-card__url-actions">
+          <button type="button" class="overlay-standalone-link" title="Copy solo Browser Source URL (separate OBS/vMix layer)" aria-label="Copy solo Browser Source URL for ${name}">
+            ${STANDALONE_LINK_ICON}
+          </button>
+          <button type="button" class="overlay-solo-toggle${graphic.soloVisible ? ' is-live' : ''}" title="${graphic.soloVisible ? 'Hide from its solo Browser Source' : 'Show on its solo Browser Source'}" aria-label="Solo Browser Source for ${name}" aria-pressed="${Boolean(graphic.soloVisible)}">
+            ${SOLO_TOGGLE_ICON}
+          </button>
         </div>
-        ${graphic.visible ? '<span class="pill pill--live" title="Visible on combined /render">Combined</span>' : ''}
-        ${graphic.soloVisible ? '<span class="pill pill--solo" title="Visible on solo ?graphic= URL">Solo source</span>' : ''}
+        <div class="overlay-card__badges">
+          ${graphic.visible ? '<span class="pill pill--on-air" title="Visible on the combined /render output">ON AIR</span>' : ''}
+          ${graphic.soloVisible ? '<span class="pill pill--solo" title="Visible on its solo ?graphic= Browser Source">Solo source</span>' : ''}
+        </div>
       </div>
     `
     body.addEventListener('click', (event) => {
       if (event.target.closest('.overlay-standalone-link, .overlay-solo-toggle')) return
       selectGraphic(graphic.id)
-    })
-    body.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault()
-        selectGraphic(graphic.id)
-      }
     })
 
     const footer = document.createElement('div')
@@ -736,16 +744,17 @@ function renderGraphics() {
     liveWrap.className = 'overlay-card__live'
 
     const button = document.createElement('button')
-    button.className = graphic.visible ? 'button button--gray' : 'button button--live'
+    button.className = `button ${liveButtonClass(graphic.visible)}`
     button.type = 'button'
-    button.textContent = graphic.visible ? 'Hide combined' : 'Go live'
-    button.setAttribute('aria-pressed', String(graphic.visible))
+    button.textContent = liveButtonLabel(graphic.visible)
+    button.setAttribute('aria-pressed', String(Boolean(graphic.visible)))
+    button.setAttribute('aria-label', `${liveButtonLabel(graphic.visible)}: ${graphic.name || graphic.id}`)
     button.title = graphic.visible
-      ? 'Hide from combined /render (all overlays)'
-      : 'Show on combined /render (all overlays)'
+      ? 'Remove from the combined /render output'
+      : 'Show on the combined /render output'
     button.addEventListener('click', (event) => {
       event.stopPropagation()
-      toggleGraphic(graphic.id, !graphic.visible)
+      setGraphicOnAir(graphic, button)
     })
     liveWrap.appendChild(button)
 
@@ -1383,7 +1392,7 @@ tickerBgUpload?.addEventListener('change', async () => {
     await patchGraphic(graphic.id, { data: { layout } })
     scheduleTickerPreview()
   } catch (err) {
-    alert(err.message || 'Upload failed')
+    showErrorToast(err.message || 'Upload failed')
   } finally {
     tickerBgUploadBtn.disabled = false
     tickerBgUploadBtn.textContent = 'Replace…'
@@ -1666,8 +1675,9 @@ widgetAdd?.addEventListener('click', async () => {
     }
     const created = await res.json()
     selectedGraphicId = created.id
+    showToast(`Added “${created.name || name}” — use Go live when it is ready`, { type: 'success' })
   } catch (err) {
-    setProjectStatus(err.message, 'error')
+    showErrorToast(err.message || 'Failed to add widget')
   }
 })
 
@@ -1679,29 +1689,32 @@ widgetRemove?.addEventListener('click', async () => {
     const res = await fetch(`/api/graphics/${graphic.id}`, { method: 'DELETE' })
     if (!res.ok) throw new Error('Failed to remove widget')
     selectedGraphicId = null
+    showToast(`Removed “${graphic.name}”`, { type: 'success' })
   } catch (err) {
-    setProjectStatus(err.message, 'error')
+    showErrorToast(err.message || 'Failed to remove widget')
   }
 })
 
 copyBtn?.addEventListener('click', async () => {
   const url = `${window.location.origin}/render`
-  const copied = await copyToClipboard(url)
+  const copied = await copyTextWithFallback(url, {
+    successMessage: '',
+    fallbackMessage: 'Clipboard unavailable — copy the combined render URL:'
+  })
   if (copied) {
     copyBtn.textContent = 'Copied'
-  } else {
-    copyBtn.textContent = 'Copy blocked'
-    window.prompt('Copy render URL:', url)
+    setTimeout(() => { copyBtn.textContent = COPY_ALL_RENDER_LABEL }, 1500)
   }
-  setTimeout(() => { copyBtn.textContent = COPY_ALL_RENDER_LABEL }, 1500)
 })
 
 wireGraphicsListActions()
 wireRenderPreviewLinks(document, () => currentState?.settings)
 
 const socket = io()
-socket.on('connect', () => setConnectionStatus(true))
-socket.on('disconnect', () => setConnectionStatus(false))
+wireConnectionState(socket, {
+  pill: connectionStatus,
+  controls: [document.querySelector('.shell-grid')]
+})
 socket.on('stateChanged', applyState)
 
 fetch('/api/state')
