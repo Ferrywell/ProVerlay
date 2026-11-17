@@ -342,8 +342,9 @@ projectExport?.addEventListener('click', async () => {
     link.download = filename
     link.click()
     URL.revokeObjectURL(url)
-    setProjectStatus('Export complete', 'success')
-    setTimeout(() => setProjectStatus(''), 2000)
+    // The browser/app now asks where to save; the user may still cancel.
+    setProjectStatus('Export ready — choose where to save it', 'success')
+    setTimeout(() => setProjectStatus(''), 4000)
   } catch (err) {
     setProjectStatus(err.message || 'Export failed', 'error')
   } finally {
