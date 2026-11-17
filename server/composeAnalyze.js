@@ -81,7 +81,7 @@ function bboxToElement(bbox, refWidth, refHeight, text, widgetType, index, total
   return {
     id: `el-${Date.now()}-${index}`,
     bind,
-    label: text || 'Veld',
+    label: text || 'Field',
     text: text || '',
     x: ((bbox.x + bbox.w / 2) / refWidth) * 100,
     y: ((bbox.y + bbox.h / 2) / refHeight) * 100,

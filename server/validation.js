@@ -189,7 +189,7 @@ const STATE_KEY_TYPES = {
   graphics: 'array'
 }
 /** Runtime-only fields that clients may echo back; they are never stored. */
-const META_KEYS = new Set(['projectId', 'serverNow'])
+const META_KEYS = new Set(['projectId', 'projectName', 'customCssVersion', 'serverNow'])
 
 /**
  * Validate and normalise a PATCH /api/state body. Returns the patch that

@@ -175,6 +175,33 @@ function applyBrand(state) {
   document.getElementById('brand-font')?.remove()
 }
 
+/**
+ * Per-project custom CSS (/project → Custom CSS), loaded after the built-in
+ * stylesheets so it can override them. `customCssVersion` changes on every
+ * save, which swaps in the new sheet (old one removed once the new one loads,
+ * so there is no unstyled flash on air). Served next to assets/, so
+ * `url(assets/foo.png)` in the sheet resolves to the project's assets.
+ */
+function applyCustomCss(state) {
+  const version = typeof state.customCssVersion === 'string' ? state.customCssVersion : ''
+  const id = typeof state.projectId === 'string' && state.projectId ? state.projectId : 'blank'
+  const href = version ? `/projects/${encodeURIComponent(id)}/custom.css?v=${encodeURIComponent(version)}` : ''
+  const current = [...document.querySelectorAll('link[data-pv-custom-css]')]
+  if (!href) {
+    current.forEach((el) => el.remove())
+    return
+  }
+  if (current.some((el) => el.getAttribute('href') === href)) return
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = href
+  link.dataset.pvCustomCss = ''
+  const dropOld = () => current.forEach((el) => el.remove())
+  link.addEventListener('load', dropOld, { once: true })
+  link.addEventListener('error', dropOld, { once: true })
+  document.head.appendChild(link)
+}
+
 function assetUrl(filename) {
   return tickerAssetUrl(projectId, filename)
 }
@@ -1728,6 +1755,7 @@ async function applyState(state) {
     applyServerTimeFromState(state)
     applyCanvas(state)
     applyBrand(state)
+    applyCustomCss(state)
   } catch (err) {
     console.error('[ProVerlay render] Could not apply canvas/brand settings:', err)
   }

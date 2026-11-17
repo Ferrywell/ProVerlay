@@ -27,6 +27,14 @@
     </header>
 
     <main class="project-grid">
+      <section class="glass panel panel--wide" aria-labelledby="projects-heading">
+        <div class="panel-head">
+          <h2 id="projects-heading">Projects</h2>
+          <p>Each project has its own widgets, branding, assets and custom CSS. The settings below always edit the active project. Deleted projects are moved to the <code>trash</code> folder in the data directory.</p>
+        </div>
+        <ul id="project-list" class="project-list" aria-live="polite"></ul>
+      </section>
+
       <section class="glass panel panel--canvas">
         <div class="panel-head">
           <h2>Render canvas</h2>
@@ -118,10 +126,75 @@
         </div>
         <ul id="design-list" class="design-list"></ul>
       </section>
+
+      <section class="glass panel panel--wide" aria-labelledby="custom-css-heading">
+        <div class="panel-head">
+          <h2 id="custom-css-heading">Custom CSS</h2>
+          <p>Optional stylesheet for this project, loaded by the render output after the built-in styles, so it can restyle any overlay (for example a brand-specific scorebug). Saving updates every open render live.</p>
+        </div>
+        <form id="custom-css-form" class="custom-css">
+          <label class="field custom-css__field">
+            <span>Stylesheet</span>
+            <textarea
+              id="custom-css-input"
+              name="css"
+              spellcheck="false"
+              autocapitalize="off"
+              autocomplete="off"
+              wrap="off"
+              placeholder=".hockey-clock { background: #111; }"
+            ></textarea>
+          </label>
+          <div class="custom-css__bar">
+            <button class="button button--primary" type="submit" id="custom-css-save">Save CSS</button>
+            <button class="button button--secondary" type="button" id="custom-css-revert" disabled>Revert</button>
+            <span id="custom-css-size" class="custom-css__size" aria-live="polite"></span>
+          </div>
+          <details class="custom-css__help">
+            <summary>Class names and variables</summary>
+            <div class="custom-css__help-body">
+              <p>Every overlay is a layer <code>.graphic-layer[data-id="&lt;widget id&gt;"][data-type="&lt;type&gt;"]</code> containing <code>.graphic.graphic--&lt;type&gt;</code>, for example <code>.graphic--matchScoreboard</code>, <code>.graphic--hockeyScorebug</code>, <code>.graphic--customTicker</code>, <code>.graphic--streamCountdown</code>, <code>.graphic--lowerThirdShow</code>, <code>.graphic--quizShow</code>, <code>.graphic--message</code>, <code>.graphic--f1Timing</code>.</p>
+              <ul>
+                <li>Match score: <code>.match-board</code>, <code>.mb-team</code>, <code>.mb-score</code>, <code>.mb-clock</code>, <code>.clock-pill</code></li>
+                <li>Hockey scorebug: <code>.hockey-bug</code>, <code>.hockey-arm--home</code>, <code>.hockey-arm--away</code>, <code>.hockey-code</code>, <code>.hockey-score</code>, <code>.hockey-clock</code>, <code>.hockey-clock__time</code>, <code>.hockey-clock__period</code></li>
+                <li>Other: <code>.countdown-board</code>, <code>.ticker-default</code>, <code>.lt-board</code>, <code>.quiz-board</code>, <code>.quiz-opt</code>, <code>.f1-tower</code>, <code>.f1-row</code></li>
+                <li>Variables: <code>--primary</code>, <code>--secondary</code>, <code>--text</code>, <code>--background</code>, <code>--brand-font</code>, <code>--font-size</code>, <code>--padding</code>, <code>--canvas-w</code>, <code>--canvas-h</code></li>
+              </ul>
+              <p>Use project assets with relative URLs, e.g. <code>background: url(assets/plate.png)</code>. <code>@import</code> is removed on save. Custom CSS is trusted local content: only paste CSS you understand, and avoid remote URLs so the overlay keeps working offline. Max 200 KB.</p>
+            </div>
+          </details>
+        </form>
+      </section>
     </main>
 
     <p id="project-status" class="project-status" role="status" aria-live="polite"></p>
 
+    <dialog id="project-name-dialog" class="project-dialog" aria-labelledby="project-name-title">
+      <form id="project-name-form" method="dialog" class="project-dialog__form">
+        <h3 id="project-name-title">Rename project</h3>
+        <label class="field">
+          <span>Project name</span>
+          <input id="project-name-input" type="text" required maxlength="120" autocomplete="off" />
+        </label>
+        <div class="project-dialog__actions">
+          <button type="button" class="button button--secondary" id="project-name-cancel">Cancel</button>
+          <button type="submit" class="button button--primary" id="project-name-ok">Rename</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="project-delete-dialog" class="project-dialog" aria-labelledby="project-delete-title">
+      <form id="project-delete-form" method="dialog" class="project-dialog__form">
+        <h3 id="project-delete-title">Delete project?</h3>
+        <p id="project-delete-text" class="project-dialog__text"></p>
+        <div class="project-dialog__actions">
+          <button type="button" class="button button--secondary" id="project-delete-cancel">Cancel</button>
+          <button type="submit" class="button button--danger" id="project-delete-ok">Delete</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="/socket.io/socket.io.js"></script>
     <script src="/public/shared/app-shell.js"></script>
     <script type="module" src="/public/project/project.js"></script>
   </body>

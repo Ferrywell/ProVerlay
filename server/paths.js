@@ -3,8 +3,8 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// In de Electron-app wijst PROVERLAY_DATA_DIR naar een schrijfbare locatie
-// (~/Library/Application Support/ProVerlay/data). Standalone draait op de repo-map.
+// In the Electron app PROVERLAY_DATA_DIR points at a writable location
+// (~/Library/Application Support/ProVerlay/data). Standalone uses the repo's data/ folder.
 let dataDir = process.env.PROVERLAY_DATA_DIR || path.join(__dirname, '..', 'data')
 
 /** Current data directory (registry.json, projects/, brands/). */

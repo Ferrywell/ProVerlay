@@ -134,3 +134,15 @@ test('port already in use rejects instead of exiting the process', async () => {
     await srv.close().catch(() => {})
   }
 })
+
+test('the last remaining project cannot be deleted', async () => {
+  const srv = await startTestServer()
+  try {
+    const res = await srv.del('/api/projects/blank')
+    assert.equal(res.status, 409)
+    assert.match(res.json.error, /last project/)
+    assert.ok(await fs.stat(path.join(srv.dir, 'projects', 'blank', 'project.json')))
+  } finally {
+    await srv.close()
+  }
+})

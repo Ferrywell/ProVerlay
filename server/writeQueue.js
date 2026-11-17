@@ -44,17 +44,21 @@ export async function renameWithRetry(from, to, { attempts = 6, baseDelayMs = 20
   }
 }
 
-/** Atomic JSON write: temp file in same directory, then rename. */
-export async function writeJsonAtomic(filePath, value) {
+/** Atomic file write: temp file in the same directory, then rename. */
+export async function writeFileAtomic(filePath, data) {
   const dir = path.dirname(filePath)
   const base = path.basename(filePath)
   const tmp = path.join(dir, `.${base}.${process.pid}.${crypto.randomUUID().slice(0, 8)}.tmp`)
-  const body = JSON.stringify(value, null, 2)
-  await fs.writeFile(tmp, body)
+  await fs.writeFile(tmp, data)
   try {
     await renameWithRetry(tmp, filePath)
   } catch (err) {
     await fs.unlink(tmp).catch(() => {})
     throw err
   }
+}
+
+/** Atomic JSON write (pretty-printed). */
+export async function writeJsonAtomic(filePath, value) {
+  await writeFileAtomic(filePath, JSON.stringify(value, null, 2))
 }

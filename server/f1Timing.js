@@ -28,7 +28,7 @@ const pollers = new Map()
 let ioRef = null
 let unsubscribe = null
 
-/** 2026-grid fallback zodat manual mode direct bruikbaar is. */
+/** 2026 grid fallback so manual mode is usable straight away. */
 export function defaultF1Drivers() {
   return [
     { pos: 1, num: '1', code: 'VER', name: 'Max Verstappen', teamColor: '#3671C6', gap: 'LEADER', interval: '' },
@@ -56,7 +56,7 @@ function f1Config(graphic) {
 
 function baseUrl(cfg) {
   const host = String(cfg.host || '127.0.0.1')
-  // IPv6-literals moeten in brackets: http://[::1]:10101/...
+  // IPv6 literals need brackets: http://[::1]:10101/...
   const hostPart = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host
   return `http://${hostPart}:${cfg.port}/api/v1/live-timing`
 }
@@ -93,7 +93,7 @@ function gapValue(raw) {
   return String(raw)
 }
 
-/** Huidige compound per auto uit TimingAppData (laatste stint). */
+/** Current tyre compound per car from TimingAppData (latest stint). */
 function currentTyre(appLine) {
   const stints = appLine?.Stints
   if (!stints) return ''
@@ -102,7 +102,7 @@ function currentTyre(appLine) {
   return String(last?.Compound || '').toUpperCase()
 }
 
-/** TimingData.Lines + DriverList → gesorteerde rijen voor de toren. */
+/** TimingData.Lines + DriverList → sorted rows for the tower. */
 export function mapTimingToRows(timingLines = {}, driverList = {}, appLines = {}) {
   const rows = []
   for (const [num, line] of Object.entries(timingLines)) {
@@ -121,8 +121,8 @@ export function mapTimingToRows(timingLines = {}, driverList = {}, appLines = {}
       inPit: Boolean(line.InPit),
       retired: Boolean(line.Retired || line.Stopped),
       knockedOut: Boolean(line.KnockedOut),
-      // Status-bit 1024 = over de finish (chequered flag), empirisch
-      // geverifieerd tegen de MultiViewer feed bij een race-einde.
+      // Status bit 1024 = crossed the finish line (chequered flag), verified
+      // empirically against the MultiViewer feed at the end of a race.
       finished: Boolean(Number(line.Status) & 1024)
     })
   }
@@ -143,8 +143,8 @@ export function mapTrackStatus(trackStatus) {
 async function pollOnce(graphicId, cfg) {
   const entry = pollers.get(graphicId)
   if (!entry) return
-  // Geen overlappende polls: bij trage MultiViewer / pollMs 250ms
-  // zou setInterval anders N × 5 HTTP-requests tegelijk starten.
+  // No overlapping polls: with a slow MultiViewer / pollMs 250 ms,
+  // setInterval would otherwise start N × 5 HTTP requests at once.
   if (entry.inFlight) return
   entry.inFlight = true
   try {
@@ -156,11 +156,11 @@ async function pollOnce(graphicId, cfg) {
       fetchTopic(cfg, 'TrackStatus').catch(() => null),
       fetchTopic(cfg, 'TimingAppData').catch(() => null)
     ])
-    // Poller kan intussen gestopt zijn
+    // The poller may have been stopped in the meantime
     if (!pollers.has(graphicId)) return
     const rows = mapTimingToRows(timing?.Lines || {}, driverList || {}, appData?.Lines || {})
-    // Bij een gemiste LapCount-fetch de vorige laptekst vasthouden: anders
-    // verdwijnt de header-pill één poll lang en verspringt de hele toren.
+    // Keep the previous lap text when a LapCount fetch fails: otherwise the
+    // header pill disappears for one poll and the whole tower jumps.
     const prevSession = entry.buffer[entry.buffer.length - 1]?.session || {}
     const lapText = lapCount?.CurrentLap
       ? `LAP ${lapCount.CurrentLap}/${lapCount.TotalLaps || '?'}`
@@ -189,7 +189,7 @@ async function pollOnce(graphicId, cfg) {
   if (pollers.has(graphicId)) broadcast(graphicId, cfg)
 }
 
-/** Snapshot op (nu − delay); nieuwste als de buffer korter is dan de delay. */
+/** Snapshot at (now − delay); the newest one when the buffer is shorter than the delay. */
 function delayedSnapshot(entry, delayMs) {
   const cutoff = Date.now() - delayMs
   for (let i = entry.buffer.length - 1; i >= 0; i--) {
@@ -210,7 +210,7 @@ function broadcast(graphicId, cfg) {
   })
 }
 
-/** Voor GET /api/f1/:id/live — initial paint zonder op de socket te wachten. */
+/** For GET /api/f1/:id/live: initial paint without waiting for the socket. */
 export function getLiveSnapshot(graphicId) {
   const state = getState()
   const graphic = (state.graphics || []).find((g) => g.id === graphicId)
@@ -242,8 +242,8 @@ function stopPoller(graphicId) {
   pollers.delete(graphicId)
 }
 
-// delayMs valt buiten de key: delay live bijstellen mag de snapshotbuffer
-// niet weggooien, anders is er niets om vertraagd af te spelen.
+// delayMs is not part of the key: adjusting the delay live must not drop the
+// snapshot buffer, otherwise there is nothing left to play back delayed.
 function pollerKey(cfg) {
   return `${cfg.host}:${cfg.port}:${cfg.pollMs}`
 }
@@ -269,13 +269,13 @@ function startPoller(graphicId, cfg) {
   pollOnce(graphicId, cfg)
 }
 
-/** Pollers in sync houden met de huidige state (start/stop/herstart bij configwijziging). */
+/** Keep pollers in sync with the current state (start/stop/restart on config changes). */
 function reconcile(state) {
   const wanted = new Map()
   for (const g of state.graphics || []) {
     if (g.type !== 'f1Timing') continue
     if (g.data?.source !== 'multiviewer') continue
-    // Poll zodra de bron aan staat: operator wil status/preview zien vóór live.
+    // Poll as soon as the source is enabled: the operator wants status/preview before going live.
     wanted.set(g.id, f1Config(g))
   }
 
@@ -291,10 +291,10 @@ function reconcile(state) {
 }
 
 /**
- * Eenmalige import van de actuele grid uit MultiViewer naar data.drivers,
- * zodat de handmatige lijst nooit met de hand gevuld hoeft te worden.
- * Werkt ongeacht de gekozen bron (gebruikt de MultiViewer-instellingen
- * van de widget).
+ * One-off import of the current grid from MultiViewer into data.drivers,
+ * so the manual list never has to be filled in by hand.
+ * Works whatever source is selected (uses the widget's MultiViewer
+ * settings).
  */
 export async function importDriversOnce(graphicId) {
   const graphic = (getState().graphics || []).find(
