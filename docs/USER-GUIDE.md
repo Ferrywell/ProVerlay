@@ -141,6 +141,26 @@ computer's IP address. More detail: [OBS-VMIX.md](OBS-VMIX.md).
 The operator shows the widgets meant for live control (match score, hockey scorebug,
 F1 timing, ticker, lower thirds, quiz) with large touch controls.
 
+**Working with the operator**
+
+- The bar under the header lists every operator widget. Tap a name to show only
+  that widget, or **All** to see them all. A red dot means the widget is on air.
+  The choice is remembered; links like `/operator?focus=<id>` open one widget.
+- Every widget is one card, the same as in the dashboard's Operate panel and on
+  `/operate/<id>`: the header has the **ON AIR** badge and **Go live** /
+  **Take off air**; below it are the main controls (score −/+, **Start clock** /
+  **Pause clock**, period, people, questions, messages).
+- **More controls** holds the rest: exact minute/second, ±1s/15s/1 min, stoppage
+  time, hide clock, quarter length, team colours, ticker speed and font size.
+  It starts closed on phones and open on larger screens, and remembers your choice.
+- Lowering a score asks for confirmation on the operator, so a mis-tap does not
+  change the score on air.
+- Score and clock changes are sent as single steps (for example "+1 home"), so
+  two operators or a Stream Deck can work on the same match without overwriting
+  each other.
+- While the connection is lost, a banner appears and the controls are locked
+  until ProVerlay is reachable again.
+
 ## 8. Stream Deck (Companion)
 
 ProVerlay includes a Bitfocus Companion module with actions for showing and hiding
