@@ -4,8 +4,8 @@
   "id": "proverlay",
   "name": "ProVerlay",
   "shortname": "proverlay",
-  "description": "Live graphics control for ProVerlay",
-  "version": "0.1.0",
+  "description": "Control ProVerlay live broadcast graphics: show and hide graphics, scores and match/hockey clocks, tickers, countdowns, lower thirds, quizzes and messages.",
+  "version": "1.0.0",
   "license": "MIT",
   "repository": "git+https://github.com/Ferrywell/ProVerlay.git",
   "bugs": "https://github.com/Ferrywell/ProVerlay/issues",
@@ -13,6 +13,7 @@
     {
       "name": "ProductionPro",
       "email": "hello@productionpro.nl",
+      "github": "Ferrywell",
       "url": "https://productionpro.nl"
     }
   ],
@@ -20,10 +21,10 @@
   "runtime": {
     "type": "node22",
     "api": "nodejs-ipc",
-    "apiVersion": "2.0.0",
+    "apiVersion": "2.0.4",
     "entrypoint": "../index.js"
   },
   "manufacturer": "ProVerlay",
   "products": ["ProVerlay"],
-  "keywords": ["Graphics", "Live", "OBS"]
+  "keywords": ["Graphics", "Overlay", "Scoreboard", "Lower third", "Broadcast", "OBS", "vMix", "Sports"]
 }
