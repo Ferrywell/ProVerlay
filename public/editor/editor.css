@@ -1,42 +1,19 @@
 .editor-app {
   min-height: 100vh;
-  padding: var(--pv-space-lg) var(--pv-screen-margin) 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: var(--pv-space-lg);
+}
+
+/* The app header is full width; the page content keeps the side margins. */
+.editor-app > main {
+  padding: var(--pv-space-lg) var(--pv-screen-margin) 1.5rem;
 }
 
 @media (min-width: 768px) {
-  .editor-app {
+  .editor-app > main {
     padding-left: var(--pv-space-xl);
     padding-right: var(--pv-space-xl);
   }
-}
-
-.editor-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--pv-space-lg);
-  padding: 0.85rem 1.1rem;
-  position: sticky;
-  top: var(--pv-space-sm);
-  z-index: 20;
-}
-
-.editor-header__start,
-.editor-header__end {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.editor-header h1 {
-  margin: 0.1rem 0 0;
-  font-size: 1.25rem;
-  font-weight: 700;
 }
 
 .field--inline {
@@ -55,7 +32,8 @@
   border-radius: var(--pv-radius-sm);
   padding: 0.55rem 0.65rem;
   font: inherit;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--pv-field-bg);
+  color: var(--pv-text);
   min-height: 44px;
 }
 
@@ -98,7 +76,7 @@
   padding: 0.35rem 0.65rem;
   border-radius: var(--pv-radius-sm);
   border: 1px solid var(--pv-border);
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--pv-surface-faint);
 }
 
 .field--toolbar {
@@ -161,7 +139,7 @@
 }
 
 .editor-status.is-success {
-  color: #248a3d;
+  color: var(--pv-positive-text);
 }
 
 .editor-status.is-error {
@@ -175,7 +153,7 @@
   justify-content: center;
   min-height: min(52vh, 420px);
   padding: var(--pv-space-md);
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--pv-fill-quiet);
   border-radius: var(--pv-radius-sm);
   border: 1px dashed var(--pv-border);
 }
@@ -422,7 +400,7 @@
 
 .editor-element.is-selected {
   outline-color: var(--pv-accent);
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.25);
+  box-shadow: 0 0 0 3px var(--pv-accent-ring);
 }
 
 .editor-element.is-dragging {
@@ -455,7 +433,8 @@
   appearance: none;
   border: 1px solid var(--pv-border);
   border-radius: var(--pv-radius-sm);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--pv-field-bg);
+  color: var(--pv-text);
   color: var(--pv-text);
   width: 2.25rem;
   height: 2.25rem;
@@ -483,7 +462,7 @@
 .editor-upload:hover,
 .editor-upload.is-dragover {
   border-color: var(--pv-accent);
-  background: rgba(0, 122, 255, 0.04);
+  background: var(--pv-accent-soft);
 }
 
 .editor-upload__hint {
@@ -521,7 +500,7 @@
   text-align: center;
   border: 1px dashed var(--pv-border);
   border-radius: var(--pv-radius-sm);
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--pv-surface-faint);
 }
 
 .inspector-form {
@@ -552,7 +531,8 @@
   border-radius: var(--pv-radius-sm);
   padding: 0.65rem 0.75rem;
   font: inherit;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--pv-field-bg);
+  color: var(--pv-text);
   min-height: 44px;
 }
 
@@ -574,7 +554,8 @@
   padding: 0.25rem;
   border: 1px solid var(--pv-border);
   border-radius: var(--pv-radius-sm);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--pv-field-bg);
+  color: var(--pv-text);
   cursor: pointer;
 }
 
@@ -601,11 +582,6 @@
 
   .editor-workspace {
     order: 1;
-  }
-
-  .editor-header {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .toolbar-group--meta {

@@ -1,9 +1,9 @@
-.dashboard {
+.dashboard .shell-grid {
   padding: var(--pv-space-lg) var(--pv-space-xl) 2rem;
 }
 
 @media (max-width: 767px) {
-  .dashboard {
+  .dashboard .shell-grid {
     padding: var(--pv-space-md) var(--pv-screen-margin) 2rem;
   }
 }
@@ -16,37 +16,9 @@
   box-shadow: var(--pv-shadow-group);
 }
 
-.shell-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--pv-space-lg);
-  padding: 0.7rem var(--pv-space-xl);
-  margin-bottom: var(--pv-space-lg);
-}
-
 h1, h2, h3 {
   margin: 0.1rem 0 0;
   font-weight: 500;
-}
-
-.header-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--pv-space-sm);
-  align-items: center;
-}
-
-.header-meta__group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--pv-space-sm);
-  align-items: center;
-}
-
-.header-meta__group--actions {
-  padding-left: var(--pv-space-sm);
-  border-left: 0.5px solid var(--pv-separator);
 }
 
 .shell-grid {
@@ -110,7 +82,7 @@ h1, h2, h3 {
   margin-top: 0.85rem;
   padding: var(--pv-space-md);
   border-radius: var(--pv-radius-sm);
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--pv-surface-faint);
   border: 1px solid var(--pv-border);
 }
 
@@ -131,8 +103,8 @@ h1, h2, h3 {
 }
 
 .overlay-card.is-selected {
-  border-color: rgba(10, 102, 194, 0.5);
-  box-shadow: inset 0 0 0 2px rgba(10, 102, 194, 0.15);
+  border-color: var(--pv-accent);
+  box-shadow: inset 0 0 0 2px var(--pv-accent-tint);
   background: var(--pv-bg-solid);
 }
 
@@ -149,7 +121,7 @@ h1, h2, h3 {
   box-shadow:
     inset 4px 0 0 var(--pv-on-air),
     0 0 0 1px var(--pv-on-air-ring),
-    0 0 0 4px rgba(10, 102, 194, 0.22);
+    0 0 0 4px var(--pv-accent-ring);
 }
 
 .overlay-card-body {
@@ -237,7 +209,7 @@ h1, h2, h3 {
   padding: 0;
   border: 1px solid var(--pv-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--pv-surface-subtle);
   color: var(--pv-text-secondary);
   cursor: pointer;
   flex-shrink: 0;
@@ -264,7 +236,7 @@ h1, h2, h3 {
 /* Solo source is secondary to ON AIR: neutral dark, never the on-air red. */
 .overlay-solo-toggle.is-live {
   border-color: var(--pv-text);
-  color: #fff;
+  color: var(--pv-bg-solid);
   background: var(--pv-text);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
@@ -409,7 +381,7 @@ h1, h2, h3 {
 
 code {
   font-size: 0.85em;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--pv-fill-quiet);
   padding: 0.1rem 0.35rem;
   border-radius: 6px;
 }
@@ -451,7 +423,7 @@ code {
 }
 
 .project-status.is-success {
-  color: #248a3d;
+  color: var(--pv-positive-text);
 }
 
 #project-switcher:disabled,
@@ -471,7 +443,7 @@ code {
   padding: var(--pv-space-sm) 0.65rem;
   border-radius: var(--pv-radius-sm);
   border: 1px solid var(--pv-border);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--pv-surface-subtle);
 }
 
 .network-url-row strong {
@@ -544,7 +516,7 @@ code {
   padding: 0.45rem 0.55rem;
   border-radius: 8px;
   border: 1px solid var(--pv-border);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--pv-surface-subtle);
 }
 
 .name-prompt-dialog {
@@ -552,11 +524,13 @@ code {
   border-radius: var(--pv-radius-md);
   padding: 0;
   max-width: 22rem;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  background: var(--pv-bg-solid);
+  color: var(--pv-text);
+  box-shadow: var(--pv-shadow-pop);
 }
 
 .name-prompt-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--pv-backdrop);
 }
 
 .name-prompt-form {
@@ -582,7 +556,7 @@ code {
   padding: var(--pv-space-md);
   text-align: center;
   border-radius: var(--pv-radius-sm);
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--pv-fill-quiet);
 }
 
 .countdown-preview__time {
@@ -710,8 +684,8 @@ code {
 
 .panel--note {
   padding: var(--pv-space-md) 1rem;
-  background: rgba(0, 122, 255, 0.04);
-  border-color: rgba(0, 122, 255, 0.12);
+  background: var(--pv-accent-soft);
+  border-color: var(--pv-accent-tint);
 }
 
 .panel--note h3 {
@@ -738,7 +712,7 @@ code {
   padding: var(--pv-space-md);
   border-radius: var(--pv-radius-sm);
   border: 1px solid var(--pv-border);
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--pv-surface-faint);
 }
 
 .panel--nested .panel-head h3 {
@@ -778,7 +752,7 @@ code {
   padding: var(--pv-space-sm);
   border-radius: var(--pv-radius-sm);
   border: 1px solid var(--pv-border);
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--pv-surface-faint);
 }
 
 .roster-item.is-active {
@@ -805,7 +779,7 @@ code {
 
 .roster-item__meta {
   font-size: 0.85rem;
-  color: var(--pv-text-muted);
+  color: var(--pv-text-secondary);
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -832,11 +806,6 @@ code {
 @media (max-width: 980px) {
   .shell-grid {
     grid-template-columns: 1fr;
-  }
-
-  .shell-header {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .overlay-card__footer {

@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ProVerlay — Scoreboard editor</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="/public/shared/app-shell.js"></script>
     <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
     <link rel="stylesheet" href="/public/shared/tahoe.css" />
     <link rel="stylesheet" href="/public/shared/form-controls.css" />
@@ -17,24 +19,14 @@
         <a class="button button--primary" href="/control">Back to dashboard</a>
       </div>
     </div>
-    <header class="editor-header glass">
-      <div class="editor-header__start">
-        <a class="button button--secondary" href="/control">← Dashboard</a>
-        <a href="/control" class="app-brand app-brand--inline">
-          <img class="app-brand__mark" src="/public/shared/proverlay-logo.png" alt="" width="40" height="40" />
-          <span class="app-brand__copy">
-            <span class="app-brand__name">ProVerlay</span>
-            <span class="app-brand__page">Scoreboard editor</span>
-          </span>
-        </a>
-      </div>
-      <div class="editor-header__end">
-        <label class="field field--inline">
+    <header class="pv-app-header" data-section="design" data-back-href="/design" data-back-label="Design">
+      <div class="pv-app-header__title"><h1>Scoreboard editor</h1></div>
+      <div class="pv-app-header__actions">
+        <label class="pv-header-field">
           <span>Overlay</span>
           <select id="editor-graphic-select" aria-label="Choose overlay"></select>
         </label>
-        <button class="button button--primary" id="editor-save" type="button">Save</button>
-        <a class="button button--secondary" href="/render">Preview</a>
+        <button class="button button--primary button--compact" id="editor-save" type="button">Save</button>
       </div>
     </header>
 
@@ -226,7 +218,6 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/public/shared/app-shell.js"></script>
     <script>
       (function () {
         const mq = window.matchMedia('(max-width: 767px)')
@@ -235,6 +226,7 @@
         mq.addEventListener('change', apply)
       })()
     </script>
+    <script type="module" src="/public/shared/app-header.js"></script>
     <script type="module" src="/public/editor/editor.js"></script>
   </body>
 </html>

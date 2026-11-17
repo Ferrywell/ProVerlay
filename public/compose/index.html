@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ProVerlay — Import design</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="/public/shared/app-shell.js"></script>
     <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
     <link rel="stylesheet" href="/public/shared/tahoe.css" />
     <link rel="stylesheet" href="/public/shared/form-controls.css" />
@@ -11,19 +13,10 @@
     <link rel="stylesheet" href="/public/compose/compose.css" />
   </head>
   <body class="compose-app editor-app">
-    <header class="editor-header glass">
-      <div class="editor-header__start">
-        <a class="button button--secondary" href="/control">← Dashboard</a>
-        <a href="/control" class="app-brand app-brand--inline">
-          <img class="app-brand__mark" src="/public/shared/proverlay-logo.png" alt="" width="40" height="40" />
-          <span class="app-brand__copy">
-            <span class="app-brand__name">ProVerlay</span>
-            <span class="app-brand__page">Create from design</span>
-          </span>
-        </a>
-      </div>
-      <div class="editor-header__end">
-        <nav class="compose-phases" aria-label="Progress">
+    <header class="pv-app-header" data-section="design" data-back-href="/design" data-back-label="Design">
+      <div class="pv-app-header__title"><h1>Create from design</h1></div>
+      <div class="pv-app-header__actions">
+        <nav class="compose-phases pv-app-header__hide-narrow" aria-label="Progress">
           <span class="compose-phase is-active" data-phase="upload">Upload</span>
           <span class="compose-phase" data-phase="review">Review</span>
           <span class="compose-phase" data-phase="create">Create</span>
@@ -106,7 +99,8 @@
       </section>
     </main>
 
-    <script src="/public/shared/app-shell.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/public/shared/app-header.js"></script>
     <script type="module" src="/public/compose/compose.js"></script>
   </body>
 </html>

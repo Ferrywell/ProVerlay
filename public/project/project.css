@@ -38,7 +38,7 @@ h1, h2 {
   padding: var(--pv-space-lg);
   border-radius: var(--pv-radius-sm);
   border: 1px solid var(--pv-border);
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--pv-surface-faint);
   max-width: 36rem;
 }
 
@@ -54,7 +54,8 @@ h1, h2 {
   border-radius: var(--pv-radius-sm);
   padding: 0.6rem 0.7rem;
   font: inherit;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--pv-field-bg);
+  color: var(--pv-text);
 }
 
 .canvas-presets {
@@ -117,7 +118,7 @@ h1, h2 {
   padding: var(--pv-space-sm) 0.65rem;
   border-radius: var(--pv-radius-sm);
   border: 1px solid var(--pv-border);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--pv-surface-subtle);
   transition: border-color 0.15s ease;
 }
 
@@ -132,7 +133,7 @@ h1, h2 {
   display: grid;
   place-items: center;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--pv-fill-quiet);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -144,7 +145,7 @@ h1, h2 {
   height: 42px;
   object-fit: contain;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--pv-fill-quiet);
 }
 
 .asset-list .asset-meta,
@@ -177,7 +178,7 @@ h1, h2 {
 }
 
 .project-status.is-success {
-  color: #248a3d;
+  color: var(--pv-positive-text);
 }
 
 @media (max-width: 900px) {
@@ -241,7 +242,7 @@ h1, h2 {
   padding: var(--pv-space-sm) var(--pv-space-md);
   border-radius: var(--pv-radius-sm);
   border: 1px solid var(--pv-border);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--pv-surface-subtle);
   transition: border-color 0.15s ease;
 }
 
@@ -302,6 +303,8 @@ h1, h2 {
 
 .custom-css__field textarea {
   min-height: 18rem;
+  background: var(--pv-code-bg);
+  color: var(--pv-text);
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   font-size: 0.85rem;
   line-height: 1.5;
@@ -362,11 +365,13 @@ h1, h2 {
   border-radius: var(--pv-radius);
   padding: 0;
   width: min(26rem, calc(100vw - 2rem));
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  background: var(--pv-bg-solid);
+  color: var(--pv-text);
+  box-shadow: var(--pv-shadow-pop);
 }
 
 .project-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--pv-backdrop);
 }
 
 .project-dialog__form {

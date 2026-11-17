@@ -8,11 +8,11 @@ import {
 import { escapeHtml } from '/public/shared/operate-ui.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
-import { wireConnectionState } from '/public/shared/connection.js'
+import { sharedSocket, wireConnectionState } from '/public/shared/connection.js'
 
 const root = document.getElementById('operator-root')
 const switcher = document.getElementById('op-switcher')
-const navBar = document.querySelector('.pv-nav-bar')
+const navBar = document.querySelector('.pv-app-header')
 
 const VIEW_KEY = 'pv-operator-view'
 const ALL = 'all'
@@ -140,7 +140,7 @@ wireOperateRoot(root, getGraphic, {
 })
 wireRenderPreviewLinks(document, () => currentState?.settings)
 
-const socket = io()
+const socket = sharedSocket()
 wireConnectionState(socket, {
   pill: document.getElementById('connection-status'),
   controls: [root, switcher]

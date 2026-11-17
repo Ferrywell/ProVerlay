@@ -9,7 +9,7 @@ import {
 import { escapeHtml } from '/public/shared/operate-ui.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
-import { wireConnectionState } from '/public/shared/connection.js'
+import { sharedSocket, wireConnectionState } from '/public/shared/connection.js'
 
 const widgetId = resolveOperateWidgetId()
 const root = document.getElementById('operate-root')
@@ -60,7 +60,7 @@ wireOperateRoot(root, getGraphic, {
 })
 wireRenderPreviewLinks(document, () => currentState?.settings)
 
-const socket = io()
+const socket = sharedSocket()
 wireConnectionState(socket, { pill: document.getElementById('connection-status'), controls: [root] })
 socket.on('stateChanged', applyState)
 

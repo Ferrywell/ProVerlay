@@ -1,3 +1,4 @@
+import { sharedSocket } from '/public/shared/connection.js'
 import { hexFromColor, patchGraphic } from '/public/shared/client.js'
 import { resolveEditorGraphicId } from '/public/shared/device.js'
 import {
@@ -1240,7 +1241,7 @@ wireKeyboardNudge()
 
 wireRenderPreviewLinks(document, () => state?.settings)
 
-const socket = io()
+const socket = sharedSocket()
 socket.on('stateChanged', async (next) => {
   state = next
   const currentId = graphic?.id || resolveGraphicId()

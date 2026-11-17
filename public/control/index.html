@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ProVerlay — Dashboard</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="/public/shared/app-shell.js"></script>
     <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
     <link rel="stylesheet" href="/public/shared/tahoe.css" />
     <link rel="stylesheet" href="/public/shared/form-controls.css" />
@@ -12,34 +14,16 @@
     <link rel="stylesheet" href="/public/control/control.css" />
   </head>
   <body class="dashboard">
-    <aside class="mobile-operator-hint" id="mobile-operator-hint" hidden>
-      <p>On a phone? Use <a href="/operator">Operator</a> for touch-friendly live control.</p>
-      <button type="button" class="pv-nav-bar__action" id="mobile-operator-hint-dismiss">OK</button>
-    </aside>
-    <header class="shell-header glass">
-      <a href="/control" class="app-brand">
-        <img class="app-brand__mark" src="/public/shared/proverlay-logo.png" alt="" width="40" height="40" />
-        <span class="app-brand__copy">
-          <span class="app-brand__name">ProVerlay</span>
-          <span class="app-brand__page">Dashboard</span>
-        </span>
-      </a>
-      <div class="header-meta">
-        <div id="connection-status" class="pill pill--sync is-connecting" role="status" aria-live="polite">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span class="status-label">Connecting…</span>
-        </div>
-        <div class="header-meta__group">
-          <a class="button button--secondary" href="/operator">Operator</a>
-          <a class="button button--secondary" href="/design">Design</a>
-          <a class="button button--secondary" href="/layout">Overlay layout</a>
-          <button class="button button--secondary" id="copy-render-url" type="button" title="Copy combined Browser Source URL">Combined render URL</button>
-        </div>
-        <div class="header-meta__group header-meta__group--actions">
-          <a class="button button--primary" href="/render">Preview</a>
-        </div>
+    <header class="pv-app-header" data-section="dashboard">
+      <div class="pv-app-header__title"><h1>Dashboard</h1></div>
+      <div class="pv-app-header__actions">
+        <button class="button button--secondary button--compact pv-app-header__hide-narrow" id="copy-render-url" type="button" title="Copy combined Browser Source URL">Combined render URL</button>
       </div>
     </header>
+    <aside class="mobile-operator-hint" id="mobile-operator-hint" hidden>
+      <p>On a phone? Use <a href="/operator">Operator</a> for touch-friendly live control.</p>
+      <button type="button" class="button button--ghost button--compact" id="mobile-operator-hint-dismiss">OK</button>
+    </aside>
 
     <main class="shell-grid">
       <section class="glass panel panel--overlays">
@@ -519,7 +503,7 @@
     </dialog>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/public/shared/app-shell.js"></script>
+    <script type="module" src="/public/shared/app-header.js"></script>
     <script type="module" src="/public/control/control.js"></script>
   </body>
 </html>
