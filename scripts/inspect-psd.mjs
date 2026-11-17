@@ -1,11 +1,19 @@
 #!/usr/bin/env node
+/**
+ * Developer utility: prints the visible layers of a Photoshop file (name, bounds and
+ * centre as % of the canvas) as JSON, to help position elements when building a
+ * PNG-based widget from a designer's PSD. Not used by the app or the build; it is the
+ * only consumer of the `ag-psd` devDependency.
+ *
+ *   node scripts/inspect-psd.mjs path/to/design.psd
+ */
 import fs from 'fs'
 import path from 'path'
 import { readPsd } from 'ag-psd'
 
 const psdPath = process.argv[2]
 if (!psdPath) {
-  console.error('Gebruik: node scripts/inspect-psd.mjs <pad/naar/bestand.psd>')
+  console.error('Usage: node scripts/inspect-psd.mjs <path/to/file.psd>')
   process.exit(1)
 }
 
