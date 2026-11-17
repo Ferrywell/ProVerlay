@@ -201,3 +201,18 @@ test('versionMatches accepts the 4-part Windows form of a version', () => {
   assert.ok(!versionMatches('0.8.1.0', '0.8.0'))
   assert.ok(!versionMatches(null, '0.8.0'))
 })
+
+// ── build/installer.nsh ───────────────────────────────────────────────────────
+
+test('uninstaller removes the start-at-login Run entry, except during updates', () => {
+  const nsh = fs.readFileSync(path.join(root, 'build', 'installer.nsh'), 'utf8')
+  const yml = fs.readFileSync(path.join(root, 'electron-builder.yml'), 'utf8')
+  const appId = yml.match(/^appId:\s*(\S+)/m)[1]
+  // app.setLoginItemSettings() names the Run value after the AppUserModelId (= appId).
+  assert.match(nsh, /!macro customUnInstall\b/)
+  assert.match(nsh, /\$\{ifNot\} \$\{isUpdated\}/)
+  assert.ok(
+    nsh.includes(`DeleteRegValue HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Run" "${appId}"`),
+    `installer.nsh must delete the Run value named after appId ${appId}`
+  )
+})
