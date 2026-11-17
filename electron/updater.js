@@ -198,16 +198,17 @@ export async function downloadUpdate(update, { dir, onProgress = () => {}, fetch
  */
 export function macAppBundle(execPath, { isPackaged = true, canWrite = (p) => fs.accessSync(p, fs.constants.W_OK) } = {}) {
   if (!isPackaged) return { ok: false, reason: 'Updating works in the installed app. When running from source, use git pull.' }
-  const bundle = path.resolve(execPath, '..', '..', '..')
+  // macOS paths, also when the tests run on Windows.
+  const bundle = path.posix.resolve(execPath, '..', '..', '..')
   if (!bundle.endsWith('.app')) return { ok: false, reason: 'Could not find the ProVerlay app bundle.' }
   if (bundle.includes('/AppTranslocation/') || bundle.startsWith('/Volumes/')) {
     return { ok: false, reason: 'Move ProVerlay to the Applications folder first, then update from there.' }
   }
   try {
-    canWrite(path.dirname(bundle))
+    canWrite(path.posix.dirname(bundle))
     canWrite(bundle)
   } catch {
-    return { ok: false, reason: `ProVerlay cannot replace itself in ${path.dirname(bundle)} (no write access).` }
+    return { ok: false, reason: `ProVerlay cannot replace itself in ${path.posix.dirname(bundle)} (no write access).` }
   }
   return { ok: true, bundle }
 }
