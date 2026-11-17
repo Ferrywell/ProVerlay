@@ -1,9 +1,12 @@
 import { resolveOperateWidgetId } from '/public/shared/device.js'
 import {
-  operateShellHtml,
-  refreshOperateSection,
-  wireOperateSection
-} from '/public/shared/operate-handlers.js'
+  operateCardHtml,
+  operateTypeLabel,
+  refreshOperateCard,
+  warnOnAirOverlap,
+  wireOperateRoot
+} from '/public/shared/operate-card.js'
+import { escapeHtml } from '/public/shared/operate-ui.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
 import { wireConnectionState } from '/public/shared/connection.js'
@@ -12,26 +15,15 @@ const widgetId = resolveOperateWidgetId()
 const root = document.getElementById('operate-root')
 const title = document.getElementById('operate-title')
 const subtitle = document.getElementById('operate-subtitle')
-const connectionStatus = document.getElementById('connection-status')
 
 let currentState = null
 
-function getGraphic(id) {
-  return currentState?.graphics?.find((g) => g.id === id) || null
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-}
+const getGraphic = (id) => currentState?.graphics?.find((g) => g.id === id) || null
 
 function renderMissing(message) {
   root.innerHTML = `<section class="empty-state">${message}</section>`
-  if (title) title.textContent = 'Operate'
-  if (subtitle) subtitle.hidden = true
+  title.textContent = 'Operate'
+  subtitle.hidden = true
 }
 
 function render() {
@@ -39,52 +31,22 @@ function render() {
     renderMissing('No widget id. Open <code>/operate?graphic=&lt;id&gt;</code> or <code>/operate/&lt;id&gt;</code>.')
     return
   }
-
   const graphic = getGraphic(widgetId)
   if (!graphic) {
     renderMissing(`Widget <code>${escapeHtml(widgetId)}</code> not found in the active project. <a href="/control">Back to the Dashboard</a>`)
     return
   }
 
-  const operatorFocusTypes = new Set(['lowerThirdShow', 'quizShow'])
-  if (operatorFocusTypes.has(graphic.type)) {
-    window.location.replace(`/operator?focus=${encodeURIComponent(widgetId)}`)
-    return
-  }
+  title.textContent = graphic.name || 'Operate'
+  subtitle.hidden = false
+  subtitle.textContent = operateTypeLabel(graphic.type)
 
-  if (title) title.textContent = graphic.name || 'Operate'
-  if (subtitle) {
-    subtitle.hidden = false
-    const labels = {
-      matchScoreboard: 'Match score',
-      customTicker: 'Ticker',
-      streamCountdown: 'Stream countdown',
-      lowerThird: 'Lower third',
-      lowerThirdShow: 'Lower thirds',
-      quizShow: 'Quiz',
-      message: 'Message',
-      f1Timing: 'F1 timing',
-      hockeyScorebug: 'Hockey scorebug'
-    }
-    subtitle.textContent = labels[graphic.type] || graphic.type
+  let card = root.querySelector(`[data-graphic-id="${CSS.escape(graphic.id)}"]`)
+  if (!card || card.dataset.type !== graphic.type) {
+    root.innerHTML = operateCardHtml(graphic, { showTitle: false })
+    card = root.firstElementChild
   }
-
-  let section = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
-  if (!section) {
-    root.innerHTML = operateShellHtml(graphic)
-    section = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
-    wireOperateSection(root, getGraphic)
-  }
-
-  refreshOperateSection(section, graphic)
-
-  if (!graphic.operator) {
-    const mount = section.querySelector('[data-operate-mount]')
-    if (mount && !mount.innerHTML.trim()) {
-      mount.innerHTML =
-        '<p class="op-status">This widget is not marked for operator control. Use Go live above or open the dashboard.</p>'
-    }
-  }
+  refreshOperateCard(card, graphic)
 }
 
 function applyState(state) {
@@ -93,10 +55,13 @@ function applyState(state) {
   render()
 }
 
+wireOperateRoot(root, getGraphic, {
+  onWentLive: (graphic) => warnOnAirOverlap(graphic, currentState?.graphics)
+})
 wireRenderPreviewLinks(document, () => currentState?.settings)
 
 const socket = io()
-wireConnectionState(socket, { pill: connectionStatus, controls: [root] })
+wireConnectionState(socket, { pill: document.getElementById('connection-status'), controls: [root] })
 socket.on('stateChanged', applyState)
 
 fetch('/api/state')

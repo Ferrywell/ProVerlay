@@ -2,14 +2,6 @@
   padding: var(--pv-space-lg) var(--pv-space-xl) 2rem;
 }
 
-.dashboard-operate-root .op-section {
-  margin: 0;
-}
-
-.dashboard-operate-root .touch-btn {
-  min-height: 48px;
-}
-
 @media (max-width: 767px) {
   .dashboard {
     padding: var(--pv-space-md) var(--pv-screen-margin) 2rem;

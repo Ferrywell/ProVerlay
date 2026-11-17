@@ -1,1082 +1,131 @@
-import { patchGraphic, toggleGraphic } from '/public/shared/client.js'
 import {
-  createTickerMessage,
-  migrateTickerMessages,
-  tickerMessageText
-} from '/public/shared/ticker-messages.js'
-import {
-  formatClock,
-  PERIOD_OPTIONS,
-  resolveLiveClock,
-  widgetVisible
-} from '/public/shared/match-utils.js'
-import {
-  formatMatchStatusLine,
-  handleMatchOperateAction,
-  handleMatchFieldChange,
-  matchPenaltyCount,
-  matchPenaltySide,
-  matchPenaltiesVisible,
-  persistAutoStoppageIfNeeded
-} from '/public/shared/operate-match.js'
-import {
-  handleHockeyOperateAction,
-  handleHockeyFieldChange
-} from '/public/shared/operate-hockey.js'
-import {
-  formatHockeyClock,
-  formatHockeyStatusLine,
-  HOCKEY_PERIOD_OPTIONS,
-  resolveLiveHockeyClock
-} from '/public/shared/hockey-utils.js'
+  operateCardHtml,
+  refreshOperateCard,
+  ensureTimers,
+  warnOnAirOverlap,
+  wireOperateRoot
+} from '/public/shared/operate-card.js'
+import { escapeHtml } from '/public/shared/operate-ui.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
-import { handleF1FieldChange, refreshF1LiveSection, handleF1Action, syncF1MvHelp } from '/public/shared/operate-handlers.js'
-import { F1_SOURCE_OPTIONS } from '/public/shared/f1-timing.js'
-import { offerTickerUndo } from '/public/shared/operate-handlers.js'
-import { withPending } from '/public/shared/toast.js'
 import { wireConnectionState } from '/public/shared/connection.js'
-import {
-  liveButtonClass,
-  liveButtonLabel,
-  onAirBadgeHtml,
-  syncLiveButton,
-  syncOnAirBadge
-} from '/public/shared/on-air.js'
 
 const root = document.getElementById('operator-root')
-const title = document.getElementById('op-title')
-const focusChip = document.getElementById('op-focus-chip')
-const connectionStatus = document.getElementById('connection-status')
-const focusId = new URLSearchParams(window.location.search).get('focus')
+const switcher = document.getElementById('op-switcher')
+const navBar = document.querySelector('.pv-nav-bar')
+
+const VIEW_KEY = 'pv-operator-view'
+const ALL = 'all'
 
 let currentState = null
-let clockTimer = null
-let mounted = false
-let showWidgetTitles = false
 
-function sectionHead(graphic, statusText, { livePill = true, statusBind = false } = {}) {
-  const titleBlock = showWidgetTitles
-    ? `<h2 class="pv-group__title">${escapeHtml(graphic.name)}</h2>`
-    : ''
-  const statusAttr = statusBind ? ' data-bind="status-line"' : ''
-  const statusBlock = statusText
-    ? `<p class="op-status"${statusAttr}>${statusText}</p>`
-    : ''
-  // ON AIR badge and the Go live / Take off air button sit in the header row,
-  // away from clock and score buttons to avoid mis-taps.
-  const pill = livePill
-    ? `<div class="op-section-head__live">
-        ${onAirBadgeHtml(graphic.visible, { bind: true })}
-        <button type="button" class="button ${liveButtonClass(graphic.visible)} touch-btn" data-action="toggle-live" aria-pressed="${Boolean(graphic.visible)}">${liveButtonLabel(graphic.visible)}</button>
-      </div>`
-    : ''
-  if (!titleBlock && !statusBlock && !pill) return ''
-  return `
-    <header class="op-section-head">
-      <div class="op-section-head__text">
-        ${titleBlock}
-        ${statusBlock}
-      </div>
-      ${pill}
-    </header>`
-}
+const getGraphic = (id) => (currentState?.graphics || []).find((g) => g.id === id) || null
+const operatorGraphics = () => (currentState?.graphics || []).filter((g) => g.operator)
 
-function getGraphicById(id) {
-  return (currentState?.graphics || []).find((g) => g.id === id) || null
-}
+/* ---------------------------------------------------- widget switcher */
 
-function operatorGraphics() {
-  return (currentState?.graphics || []).filter((g) => g.operator)
-}
-
-function penaltyCount(kicks = []) {
-  return matchPenaltyCount(kicks)
-}
-
-function nextPenaltySide(homeKicks, awayKicks) {
-  return matchPenaltySide({}, { homeKicks, awayKicks })
-}
-
-function penaltiesEnabled(data = {}) {
-  return matchPenaltiesVisible(data)
-}
-
-function formatOpStatusLine(clock = {}) {
-  return formatMatchStatusLine(clock)
-}
-
-function updateFocusChip(name, itemCount = 1) {
-  if (!focusChip) return
-  if (focusId && name && itemCount > 1) {
-    focusChip.hidden = false
-    focusChip.textContent = name
-  } else {
-    focusChip.hidden = true
-    focusChip.textContent = ''
+function readStoredView() {
+  try {
+    return localStorage.getItem(VIEW_KEY)
+  } catch {
+    return null
   }
 }
 
-function matchCardTemplate(graphic) {
-  const d = graphic.data || {}
-  const clock = d.clock || {}
-  const penalties = d.penalties || {}
-  const clockText = formatClock(clock)
-  const nextSide = nextPenaltySide(penalties.homeKicks || [], penalties.awayKicks || [])
-  // Penalty-blok alleen tonen als de periode op penalties staat
-  const showPenalties = penaltiesEnabled(d) && clock.period === 'penalties'
+/** ?focus=<id> (links from the dashboard) wins over the remembered view. */
+let view = new URLSearchParams(window.location.search).get('focus') || readStoredView() || ALL
 
-  return `
-    <section class="op-section score-panel${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
-      <div class="pv-group">
-      ${sectionHead(graphic, formatOpStatusLine(clock), { statusBind: true })}
-      <div class="pv-group__cell pv-group__cell--flush">
-      <div class="score-teams">
-        <div class="team-block">
-          <input class="team-code-input" type="text" maxlength="4" data-field="homeCode" value="${escapeHtml(d.homeCode || '')}" aria-label="Home team code" spellcheck="false" />
-          ${d.showNames ? `<input class="team-name-input" type="text" data-field="homeName" value="${escapeHtml(d.homeName || '')}" aria-label="Home team name" spellcheck="false" />` : ''}
-          <div class="score-value" data-bind="homeScore">${d.homeScore ?? 0}</div>
-          <div class="score-actions">
-            <button class="button button--gray touch-btn touch-btn--score" data-action="home-minus">−</button>
-            <button class="button button--tinted touch-btn touch-btn--score" data-action="home-plus">+</button>
-          </div>
-        </div>
-        <div class="score-mid">
-          <div class="clock-display" data-bind="clock">${clockText}</div>
-          <div data-bind="period">${PERIOD_OPTIONS.find((p) => p.value === clock.period)?.label || clock.period}</div>
-        </div>
-        <div class="team-block">
-          <input class="team-code-input" type="text" maxlength="4" data-field="awayCode" value="${escapeHtml(d.awayCode || '')}" aria-label="Away team code" spellcheck="false" />
-          ${d.showNames ? `<input class="team-name-input" type="text" data-field="awayName" value="${escapeHtml(d.awayName || '')}" aria-label="Away team name" spellcheck="false" />` : ''}
-          <div class="score-value" data-bind="awayScore">${d.awayScore ?? 0}</div>
-          <div class="score-actions">
-            <button class="button button--gray touch-btn touch-btn--score" data-action="away-minus">−</button>
-            <button class="button button--tinted touch-btn touch-btn--score" data-action="away-plus">+</button>
-          </div>
-        </div>
-      </div>
-      </div>
-      <div class="pv-group__cell">
-      <div class="clock-controls">
-        <label class="field field--inline">
-          <span>Minute</span>
-          <input type="number" min="0" max="130" data-field="minute" value="${resolveLiveClock(clock).minute ?? 0}" />
-        </label>
-        <label class="field field--inline">
-          <span>Second</span>
-          <input type="number" min="0" max="59" data-field="second" value="${resolveLiveClock(clock).second ?? 0}" />
-        </label>
-        <label class="field field--inline field--grow">
-          <span>Period</span>
-          <select data-field="period">
-            ${PERIOD_OPTIONS.map((p) => `<option value="${p.value}"${clock.period === p.value ? ' selected' : ''}>${p.label}</option>`).join('')}
-          </select>
-        </label>
-      </div>
-      </div>
-      <div class="pv-group__cell pv-group__cell--flush">
-        <div class="pv-segmented pv-segmented--cols-3" role="group" aria-label="Adjust seconds">
-          <button type="button" class="pv-segmented__btn" data-action="sec-minus-1">−1s</button>
-          <button type="button" class="pv-segmented__btn" data-action="sec-plus-1">+1s</button>
-          <button type="button" class="pv-segmented__btn" data-action="sec-minus">−15s</button>
-        </div>
-        <div class="pv-segmented pv-segmented--cols-3" role="group" aria-label="Adjust minutes">
-          <button type="button" class="pv-segmented__btn" data-action="sec-plus">+15s</button>
-          <button type="button" class="pv-segmented__btn" data-action="min-minus">−1 min</button>
-          <button type="button" class="pv-segmented__btn" data-action="min-plus">+1 min</button>
-        </div>
-        <button type="button" class="button ${clock.stoppageTime ? 'button--live' : 'button--gray'} touch-btn clock-adjust__stoppage" data-action="toggle-stoppage">
-          ${clock.stoppageTime ? 'Stoppage (45+/90+)' : 'Normal time'}
-        </button>
-        <button type="button" class="button ${clock.autoStoppageAt90 ? 'button--live' : 'button--gray'} touch-btn clock-adjust__auto-stoppage" data-action="toggle-auto-stoppage">
-          Automatic stoppage from 90'
-        </button>
-      </div>
-      <div class="pv-group__cell pv-group__cell--actions">
-      <div class="op-toolbar op-toolbar--primary">
-        <button type="button" class="button ${clock.running ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-clock">
-          ${clock.running ? 'Pause' : 'Start clock'}
-        </button>
-        <button type="button" class="button ${widgetVisible(d.widgets, 'clock') ? 'button--gray' : 'button--secondary'} touch-btn" data-action="toggle-clock-visible">
-          ${widgetVisible(d.widgets, 'clock') ? 'Hide clock' : 'Show clock'}
-        </button>
-      </div>
-      </div>
-      <div class="penalty-section pv-group__cell${penalties.active ? ' is-active' : ''}"${showPenalties ? '' : ' hidden'}>
-        <div class="penalty-head">
-          <h3>Penalties</h3>
-          <button class="button ${penalties.active ? 'button--live' : 'button--secondary'} touch-btn" data-action="toggle-penalties">
-            ${penalties.active ? 'Active' : 'Off'}
-          </button>
-        </div>
-        <div class="penalty-score">
-          <span>${escapeHtml(d.homeCode || 'HOME')} <span data-bind="pen-home">${penaltyCount(penalties.homeKicks)}</span></span>
-          <span>—</span>
-          <span><span data-bind="pen-away">${penaltyCount(penalties.awayKicks)}</span> ${escapeHtml(d.awayCode || 'AWAY')}</span>
-        </div>
-        <div class="op-toolbar" data-pen-toolbar>
-          <button class="button button--primary touch-btn" data-action="pen-home-goal" ${!penalties.active || nextSide !== 'home' ? 'disabled' : ''}>${escapeHtml(d.homeCode)} goal</button>
-          <button class="button button--danger touch-btn" data-action="pen-home-miss" ${!penalties.active || nextSide !== 'home' ? 'disabled' : ''}>${escapeHtml(d.homeCode)} miss</button>
-          <button class="button button--primary touch-btn" data-action="pen-away-goal" ${!penalties.active || nextSide !== 'away' ? 'disabled' : ''}>${escapeHtml(d.awayCode)} goal</button>
-          <button class="button button--danger touch-btn" data-action="pen-away-miss" ${!penalties.active || nextSide !== 'away' ? 'disabled' : ''}>${escapeHtml(d.awayCode)} miss</button>
-          <button class="button button--secondary touch-btn" data-action="pen-undo">Undo last</button>
-          <button class="button button--secondary touch-btn" data-action="pen-reset">Reset</button>
-        </div>
-      </div>
-      </div>
-    </section>
-  `
+function setView(next) {
+  view = next
+  try {
+    localStorage.setItem(VIEW_KEY, next)
+  } catch {
+    /* private mode */
+  }
+  const url = new URL(window.location.href)
+  if (next === ALL) url.searchParams.delete('focus')
+  else url.searchParams.set('focus', next)
+  window.history.replaceState(null, '', url)
+  render()
+  window.scrollTo({ top: 0 })
 }
 
-function legacyCardTemplate(graphic) {
-  const d = graphic.data
-  return `
-    <section class="op-section score-panel${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
-      <div class="pv-group">
-      ${sectionHead(graphic, `${escapeHtml(d.homeTeam)} vs ${escapeHtml(d.awayTeam)}`)}
-      <div class="pv-group__cell pv-group__cell--flush">
-      <div class="score-teams">
-        <div class="team-block">
-          <div class="team-name">${escapeHtml(d.homeTeam)}</div>
-          <div class="score-value">${d.homeScore}</div>
-          <div class="score-actions">
-            <button class="button button--gray touch-btn touch-btn--score" data-action="home-minus">−</button>
-            <button class="button button--tinted touch-btn touch-btn--score" data-action="home-plus">+</button>
-          </div>
-        </div>
-        <div class="score-mid">
-          <div>${d.period}</div>
-          <div>${d.showClock ? `${d.minute}'` : ''}</div>
-        </div>
-        <div class="team-block">
-          <div class="team-name">${escapeHtml(d.awayTeam)}</div>
-          <div class="score-value">${d.awayScore}</div>
-          <div class="score-actions">
-            <button class="button button--gray touch-btn touch-btn--score" data-action="away-minus">−</button>
-            <button class="button button--tinted touch-btn touch-btn--score" data-action="away-plus">+</button>
-          </div>
-        </div>
-      </div>
-      </div>
-      <div class="pv-group__cell pv-group__cell--actions">
-      <div class="op-toolbar op-toolbar--primary">
-        <button type="button" class="button button--gray touch-btn" data-action="minute-minus">−1 min</button>
-        <button type="button" class="button button--gray touch-btn" data-action="minute-plus">+1 min</button>
-      </div>
-      </div>
-      </div>
-    </section>
-  `
+function resolvedView(items) {
+  return view !== ALL && items.some((g) => g.id === view) ? view : ALL
 }
 
-function escapeHtml(value = '') {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-}
-
-function lowerThirdShowCardTemplate(graphic) {
-  const entries = graphic.data?.entries || []
-  const activeId = graphic.data?.activeEntryId
-  return `
-    <section class="op-section${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
-      <div class="pv-group">
-      ${sectionHead(graphic, `${entries.length} ${entries.length === 1 ? 'person' : 'people'}`)}
-      <div class="pv-group__cell">
-      <div class="roster-touch-grid">
-        ${entries.length
-          ? entries
-              .map((entry) => {
-                const isActive = graphic.visible && activeId === entry.id
-                return `<button type="button" class="button touch-btn roster-touch-btn ${isActive ? 'button--live' : 'button--secondary'}" data-action="lt-show" data-entry-id="${entry.id}">
-                  <span class="roster-touch-name">${escapeHtml(entry.name)}</span>
-                  ${entry.title ? `<span class="roster-touch-meta">${escapeHtml(entry.title)}</span>` : ''}
-                </button>`
-              })
-              .join('')
-          : '<p class="op-status">No people in this list yet. Add them on the dashboard.</p>'}
-      </div>
-      </div>
-      <div class="pv-group__cell pv-group__cell--actions">
-      <div class="op-toolbar op-toolbar--live">
-        <button type="button" class="button button--gray touch-btn" data-action="lt-hide" ${!graphic.visible ? 'disabled' : ''}>Clear lower third</button>
-      </div>
-      </div>
-      </div>
-    </section>
-  `
-}
-
-function quizShowCardTemplate(graphic) {
-  const d = graphic.data || {}
-  const questions = d.questions || []
-  const activeId = d.activeQuestionId
-  return `
-    <section class="op-section${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
-      <div class="pv-group">
-      ${sectionHead(graphic, `${questions.length} ${questions.length === 1 ? 'question' : 'questions'}${d.revealed ? ' · answer revealed' : ''}`)}
-      <div class="pv-group__cell">
-      <div class="roster-touch-grid roster-touch-grid--wide">
-        ${questions.length
-          ? questions
-              .map((q) => {
-                const isActive = graphic.visible && activeId === q.id
-                return `<button type="button" class="button touch-btn roster-touch-btn ${isActive ? 'button--live' : 'button--secondary'}" data-action="quiz-show" data-entry-id="${q.id}">
-                  <span class="roster-touch-name">${escapeHtml(q.question)}</span>
-                </button>`
-              })
-              .join('')
-          : '<p class="op-status">No questions yet. Add them on the dashboard.</p>'}
-      </div>
-      </div>
-      <div class="pv-group__cell pv-group__cell--actions">
-      <div class="op-toolbar op-toolbar--primary">
-        <button type="button" class="button ${d.revealed ? 'button--live' : 'button--primary'} touch-btn" data-action="quiz-reveal" ${!graphic.visible || !activeId ? 'disabled' : ''}>
-          ${d.revealed ? 'Hide answer' : 'Reveal answer'}
-        </button>
-        <button type="button" class="button button--gray touch-btn" data-action="quiz-hide" ${!graphic.visible ? 'disabled' : ''}>Hide</button>
-      </div>
-      </div>
-      </div>
-    </section>
-  `
-}
-
-function tickerMessagesHtml(messages) {
-  return migrateTickerMessages(messages)
-    .map(
-      (m, i) =>
-        `<li class="ticker-msg-list__item${m.enabled ? '' : ' is-disabled'}">
-          <label class="ticker-msg-row">
-            <input type="checkbox" class="ticker-msg-row__toggle" data-action="ticker-toggle" data-index="${i}" ${m.enabled ? 'checked' : ''} />
-            <span class="ticker-msg-row__text">${escapeHtml(tickerMessageText(m))}</span>
-          </label>
-          <button type="button" class="button button--danger button--icon" data-action="ticker-del" data-index="${i}" title="Remove permanently" aria-label="Remove message">×</button>
-        </li>`
+function renderSwitcher(items, active) {
+  switcher.hidden = items.length < 2
+  if (switcher.hidden) return
+  const html = [
+    `<button type="button" class="op-switcher__btn" data-view="${ALL}" aria-pressed="${active === ALL}">All</button>`,
+    ...items.map(
+      (g) => `<button type="button" class="op-switcher__btn" data-view="${escapeHtml(g.id)}" aria-pressed="${active === g.id}">
+        <span class="op-switcher__dot${g.visible ? ' is-live' : ''}" aria-hidden="true"></span>
+        <span class="op-switcher__name">${escapeHtml(g.name || g.id)}</span>
+        ${g.visible ? '<span class="visually-hidden">(on air)</span>' : ''}
+      </button>`
     )
-    .join('')
+  ].join('')
+  if (switcher.dataset.html === html) return
+  const focused = switcher.contains(document.activeElement) ? document.activeElement.dataset.view : null
+  switcher.innerHTML = html
+  switcher.dataset.html = html
+  if (focused) switcher.querySelector(`[data-view="${CSS.escape(focused)}"]`)?.focus()
+  switcher.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
 }
 
-function updateTickerCard(card, graphic) {
-  const d = graphic.data || {}
-  const messages = migrateTickerMessages(d.messages || [])
-  const list = card.querySelector('.ticker-msg-list')
-  if (list) list.innerHTML = tickerMessagesHtml(messages)
-  const status = card.querySelector('.op-status')
-  if (status) status.textContent = `${messages.length} ${messages.length === 1 ? 'message' : 'messages'}`
-  const speedInput = card.querySelector('[data-field="ticker-speed"]')
-  if (speedInput && document.activeElement !== speedInput) {
-    speedInput.value = d.speed ?? 90
-    const out = card.querySelector('[data-bind="speed-out"]')
-    if (out) out.textContent = d.speed ?? 90
-  }
-  const sizeInput = card.querySelector('[data-field="ticker-fontsize"]')
-  if (sizeInput && document.activeElement !== sizeInput) {
-    sizeInput.value = d.fontSize ?? 30
-    const out = card.querySelector('[data-bind="fontsize-out"]')
-    if (out) out.textContent = d.fontSize ?? 30
-  }
-  updateLiveState(card, graphic)
-}
+switcher.addEventListener('click', (event) => {
+  const btn = event.target.closest('[data-view]')
+  if (btn) setView(btn.dataset.view)
+})
 
-function tickerCardTemplate(graphic) {
-  const d = graphic.data || {}
-  const messages = migrateTickerMessages(d.messages || [])
-  return `
-    <section class="op-section${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
-      <div class="pv-group">
-      ${sectionHead(graphic, `${messages.length} ${messages.length === 1 ? 'message' : 'messages'}`)}
-      <div class="pv-group__cell pv-group__cell--flush">
-      <ul class="ticker-msg-list">${tickerMessagesHtml(messages)}</ul>
-      </div>
-      <div class="pv-group__cell ticker-compose">
-      <label class="field">
-        <span>New message</span>
-        <div class="ticker-compose__row">
-          <input type="text" data-field="ticker-new" placeholder="Type a message…" />
-          <button type="button" class="button button--primary ticker-compose__add" data-action="ticker-add">Add</button>
-        </div>
-      </label>
-      <p class="op-status">New messages start disabled.</p>
-      <label class="field field--slider">
-        <span>Speed · <output data-bind="speed-out">${d.speed ?? 90}</output> px/s</span>
-        <input type="range" min="30" max="240" step="5" data-field="ticker-speed" value="${d.speed ?? 90}" />
-      </label>
-      <label class="field field--slider">
-        <span>Font size · <output data-bind="fontsize-out">${d.fontSize ?? 30}</output> px</span>
-        <input type="range" min="16" max="200" step="2" data-field="ticker-fontsize" value="${d.fontSize ?? 30}" />
-      </label>
-      </div>
-      </div>
-    </section>
-  `
-}
+// Keep the switcher just below the sticky nav bar.
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty('--op-nav-height', `${navBar.offsetHeight}px`)
+}).observe(navBar)
 
-function f1StatusText(graphic) {
-  const d = graphic.data || {}
-  const source = d.source === 'multiviewer' ? 'MultiViewer live' : 'Manual standings'
-  return `${source} · focus ${d.focusDriver || '—'} · top ${d.topCount || 5}`
-}
+/* --------------------------------------------------------------- render */
 
-function f1CardTemplate(graphic) {
-  const d = graphic.data || {}
-  const mv = d.multiviewer || {}
-  const isLiveSource = d.source === 'multiviewer'
-  return `
-    <section class="op-section${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
-      <div class="pv-group">
-      ${sectionHead(graphic, f1StatusText(graphic), { statusBind: true })}
-      <div class="pv-group__cell f1-card__live"${isLiveSource ? '' : ' hidden'}>
-        <p class="op-status f1-live-line">
-          <span class="f1-status-dot" data-bind="f1-status-dot"></span>
-          <span data-bind="f1-status">Checking live timing…</span>
-        </p>
-        <div class="f1-mv-toolbar">
-          <button type="button" class="button button--secondary touch-btn" data-action="f1-open-multiviewer">Open MultiViewer</button>
-          <button type="button" class="button button--gray touch-btn" data-action="f1-toggle-mv-help" data-bind="f1-mv-help-toggle">Setup tip</button>
-        </div>
-        <aside class="f1-mv-help" data-f1-mv-help hidden>
-          <p class="f1-mv-help__lead">Turn on Live Timing in MultiViewer — video alone sends no standings.</p>
-          <ol class="f1-mv-help__steps">
-            <li>Open MultiViewer and load the session.</li>
-            <li>Start <strong>Live Timing</strong> (or <strong>Replay Live Timing</strong>).</li>
-            <li>Keep ProVerlay host/port aligned (default <code>127.0.0.1:10101</code>).</li>
-          </ol>
-          <button type="button" class="button button--gray touch-btn" data-action="f1-dismiss-mv-help">Got it</button>
-        </aside>
-      </div>
-      <div class="pv-group__cell f1-card__fields">
-        <label class="field">
-          <span>Source</span>
-          <select data-field="f1-source">
-            ${F1_SOURCE_OPTIONS.map((o) => `<option value="${o.value}"${d.source === o.value ? ' selected' : ''}>${o.label}</option>`).join('')}
-          </select>
-        </label>
-        <label class="field">
-          <span>Focus driver</span>
-          <input type="text" maxlength="3" data-field="f1-focus" value="${escapeHtml(d.focusDriver || '')}" placeholder="VER" spellcheck="false" />
-        </label>
-        <label class="field">
-          <span>Top positions</span>
-          <input type="number" min="1" max="20" inputmode="numeric" data-field="f1-topcount" value="${d.topCount || 5}" />
-        </label>
-        <label class="field"${isLiveSource ? '' : ' hidden'}>
-          <span>Delay (s)</span>
-          <input type="number" min="0" max="120" step="0.5" inputmode="decimal" data-field="f1-mv-delay" value="${(Number(mv.delayMs) || 0) / 1000}" />
-        </label>
-      </div>
-      <div class="pv-group__cell f1-card__prepare">
-        <button type="button" class="button button--secondary touch-btn" data-action="f1-import-drivers">
-          Import from MultiViewer
-        </button>
-        <p class="op-status f1-operate__import-status" data-bind="f1-import-status"></p>
-      </div>
-      </div>
-    </section>
-  `
-}
-
-function updateF1Card(card, graphic) {
-  const d = graphic.data || {}
-  const mv = d.multiviewer || {}
-  const status = card.querySelector('[data-bind="status-line"]')
-  if (status) status.textContent = f1StatusText(graphic)
-  const liveBlock = card.querySelector('.f1-card__live')
-  if (liveBlock) liveBlock.hidden = d.source !== 'multiviewer'
-  if (d.source === 'multiviewer') syncF1MvHelp(card)
-  const setIfIdle = (selector, value) => {
-    const input = card.querySelector(selector)
-    if (input && document.activeElement !== input) input.value = value
-  }
-  setIfIdle('[data-field="f1-source"]', d.source || 'manual')
-  setIfIdle('[data-field="f1-focus"]', d.focusDriver || '')
-  setIfIdle('[data-field="f1-topcount"]', d.topCount || 5)
-  setIfIdle('[data-field="f1-mv-delay"]', (Number(mv.delayMs) || 0) / 1000)
-  const delayField = card.querySelector('[data-field="f1-mv-delay"]')?.closest('.field')
-  if (delayField) delayField.hidden = d.source !== 'multiviewer'
-  updateLiveState(card, graphic)
-}
-
-
-function hockeyCardTemplate(graphic) {
-  const d = graphic.data || {}
-  const clock = d.clock || {}
-  const live = resolveLiveHockeyClock(clock)
-  const remSec = Math.round(live.remainingMs / 1000)
-  const minute = Math.floor(remSec / 60)
-  const second = remSec % 60
-  const quarterMin = Math.round((live.quarterMs / 60000) * 10) / 10
-
-  return `
-    <section class="op-section score-panel${graphic.visible ? ' is-live' : ''}" data-graphic-id="${graphic.id}" data-type="${graphic.type}">
-      <div class="pv-group">
-      ${sectionHead(graphic, formatHockeyStatusLine(clock), { statusBind: true })}
-      <div class="pv-group__cell pv-group__cell--flush">
-      <div class="score-teams">
-        <div class="team-block">
-          <input class="team-code-input" type="text" maxlength="3" data-field="homeCode" value="${escapeHtml(d.homeCode || '')}" aria-label="Home team code" spellcheck="false" />
-          <input type="color" data-field="homeColor" value="${escapeHtml(d.homeColor || '#E5484D')}" aria-label="Home colour" />
-          <div class="score-value" data-bind="homeScore">${d.homeScore ?? 0}</div>
-          <div class="score-actions">
-            <button class="button button--gray touch-btn touch-btn--score" data-action="home-minus">−</button>
-            <button class="button button--tinted touch-btn touch-btn--score" data-action="home-plus">+</button>
-          </div>
-        </div>
-        <div class="score-mid">
-          <div class="clock-display" data-bind="clock">${formatHockeyClock(clock)}</div>
-          <div data-bind="period">${HOCKEY_PERIOD_OPTIONS.find((p) => p.value === live.period)?.label || live.period}</div>
-        </div>
-        <div class="team-block">
-          <input class="team-code-input" type="text" maxlength="3" data-field="awayCode" value="${escapeHtml(d.awayCode || '')}" aria-label="Away team code" spellcheck="false" />
-          <input type="color" data-field="awayColor" value="${escapeHtml(d.awayColor || '#3E63DD')}" aria-label="Away colour" />
-          <div class="score-value" data-bind="awayScore">${d.awayScore ?? 0}</div>
-          <div class="score-actions">
-            <button class="button button--gray touch-btn touch-btn--score" data-action="away-minus">−</button>
-            <button class="button button--tinted touch-btn touch-btn--score" data-action="away-plus">+</button>
-          </div>
-        </div>
-      </div>
-      </div>
-      <div class="pv-group__cell">
-      <div class="clock-controls">
-        <label class="field field--inline">
-          <span>Minute</span>
-          <input type="number" min="0" max="30" data-field="minute" value="${minute}" />
-        </label>
-        <label class="field field--inline">
-          <span>Second</span>
-          <input type="number" min="0" max="59" data-field="second" value="${second}" />
-        </label>
-        <label class="field field--inline">
-          <span>Quarter</span>
-          <input type="number" min="1" max="20" step="0.5" data-field="quarterMin" value="${quarterMin}" />
-        </label>
-        <label class="field field--inline field--grow">
-          <span>Period</span>
-          <select data-field="period">
-            ${HOCKEY_PERIOD_OPTIONS.map((p) => `<option value="${p.value}"${live.period === p.value ? ' selected' : ''}>${p.label}</option>`).join('')}
-          </select>
-        </label>
-      </div>
-      </div>
-      <div class="pv-group__cell pv-group__cell--flush">
-        <div class="pv-segmented pv-segmented--cols-3" role="group" aria-label="Adjust seconds">
-          <button type="button" class="pv-segmented__btn" data-action="sec-minus-1">−1s</button>
-          <button type="button" class="pv-segmented__btn" data-action="sec-plus-1">+1s</button>
-          <button type="button" class="pv-segmented__btn" data-action="sec-minus">−15s</button>
-        </div>
-        <div class="pv-segmented pv-segmented--cols-3" role="group" aria-label="Adjust minutes">
-          <button type="button" class="pv-segmented__btn" data-action="sec-plus">+15s</button>
-          <button type="button" class="pv-segmented__btn" data-action="min-minus">−1 min</button>
-          <button type="button" class="pv-segmented__btn" data-action="min-plus">+1 min</button>
-        </div>
-      </div>
-      <div class="pv-group__cell pv-group__cell--actions">
-      <div class="op-toolbar op-toolbar--primary">
-        <button type="button" class="button ${clock.running ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-clock">
-          ${clock.running ? 'Pause' : 'Start clock'}
-        </button>
-        <button type="button" class="button button--secondary touch-btn" data-action="reset-quarter">Reset quarter</button>
-      </div>
-      </div>
-      </div>
-    </section>
-  `
-}
-
-function updateHockeyCard(card, graphic) {
-  const d = graphic.data || {}
-  const clock = d.clock || {}
-  const live = resolveLiveHockeyClock(clock)
-  const remSec = Math.round(live.remainingMs / 1000)
-  card.querySelectorAll('[data-bind="homeScore"]').forEach((n) => { n.textContent = d.homeScore ?? 0 })
-  card.querySelectorAll('[data-bind="awayScore"]').forEach((n) => { n.textContent = d.awayScore ?? 0 })
-  const clockEl = card.querySelector('[data-bind="clock"]')
-  if (clockEl) clockEl.textContent = formatHockeyClock(clock)
-  const periodEl = card.querySelector('[data-bind="period"]')
-  if (periodEl) periodEl.textContent = HOCKEY_PERIOD_OPTIONS.find((p) => p.value === live.period)?.label || live.period
-  const status = card.querySelector('[data-bind="status-line"]')
-  if (status) status.textContent = formatHockeyStatusLine(clock)
-  const minuteInput = card.querySelector('[data-field="minute"]')
-  const secondInput = card.querySelector('[data-field="second"]')
-  const quarterInput = card.querySelector('[data-field="quarterMin"]')
-  if (minuteInput && document.activeElement !== minuteInput) minuteInput.value = Math.floor(remSec / 60)
-  if (secondInput && document.activeElement !== secondInput) secondInput.value = remSec % 60
-  if (quarterInput && document.activeElement !== quarterInput) quarterInput.value = Math.round((live.quarterMs / 60000) * 10) / 10
-  const periodSelect = card.querySelector('[data-field="period"]')
-  if (periodSelect && document.activeElement !== periodSelect) periodSelect.value = live.period || 'q1'
-  const clockBtn = card.querySelector('[data-action="toggle-clock"]')
-  if (clockBtn) {
-    clockBtn.className = `button ${clock.running ? 'button--gray' : 'button--live'} touch-btn`
-    clockBtn.textContent = clock.running ? 'Pause' : 'Start clock'
-  }
-  for (const [field, val] of [
-    ['homeCode', d.homeCode || ''],
-    ['awayCode', d.awayCode || ''],
-    ['homeColor', d.homeColor || '#E5484D'],
-    ['awayColor', d.awayColor || '#3E63DD']
-  ]) {
-    const input = card.querySelector(`[data-field="${field}"]`)
-    if (input && document.activeElement !== input) input.value = val
-  }
-  updateLiveState(card, graphic)
-}
-
-function cardTemplate(graphic) {
-  if (graphic.type === 'matchScoreboard') return matchCardTemplate(graphic)
-  if (graphic.type === 'customTicker') return tickerCardTemplate(graphic)
-  if (graphic.type === 'lowerThirdShow') return lowerThirdShowCardTemplate(graphic)
-  if (graphic.type === 'quizShow') return quizShowCardTemplate(graphic)
-  if (graphic.type === 'f1Timing') return f1CardTemplate(graphic)
-  if (graphic.type === 'hockeyScorebug') return hockeyCardTemplate(graphic)
-  return legacyCardTemplate(graphic)
-}
-
-function updateLiveState(card, graphic) {
-  card.classList.toggle('is-live', Boolean(graphic.visible))
-  syncOnAirBadge(card.querySelector('[data-bind="live-pill"]'), graphic.visible)
-  const liveBtn = card.querySelector('[data-action="toggle-live"]')
-  if (liveBtn && liveBtn.dataset.pending !== '1') syncLiveButton(liveBtn, graphic.visible)
-}
-
-function updateMatchCard(card, graphic) {
-  const d = graphic.data || {}
-  const clock = d.clock || {}
-  const liveClock = resolveLiveClock(clock)
-  const penalties = d.penalties || {}
-  const nextSide = nextPenaltySide(penalties.homeKicks || [], penalties.awayKicks || [])
-
-  card.querySelectorAll('[data-bind="homeScore"]').forEach((n) => { n.textContent = d.homeScore ?? 0 })
-  card.querySelectorAll('[data-bind="awayScore"]').forEach((n) => { n.textContent = d.awayScore ?? 0 })
-
-  const homeCodeInput = card.querySelector('[data-field="homeCode"]')
-  const awayCodeInput = card.querySelector('[data-field="awayCode"]')
-  const homeNameInput = card.querySelector('[data-field="homeName"]')
-  const awayNameInput = card.querySelector('[data-field="awayName"]')
-  if (homeCodeInput && document.activeElement !== homeCodeInput) homeCodeInput.value = d.homeCode || ''
-  if (awayCodeInput && document.activeElement !== awayCodeInput) awayCodeInput.value = d.awayCode || ''
-  if (homeNameInput && document.activeElement !== homeNameInput) homeNameInput.value = d.homeName || ''
-  if (awayNameInput && document.activeElement !== awayNameInput) awayNameInput.value = d.awayName || ''
-
-  const homeCode = d.homeCode || 'HOME'
-  const awayCode = d.awayCode || 'AWAY'
-  const penScore = card.querySelector('.penalty-score')
-  if (penScore) {
-    penScore.innerHTML = `<span>${homeCode} <span data-bind="pen-home">${penaltyCount(penalties.homeKicks)}</span></span><span>—</span><span><span data-bind="pen-away">${penaltyCount(penalties.awayKicks)}</span> ${awayCode}</span>`
-  }
-  card.querySelectorAll('[data-action="pen-home-goal"]').forEach((btn) => { btn.textContent = `${homeCode} goal` })
-  card.querySelectorAll('[data-action="pen-home-miss"]').forEach((btn) => { btn.textContent = `${homeCode} miss` })
-  card.querySelectorAll('[data-action="pen-away-goal"]').forEach((btn) => { btn.textContent = `${awayCode} goal` })
-  card.querySelectorAll('[data-action="pen-away-miss"]').forEach((btn) => { btn.textContent = `${awayCode} miss` })
-
-  const clockEl = card.querySelector('[data-bind="clock"]')
-  if (clockEl) clockEl.textContent = formatClock(clock)
-  const periodEl = card.querySelector('[data-bind="period"]')
-  if (periodEl) {
-    periodEl.textContent = PERIOD_OPTIONS.find((p) => p.value === clock.period)?.label || clock.period
-  }
-  const penHomeEl = card.querySelector('[data-bind="pen-home"]')
-  if (penHomeEl) penHomeEl.textContent = penaltyCount(penalties.homeKicks)
-  const penAwayEl = card.querySelector('[data-bind="pen-away"]')
-  if (penAwayEl) penAwayEl.textContent = penaltyCount(penalties.awayKicks)
-
-  const minuteInput = card.querySelector('[data-field="minute"]')
-  const secondInput = card.querySelector('[data-field="second"]')
-  const periodSelect = card.querySelector('[data-field="period"]')
-  if (minuteInput && document.activeElement !== minuteInput) minuteInput.value = liveClock.minute ?? 0
-  if (secondInput && document.activeElement !== secondInput) secondInput.value = liveClock.second ?? 0
-  if (periodSelect && document.activeElement !== periodSelect) periodSelect.value = clock.period || 'second_half'
-
-  const clockBtn = card.querySelector('[data-action="toggle-clock"]')
-  if (clockBtn) {
-    clockBtn.className = `button ${clock.running ? 'button--gray' : 'button--live'} touch-btn`
-    clockBtn.textContent = clock.running ? 'Pause' : 'Start clock'
-  }
-  const clockVisBtn = card.querySelector('[data-action="toggle-clock-visible"]')
-  if (clockVisBtn) {
-    const show = widgetVisible(d.widgets, 'clock')
-    clockVisBtn.className = `button ${show ? 'button--gray' : 'button--secondary'} touch-btn`
-    clockVisBtn.textContent = show ? 'Hide clock' : 'Show clock'
-  }
-  const stoppageBtn = card.querySelector('[data-action="toggle-stoppage"]')
-  if (stoppageBtn) {
-    stoppageBtn.className = `button ${clock.stoppageTime ? 'button--live' : 'button--gray'} touch-btn clock-adjust__stoppage`
-    stoppageBtn.textContent = clock.stoppageTime ? 'Stoppage (45+/90+)' : 'Normal time'
-  }
-  const autoStoppageBtn = card.querySelector('[data-action="toggle-auto-stoppage"]')
-  if (autoStoppageBtn) {
-    autoStoppageBtn.className = `button ${clock.autoStoppageAt90 ? 'button--live' : 'button--gray'} touch-btn clock-adjust__auto-stoppage`
-  }
-  updateLiveState(card, graphic)
-  const penBtn = card.querySelector('[data-action="toggle-penalties"]')
-  if (penBtn) {
-    penBtn.className = `button ${penalties.active ? 'button--live' : 'button--secondary'} touch-btn`
-    penBtn.textContent = penalties.active ? 'Active' : 'Off'
-  }
-  const status = card.querySelector('[data-bind="status-line"]')
-  if (status) {
-    status.textContent = formatOpStatusLine(clock)
-  }
-
-  const penaltySection = card.querySelector('.penalty-section')
-  if (penaltySection) {
-    // Alleen tonen als de periode op penalties staat
-    penaltySection.hidden = !(penaltiesEnabled(d) && clock.period === 'penalties')
-    penaltySection.classList.toggle('is-active', Boolean(penalties.active))
-  }
-
-  card.querySelectorAll('[data-action="pen-home-goal"], [data-action="pen-home-miss"]').forEach((btn) => {
-    btn.disabled = !penalties.active || nextSide !== 'home'
-  })
-  card.querySelectorAll('[data-action="pen-away-goal"], [data-action="pen-away-miss"]').forEach((btn) => {
-    btn.disabled = !penalties.active || nextSide !== 'away'
-  })
-}
-
-
-async function handleAction(graphicId, action, event) {
-  const latest = currentState.graphics.find((g) => g.id === graphicId)
-  if (!latest) return
-
-  if (action === 'toggle-live') {
-    return toggleGraphic(graphicId, !latest.visible)
-  }
-
-  if (latest.type === 'lowerThirdShow') {
-    if (action === 'toggle-live') {
-      await toggleGraphic(graphicId, !latest.visible)
-      return
-    }
-    if (action === 'lt-hide') {
-      await fetch(`/api/graphics/${graphicId}/hide`, { method: 'POST' })
-      return
-    }
-    if (action === 'lt-show') {
-      const entryId = event?.target?.closest('[data-action]')?.dataset.entryId
-      if (!entryId) return
-      await fetch(`/api/graphics/${graphicId}/entries/${entryId}/show`, { method: 'POST' })
-      return
-    }
-    return
-  }
-
-  if (latest.type === 'quizShow') {
-    if (action === 'toggle-live') {
-      await toggleGraphic(graphicId, !latest.visible)
-      return
-    }
-    if (action === 'quiz-hide') {
-      await toggleGraphic(graphicId, false)
-      return
-    }
-    if (action === 'quiz-reveal') {
-      await patchGraphic(graphicId, { data: { revealed: !latest.data?.revealed } })
-      return
-    }
-    if (action === 'quiz-show') {
-      const entryId = event?.target?.closest('[data-action]')?.dataset.entryId
-      if (!entryId) return
-      await patchGraphic(graphicId, {
-        visible: true,
-        data: { activeQuestionId: entryId, revealed: false }
-      })
-      return
-    }
-    return
-  }
-
-  if (latest.type === 'customTicker') {
-    if (action === 'toggle-live') {
-      await toggleGraphic(graphicId, !latest.visible)
-      return
-    }
-    const data = structuredClone(latest.data)
-    const list = migrateTickerMessages(data.messages || [])
-    if (action === 'ticker-add') {
-      const card = root.querySelector(`[data-graphic-id="${graphicId}"]`)
-      const text = card?.querySelector('[data-field="ticker-new"]')?.value?.trim()
-      if (!text) return
-      list.push(createTickerMessage(text, { enabled: false }))
-    }
-    let removed = null
-    let removedIndex = -1
-    if (action === 'ticker-del') {
-      const idx = Number(event?.target?.closest('[data-action]')?.dataset.index)
-      if (!Number.isNaN(idx) && list[idx]) {
-        removed = list.splice(idx, 1)[0]
-        removedIndex = idx
-      }
-    }
-    if (action === 'ticker-toggle') {
-      const idx = Number(event?.target?.closest('[data-action]')?.dataset.index)
-      if (!Number.isNaN(idx) && list[idx]) {
-        list[idx] = { ...list[idx], enabled: event.target.checked }
-      }
-    }
-    data.messages = list
-    const saved = await patchGraphic(graphicId, { data })
-    if (saved && removed) offerTickerUndo(graphicId, removed, removedIndex, getGraphicById)
-    return
-  }
-
-  if (latest.type === 'matchScoreboard') {
-    const result = await handleMatchOperateAction(latest, action, event)
-    if (result && typeof result === 'object' && result.data) {
-      const card = root.querySelector(`[data-graphic-id="${graphicId}"]`)
-      if (card) updateMatchCard(card, result)
-    }
-    return
-  }
-
-  if (latest.type === 'hockeyScorebug') {
-    const result = await handleHockeyOperateAction(latest, action, event, { confirmDecrement: true })
-    if (result && typeof result === 'object' && result.data) {
-      const card = root.querySelector(`[data-graphic-id="${graphicId}"]`)
-      if (card) updateHockeyCard(card, result)
-    }
-    ensureClockTimer()
-    return
-  }
-
-  if (latest.type === 'f1Timing') {
-    if (action === 'toggle-live') {
-      await toggleGraphic(graphicId, !latest.visible)
-      return
-    }
-    await handleF1Action(latest, action, event)
-    return
-  }
-
-  const data = { ...latest.data }
-  if (action === 'home-plus') data.homeScore += 1
-  if (action === 'home-minus') data.homeScore = Math.max(0, data.homeScore - 1)
-  if (action === 'away-plus') data.awayScore += 1
-  if (action === 'away-minus') data.awayScore = Math.max(0, data.awayScore - 1)
-  if (action === 'minute-plus') data.minute += 1
-  if (action === 'minute-minus') data.minute = Math.max(0, data.minute - 1)
-  if (action === 'toggle-live') {
-    await toggleGraphic(graphicId, !latest.visible)
-    return
-  }
-  await patchGraphic(graphicId, { data })
-}
-
-async function handleFieldChange(graphicId, field, value) {
-  const latest = currentState.graphics.find((g) => g.id === graphicId)
-  if (!latest) return
-
-  if (field === 'ticker-speed' && latest.type === 'customTicker') {
-    await patchGraphic(graphicId, { data: { speed: Math.max(10, Number(value) || 90) } })
-    return
-  }
-
-  if (field === 'ticker-fontsize' && latest.type === 'customTicker') {
-    await patchGraphic(graphicId, { data: { fontSize: Math.min(200, Math.max(10, Number(value) || 30)) } })
-    return
-  }
-
-  if (latest.type === 'f1Timing' && field.startsWith('f1-')) {
-    await handleF1FieldChange(latest, field, value)
-    return
-  }
-
-  if (latest.type === 'matchScoreboard') {
-    await handleMatchFieldChange(latest, field, value)
-    return
-  }
-
-  if (latest.type === 'hockeyScorebug') {
-    await handleHockeyFieldChange(latest, field, value)
-    ensureClockTimer()
-    return
-  }
-}
-
-function mountHandlers() {
-  if (mounted) return
-  root.addEventListener('click', (event) => {
-    const btn = event.target.closest('[data-action]')
-    if (!btn || btn.disabled) return
-    const card = btn.closest('[data-graphic-id]')
-    if (!card) return
-    event.preventDefault()
-    if (btn.dataset.action === 'toggle-live') {
-      withPending(btn, () => handleAction(card.dataset.graphicId, 'toggle-live', event)).then((updated) => {
-        if (updated && btn.isConnected) syncLiveButton(btn, updated.visible)
-      })
-      return
-    }
-    handleAction(card.dataset.graphicId, btn.dataset.action, event)
-  })
-  root.addEventListener('change', (event) => {
-    const field = event.target.dataset.field
-    const toggle = event.target.closest('[data-action="ticker-toggle"]')
-    if (toggle) {
-      const card = toggle.closest('[data-graphic-id]')
-      if (!card) return
-      handleAction(card.dataset.graphicId, 'ticker-toggle', event)
-      return
-    }
-    if (!field) return
-    const card = event.target.closest('[data-graphic-id]')
-    if (!card) return
-    handleFieldChange(card.dataset.graphicId, field, event.target.value)
-  })
-  const teamFieldDebounce = {}
-  root.addEventListener('input', (event) => {
-    const field = event.target.dataset?.field
-    if (!['homeCode', 'awayCode', 'homeName', 'awayName'].includes(field)) return
-    const card = event.target.closest('[data-graphic-id]')
-    if (!card) return
-    const key = `${card.dataset.graphicId}:${field}`
-    clearTimeout(teamFieldDebounce[key])
-    teamFieldDebounce[key] = setTimeout(() => {
-      handleFieldChange(card.dataset.graphicId, field, event.target.value)
-    }, 350)
-  })
-  const sliderOutputs = { 'ticker-speed': 'speed-out', 'ticker-fontsize': 'fontsize-out' }
-  const sliderDebounce = {}
-  root.addEventListener('input', (event) => {
-    const field = event.target.dataset.field
-    if (!sliderOutputs[field]) return
-    const card = event.target.closest('[data-graphic-id]')
-    if (!card) return
-    const out = card.querySelector(`[data-bind="${sliderOutputs[field]}"]`)
-    if (out) out.textContent = event.target.value
-    clearTimeout(sliderDebounce[field])
-    sliderDebounce[field] = setTimeout(() => {
-      handleFieldChange(card.dataset.graphicId, field, event.target.value)
-    }, 250)
-  })
-  mounted = true
-}
-
-function tickLiveClocks() {
-  if (!currentState) return
-  for (const graphic of operatorGraphics()) {
-    if (!graphic.data?.clock?.running) continue
-    const card = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
-    if (!card) continue
-    if (graphic.type === 'matchScoreboard') {
-      void persistAutoStoppageIfNeeded(graphic)
-      const live = resolveLiveClock(graphic.data.clock)
-      const clockEl = card.querySelector('[data-bind="clock"]')
-      if (clockEl) clockEl.textContent = formatClock(graphic.data.clock)
-      const minuteInput = card.querySelector('[data-field="minute"]')
-      const secondInput = card.querySelector('[data-field="second"]')
-      if (minuteInput && document.activeElement !== minuteInput) minuteInput.value = live.minute
-      if (secondInput && document.activeElement !== secondInput) secondInput.value = live.second
-      continue
-    }
-    if (graphic.type === 'hockeyScorebug') {
-      updateHockeyCard(card, graphic)
-    }
-  }
-}
-
-let f1LiveTimer = null
-
-function tickF1Live() {
-  if (!currentState) return
-  for (const graphic of operatorGraphics()) {
-    if (graphic.type !== 'f1Timing' || graphic.data?.source !== 'multiviewer') continue
-    const card = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
-    if (card) void refreshF1LiveSection(card, graphic)
-  }
-}
-
-function ensureF1LiveTimer() {
-  const needs = operatorGraphics().some(
-    (g) => g.type === 'f1Timing' && g.data?.source === 'multiviewer'
-  )
-  if (needs && !f1LiveTimer) {
-    f1LiveTimer = setInterval(tickF1Live, 3000)
-    tickF1Live()
-  } else if (!needs && f1LiveTimer) {
-    clearInterval(f1LiveTimer)
-    f1LiveTimer = null
-  }
-}
-
-function ensureClockTimer() {
-  const needs = operatorGraphics().some(
-    (g) =>
-      (g.type === 'matchScoreboard' || g.type === 'hockeyScorebug') && g.data?.clock?.running
-  )
-  if (needs && !clockTimer) {
-    clockTimer = setInterval(tickLiveClocks, 250)
-  } else if (!needs && clockTimer) {
-    clearInterval(clockTimer)
-    clockTimer = null
-  }
+function renderEmpty() {
+  const hasAny = (currentState?.graphics || []).length > 0
+  root.innerHTML = hasAny
+    ? `<section class="empty-state">
+        <p class="empty-state__title">No widgets for live control</p>
+        <p>None of the widgets in this project are enabled for the operator. Enable “Operator” on a widget in the Dashboard.</p>
+      </section>`
+    : `<section class="empty-state">
+        <p class="empty-state__title">No widgets yet — add your first graphic</p>
+        <p>Open the Dashboard on a computer and choose <strong>Add widget</strong> or <strong>Create from design</strong>. New widgets appear here right away.</p>
+      </section>`
+  switcher.hidden = true
+  document.body.classList.remove('operator--single', 'operator--multi')
 }
 
 function render() {
-  mountHandlers()
   const items = operatorGraphics()
-
   if (!items.length) {
-    const hasAny = (currentState?.graphics || []).length > 0
-    root.innerHTML = hasAny
-      ? `<section class="empty-state">
-          <p class="empty-state__title">No widgets for live control</p>
-          <p>None of the widgets in this project are enabled for the operator. Enable “Operator” on a widget in the Dashboard.</p>
-        </section>`
-      : `<section class="empty-state">
-          <p class="empty-state__title">No widgets yet — add your first graphic</p>
-          <p>Open the Dashboard on a computer and choose <strong>Add widget</strong> or <strong>Create from design</strong>. New widgets appear here right away.</p>
-        </section>`
-    document.body.classList.remove('operator--single', 'operator--multi')
-    updateFocusChip(null, 0)
-    ensureClockTimer()
-    ensureF1LiveTimer()
+    renderEmpty()
+    ensureTimers()
     return
   }
 
-  const ordered = focusId
-    ? [items.find((g) => g.id === focusId), ...items.filter((g) => g.id !== focusId)].filter(Boolean)
-    : items
+  const active = resolvedView(items)
+  renderSwitcher(items, active)
+  document.body.classList.toggle('operator--single', items.length === 1 || active !== ALL)
+  document.body.classList.toggle('operator--multi', items.length > 1 && active === ALL)
 
-  showWidgetTitles = ordered.length > 1
-  document.body.classList.toggle('operator--single', ordered.length === 1)
-  document.body.classList.toggle('operator--multi', ordered.length > 1)
-  title.textContent = 'Live control'
-  updateFocusChip(
-    focusId ? ordered.find((g) => g.id === focusId)?.name || ordered[0]?.name : null,
-    ordered.length
-  )
+  const existing = [...root.querySelectorAll(':scope > [data-graphic-id]')]
+  const sameCards =
+    existing.length === items.length &&
+    existing.every((card, i) => card.dataset.graphicId === items[i].id && card.dataset.type === items[i].type)
+  if (!sameCards) root.innerHTML = items.map((g) => operateCardHtml(g)).join('')
 
-  const existingIds = [...root.querySelectorAll('[data-graphic-id]')].map((n) => n.dataset.graphicId)
-  const nextIds = ordered.map((g) => g.id)
-
-  if (existingIds.join() !== nextIds.join() || root.querySelector('.empty-state')) {
-    root.innerHTML = ordered.map((g) => cardTemplate(g)).join('')
-    for (const graphic of ordered) {
-      if (graphic.type !== 'f1Timing' || graphic.data?.source !== 'multiviewer') continue
-      const card = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
-      if (card) syncF1MvHelp(card)
-    }
-  } else {
-    for (const graphic of ordered) {
-      const card = root.querySelector(`[data-graphic-id="${graphic.id}"]`)
-      if (!card) continue
-      if (graphic.type === 'matchScoreboard') updateMatchCard(card, graphic)
-      else if (graphic.type === 'hockeyScorebug') updateHockeyCard(card, graphic)
-      else if (graphic.type === 'customTicker') updateTickerCard(card, graphic)
-      else if (graphic.type === 'f1Timing') updateF1Card(card, graphic)
-      else if (graphic.type === 'lowerThirdShow' || graphic.type === 'quizShow') {
-        // Alleen deze kaart herbouwen zodat invoervelden in andere kaarten blijven staan
-        const wrap = document.createElement('div')
-        wrap.innerHTML = cardTemplate(graphic)
-        card.replaceWith(wrap.firstElementChild)
-      } else updateLiveState(card, graphic)
-    }
+  for (const card of root.querySelectorAll(':scope > [data-graphic-id]')) {
+    card.hidden = active !== ALL && card.dataset.graphicId !== active
+    refreshOperateCard(card, getGraphic(card.dataset.graphicId))
   }
-
-  ensureClockTimer()
-  ensureF1LiveTimer()
+  ensureTimers()
 }
 
 function applyState(state) {
@@ -1085,27 +134,48 @@ function applyState(state) {
   render()
 }
 
+wireOperateRoot(root, getGraphic, {
+  confirmDecrement: true,
+  onWentLive: (graphic) => warnOnAirOverlap(graphic, currentState?.graphics)
+})
 wireRenderPreviewLinks(document, () => currentState?.settings)
 
 const socket = io()
-wireConnectionState(socket, { pill: connectionStatus, controls: [root] })
+wireConnectionState(socket, {
+  pill: document.getElementById('connection-status'),
+  controls: [root, switcher]
+})
 socket.on('stateChanged', applyState)
 
+/* Desk mode: two columns on wide screens in the "All" view. */
 const DESK_KEY = 'pv-operator-desk'
-function syncDeskMode() {
-  const on = localStorage.getItem(DESK_KEY) === '1'
-  document.body.classList.toggle('operator--desk', on)
-  const btn = document.getElementById('desk-mode-toggle')
-  if (btn) {
-    btn.setAttribute('aria-pressed', String(on))
-    btn.classList.toggle('is-active', on)
+const deskToggle = document.getElementById('desk-mode-toggle')
+
+function deskOn() {
+  try {
+    return localStorage.getItem(DESK_KEY) === '1'
+  } catch {
+    return false
   }
 }
-document.getElementById('desk-mode-toggle')?.addEventListener('click', () => {
-  const next = localStorage.getItem(DESK_KEY) !== '1'
-  localStorage.setItem(DESK_KEY, next ? '1' : '0')
+
+function syncDeskMode() {
+  const on = deskOn()
+  document.body.classList.toggle('operator--desk', on)
+  deskToggle?.setAttribute('aria-pressed', String(on))
+  deskToggle?.classList.toggle('is-active', on)
+}
+
+deskToggle?.addEventListener('click', () => {
+  try {
+    localStorage.setItem(DESK_KEY, deskOn() ? '0' : '1')
+  } catch {
+    /* private mode */
+  }
   syncDeskMode()
 })
 syncDeskMode()
 
-fetch('/api/state').then((r) => r.json()).then(applyState)
+fetch('/api/state')
+  .then((r) => r.json())
+  .then(applyState)
