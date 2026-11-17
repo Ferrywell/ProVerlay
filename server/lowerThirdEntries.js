@@ -1,7 +1,17 @@
-import { getGraphic, patchGraphic } from './state.js'
+import crypto from 'crypto'
+import { getGraphic, updateGraphic } from './state.js'
+import { badRequest } from './validation.js'
 
 function entryId() {
-  return `sp-${Date.now().toString(36)}`
+  return `sp-${crypto.randomUUID().slice(0, 8)}`
+}
+
+function cleanText(value) {
+  return String(value ?? '').trim()
+}
+
+function cleanKeywords(value) {
+  return Array.isArray(value) ? value.filter((k) => typeof k === 'string') : []
 }
 
 export function getLowerThirdGraphic(graphicId) {
@@ -10,76 +20,82 @@ export function getLowerThirdGraphic(graphicId) {
   return graphic
 }
 
+/**
+ * All entry operations run inside the state write queue (updateGraphic), so
+ * concurrent adds/edits from several clients never overwrite each other.
+ */
+function updateLowerThird(graphicId, fn) {
+  return updateGraphic(graphicId, (graphic) => {
+    if (graphic.type !== 'lowerThirdShow') return null
+    return fn(graphic, Array.isArray(graphic.data?.entries) ? graphic.data.entries : [])
+  })
+}
+
 export async function addLowerThirdEntry(graphicId, entry = {}) {
-  const graphic = getLowerThirdGraphic(graphicId)
-  if (!graphic) return null
-
-  const name = String(entry.name || '').trim()
-  if (!name) throw new Error('Name is required')
-
-  const newEntry = {
-    id: entry.id || entryId(),
-    name,
-    title: String(entry.title || '').trim(),
-    company: String(entry.company || '').trim(),
-    keywords: Array.isArray(entry.keywords) ? entry.keywords : []
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+    throw badRequest('Body must be a JSON object')
   }
+  const name = cleanText(entry.name)
+  if (!name) throw badRequest('Name is required')
 
-  const entries = [...(graphic.data?.entries || []), newEntry]
-  await patchGraphic(graphicId, { data: { entries } })
-  return newEntry
+  let created = null
+  await updateLowerThird(graphicId, (graphic, entries) => {
+    const requested = typeof entry.id === 'string' && entry.id ? entry.id : null
+    created = {
+      id: requested && !entries.some((e) => e.id === requested) ? requested : entryId(),
+      name,
+      title: cleanText(entry.title),
+      company: cleanText(entry.company),
+      keywords: cleanKeywords(entry.keywords)
+    }
+    return { ...graphic, data: { ...graphic.data, entries: [...entries, created] } }
+  })
+  return created
 }
 
 export async function updateLowerThirdEntry(graphicId, entryIdParam, patch = {}) {
-  const graphic = getLowerThirdGraphic(graphicId)
-  if (!graphic) return null
-
-  const entries = (graphic.data?.entries || []).map((entry) => {
-    if (entry.id !== entryIdParam) return entry
-    return {
-      ...entry,
-      ...(patch.name !== undefined ? { name: String(patch.name).trim() } : {}),
-      ...(patch.title !== undefined ? { title: String(patch.title).trim() } : {}),
-      ...(patch.company !== undefined ? { company: String(patch.company).trim() } : {}),
-      ...(patch.keywords !== undefined ? { keywords: patch.keywords } : {})
-    }
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+    throw badRequest('Body must be a JSON object')
+  }
+  let updated = null
+  await updateLowerThird(graphicId, (graphic, entries) => {
+    if (!entries.some((e) => e.id === entryIdParam)) return null
+    const next = entries.map((entry) => {
+      if (entry.id !== entryIdParam) return entry
+      updated = {
+        ...entry,
+        ...(patch.name !== undefined ? { name: cleanText(patch.name) } : {}),
+        ...(patch.title !== undefined ? { title: cleanText(patch.title) } : {}),
+        ...(patch.company !== undefined ? { company: cleanText(patch.company) } : {}),
+        ...(patch.keywords !== undefined ? { keywords: cleanKeywords(patch.keywords) } : {})
+      }
+      return updated
+    })
+    return { ...graphic, data: { ...graphic.data, entries: next } }
   })
-
-  if (!entries.some((e) => e.id === entryIdParam)) return null
-  await patchGraphic(graphicId, { data: { entries } })
-  return entries.find((e) => e.id === entryIdParam)
+  return updated
 }
 
 export async function deleteLowerThirdEntry(graphicId, entryIdParam) {
-  const graphic = getLowerThirdGraphic(graphicId)
-  if (!graphic) return null
-
-  const entries = (graphic.data?.entries || []).filter((e) => e.id !== entryIdParam)
-  if (entries.length === (graphic.data?.entries || []).length) return null
-
-  const data = { entries }
-  if (graphic.data?.activeEntryId === entryIdParam) {
-    data.activeEntryId = null
-  }
-  await patchGraphic(graphicId, { visible: false, data })
-  return { ok: true }
+  let deleted = false
+  await updateLowerThird(graphicId, (graphic, entries) => {
+    const next = entries.filter((e) => e.id !== entryIdParam)
+    if (next.length === entries.length) return null
+    deleted = true
+    const data = { ...graphic.data, entries: next }
+    if (graphic.data?.activeEntryId === entryIdParam) data.activeEntryId = null
+    return { ...graphic, visible: false, data }
+  })
+  return deleted ? { ok: true } : null
 }
 
 export async function showLowerThirdEntry(graphicId, entryIdParam) {
-  const graphic = getLowerThirdGraphic(graphicId)
-  if (!graphic) return null
-  if (!(graphic.data?.entries || []).some((e) => e.id === entryIdParam)) return null
-
-  await patchGraphic(graphicId, {
-    visible: true,
-    data: { activeEntryId: entryIdParam }
+  return updateLowerThird(graphicId, (graphic, entries) => {
+    if (!entries.some((e) => e.id === entryIdParam)) return null
+    return { ...graphic, visible: true, data: { ...graphic.data, activeEntryId: entryIdParam } }
   })
-  return getGraphic(graphicId)
 }
 
 export async function hideLowerThirdShow(graphicId) {
-  const graphic = getLowerThirdGraphic(graphicId)
-  if (!graphic) return null
-  await patchGraphic(graphicId, { visible: false })
-  return getGraphic(graphicId)
+  return updateLowerThird(graphicId, (graphic) => ({ ...graphic, visible: false }))
 }

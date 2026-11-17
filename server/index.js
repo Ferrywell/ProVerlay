@@ -1,176 +1,30 @@
-import express from 'express'
-import http from 'http'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import { Server } from 'socket.io'
-import { createApiRouter } from './api.js'
-import { loadState, getState, onStateChange, reloadState } from './state.js'
-import { initF1Timing } from './f1Timing.js'
-import { detectDevice, preferredDashboard } from './device.js'
-import { assetsDir } from './projects.js'
+/**
+ * CLI / Electron entry point: `node server/index.js`.
+ * Importing this module starts the server (Electron relies on that).
+ * Tests and embedders should use createApp()/startServer() from ./app.js.
+ */
+import { startServer } from './app.js'
 import { buildNetworkUrls } from './network.js'
+import { getState } from './state.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ROOT = path.join(__dirname, '..')
 const PORT = Number(process.env.PORT || 2014)
 
-const app = express()
-const server = http.createServer(app)
-const io = new Server(server, { cors: { origin: '*' } })
-
-app.use(express.json())
-app.use('/api', createApiRouter())
-app.use('/public', express.static(path.join(ROOT, 'public')))
-app.use('/templates', express.static(path.join(ROOT, 'templates')))
-
-app.use('/projects/:projectId/assets', (req, res, next) => {
-  const dir = assetsDir(req.params.projectId)
-  express.static(dir)(req, res, next)
+// A single bug must not take a live show off air: log and keep running.
+process.on('unhandledRejection', (reason) => {
+  console.error('[proverlay] Unhandled promise rejection (server keeps running):', reason)
+})
+process.on('uncaughtException', (err, origin) => {
+  console.error(`[proverlay] Uncaught exception (${origin}); server keeps running:`, err)
 })
 
-app.get('/render', (_req, res) => {
-  res.sendFile(path.join(ROOT, 'public', 'render', 'index.html'))
-})
-
-app.get('/render/:graphicId', (req, res) => {
-  res.redirect(`/render?graphic=${encodeURIComponent(req.params.graphicId)}`)
-})
-
-app.get('/control', (req, res) => {
-  // Decision A: tablets/phones use Operator for live control — not the dense desktop dashboard.
-  const device = detectDevice(req.headers['user-agent'] || '')
-  if (device === 'mobile' || device === 'tablet') {
-    return res.redirect('/operator')
-  }
-  res.sendFile(path.join(ROOT, 'public', 'control', 'index.html'))
-})
-
-app.get('/design', (_req, res) => {
-  res.sendFile(path.join(ROOT, 'public', 'design', 'index.html'))
-})
-
-app.get('/operator', (_req, res) => {
-  res.sendFile(path.join(ROOT, 'public', 'operator', 'index.html'))
-})
-
-app.get('/operate/:widgetId', (_req, res) => {
-  res.sendFile(path.join(ROOT, 'public', 'operate', 'index.html'))
-})
-
-app.get('/operate', (_req, res) => {
-  res.sendFile(path.join(ROOT, 'public', 'operate', 'index.html'))
-})
-
-app.get('/layout', (_req, res) => {
-  res.sendFile(path.join(ROOT, 'public', 'layout', 'index.html'))
-})
-
-app.get('/editor', (_req, res) => {
-  res.sendFile(path.join(ROOT, 'public', 'editor', 'index.html'))
-})
-
-app.get('/editor/:graphicId', (req, res) => {
-  res.redirect(`/editor?graphic=${encodeURIComponent(req.params.graphicId)}`)
-})
-
-app.get('/compose', (_req, res) => {
-  res.sendFile(path.join(ROOT, 'public', 'compose', 'index.html'))
-})
-
-app.get('/project', (_req, res) => {
-  res.sendFile(path.join(ROOT, 'public', 'project', 'index.html'))
-})
-
-app.get('/', (req, res) => {
-  const device = detectDevice(req.headers['user-agent'] || '')
-  const dashboard = preferredDashboard(device, req.query)
-  res.redirect(`/${dashboard}`)
-})
-
-// API/JSON errors → JSON (geen HTML stack traces met filesystem-paden)
-app.use((err, _req, res, next) => {
-  if (res.headersSent) return next(err)
-  if (err instanceof SyntaxError && 'body' in err) {
-    return res.status(400).json({ error: 'Invalid JSON body' })
-  }
-  const status = Number(err.status || err.statusCode) || 500
-  if (_req.path?.startsWith('/api') || _req.originalUrl?.startsWith('/api')) {
-    return res.status(status).json({ error: err.message || 'Internal server error' })
-  }
-  next(err)
-})
-
-io.on('connection', (socket) => {
-  socket.emit('stateChanged', getState())
-
-  socket.on('getState', (_payload, ack) => {
-    if (typeof ack === 'function') ack(getState())
-  })
-
-  socket.on('patchState', async (payload, ack) => {
-    const { patchState } = await import('./state.js')
-    const next = await patchState(payload)
-    if (typeof ack === 'function') ack(next)
-  })
-
-  socket.on('patchGraphic', async ({ id, patch }, ack) => {
-    const { patchGraphic } = await import('./state.js')
-    const next = await patchGraphic(id, patch)
-    if (typeof ack === 'function') ack(next ? getState().graphics.find((g) => g.id === id) : null)
-  })
-
-  socket.on('toggleGraphic', async ({ id, visible }, ack) => {
-    const { setGraphicVisibility, getGraphic } = await import('./state.js')
-    await setGraphicVisibility(id, visible)
-    if (typeof ack === 'function') ack(getGraphic(id))
-  })
-
-  socket.on('toggleGraphicSolo', async ({ id, soloVisible }, ack) => {
-    const { setGraphicSoloVisibility, getGraphic } = await import('./state.js')
-    await setGraphicSoloVisibility(id, soloVisible)
-    if (typeof ack === 'function') ack(getGraphic(id))
-  })
-
-  socket.on('activateProject', async ({ id }, ack) => {
-    const { activateProject } = await import('./projects.js')
-    const project = await activateProject(id)
-    if (!project) {
-      if (typeof ack === 'function') ack({ error: 'Not found' })
-      return
-    }
-    await reloadState()
-    io.emit('stateChanged', getState())
-    if (typeof ack === 'function') ack({ project, state: getState() })
-  })
-})
-
-onStateChange((state) => {
-  io.emit('stateChanged', state)
-})
-
-await loadState()
-initF1Timing(io)
-
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(
-      `ProVerlay could not bind to port ${PORT} (already in use). ` +
-        'Close the other instance or set PORT to a free port.'
-    )
-    process.exit(1)
-  }
-  console.error('Server error:', err)
-  process.exit(1)
-})
-
-server.listen(PORT, '0.0.0.0', () => {
-  const net = buildNetworkUrls(PORT)
-  console.log(`ProVerlay running on port ${PORT}`)
-  console.log(`  Dashboard: http://localhost:${PORT}/control`)
-  console.log(`  Operator:  http://localhost:${PORT}/operator`)
-  console.log(`  Operate:   http://localhost:${PORT}/operate?graphic=<id>`)
-  console.log(`  Editor:    http://localhost:${PORT}/editor`)
-  console.log(`  Render:    http://localhost:${PORT}/render`)
+function printBanner(port) {
+  const net = buildNetworkUrls(port)
+  console.log(`ProVerlay running on port ${port}`)
+  console.log(`  Dashboard: http://localhost:${port}/control`)
+  console.log(`  Operator:  http://localhost:${port}/operator`)
+  console.log(`  Operate:   http://localhost:${port}/operate?graphic=<id>`)
+  console.log(`  Editor:    http://localhost:${port}/editor`)
+  console.log(`  Render:    http://localhost:${port}/render`)
   console.log(`  Project:   ${getState().projectId}`)
   console.log('  Netwerk (gebruik http, geen https):')
   for (const { url } of net.urls.lan.filter((u) => u.path === 'operator')) {
@@ -179,4 +33,24 @@ server.listen(PORT, '0.0.0.0', () => {
   for (const { url } of net.urls.lan.filter((u) => u.path === 'control')) {
     console.log(`    Dashboard: ${url}`)
   }
-})
+}
+
+try {
+  const handle = await startServer({ port: PORT })
+  printBanner(handle.port)
+} catch (err) {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `ProVerlay could not bind to port ${PORT} (already in use). ` +
+        'Close the other instance or set PORT to a free port.'
+    )
+  } else if (err.code === 'EACCES') {
+    console.error(
+      `ProVerlay is not allowed to bind to port ${PORT} (permission denied). ` +
+        'Ports below 1024 need elevated rights; set PORT to a port above 1024.'
+    )
+  } else {
+    console.error('ProVerlay failed to start:', err)
+  }
+  process.exit(1)
+}

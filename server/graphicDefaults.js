@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { defaultMatchData } from './matchClock.js'
 import { defaultF1Drivers } from './f1Timing.js'
 
@@ -247,9 +248,27 @@ export function defaultTransition() {
   return { in: 'auto', out: 'auto', duration: 450 }
 }
 
+/** Widget types that can be created via POST /api/graphics. */
+export const WIDGET_TYPES = Object.freeze(Object.keys(GRAPHIC_TEMPLATES))
+
+export function isWidgetType(type) {
+  // Own-property check: never resolve "constructor", "toString", … from the prototype.
+  return typeof type === 'string' && Object.hasOwn(GRAPHIC_TEMPLATES, type)
+}
+
+/** Unique graphic id, e.g. "match-scoreboard-3f9a1c2e" (no Date.now collisions). */
+export function graphicIdFor(type) {
+  const slug = type.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')
+  return `${slug}-${crypto.randomUUID().slice(0, 8)}`
+}
+
 export function createGraphicFromType(type, name = 'New widget') {
+  if (!isWidgetType(type)) {
+    throw Object.assign(new Error(`Unknown widget type: ${String(type).slice(0, 60)}`), {
+      status: 400,
+      expose: true
+    })
+  }
   const factory = GRAPHIC_TEMPLATES[type]
-  if (!factory) throw new Error(`Unknown widget type: ${type}`)
-  const id = `${type.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}-${Date.now()}`
-  return { id, transition: defaultTransition(), ...factory(name) }
+  return { id: graphicIdFor(type), transition: defaultTransition(), ...factory(name) }
 }
