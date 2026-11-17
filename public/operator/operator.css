@@ -28,20 +28,28 @@ body.operator {
 }
 
 .operator .pv-nav-bar__sync {
-  padding: 0.35rem;
-  line-height: 0;
+  white-space: nowrap;
 }
 
-.operator .pv-nav-bar__sync .status-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+/* Phones: the pill shrinks to its dot; the text stays available to assistive
+   tech, and a disconnect also shows the full-width offline banner. */
+@media (max-width: 479px) {
+  .operator .pv-nav-bar__sync {
+    padding: 0.35rem;
+    line-height: 0;
+  }
+
+  .operator .pv-nav-bar__sync .status-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
 .operator .pv-nav-bar__subtitle {
@@ -85,6 +93,34 @@ body.operator {
   margin: 0.2rem 0 0;
 }
 
+/* ON AIR badge + Go live / Take off air live in the card header row,
+   away from the clock and score buttons. */
+.op-section-head__live {
+  display: flex;
+  align-items: center;
+  gap: var(--pv-space-sm);
+  flex-shrink: 0;
+}
+
+.op-section-head__live .touch-btn {
+  min-height: 44px;
+  min-width: 0;
+  padding: 0.5rem 0.9rem;
+  font-size: var(--pv-type-callout);
+  font-weight: 600;
+}
+
+@media (max-width: 380px) {
+  .op-section-head {
+    flex-wrap: wrap;
+  }
+
+  .op-section-head__live {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 .op-status {
   margin: 0;
   color: var(--pv-text-secondary);
@@ -112,19 +148,32 @@ body.operator {
   text-align: center;
 }
 
+/* Wide enough for 4 bold capitals (e.g. AJAX) plus padding and border. */
 .team-code-input {
-  width: 4.5ch;
+  width: calc(4 * 0.85em + 0.8rem + 2px);
   max-width: 100%;
   border: 0.5px solid var(--pv-border-strong);
   border-radius: var(--pv-radius-sm);
   box-shadow: none;
   background: var(--pv-bg-solid);
-  padding: 0.4rem 0.5rem;
+  padding: 0.4rem;
+  letter-spacing: 0;
   text-align: center;
   font-size: var(--pv-type-subhead);
   font-weight: 650;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
+}
+
+/* 16px on touch devices so iOS does not zoom the page when a field is focused
+   (pinch-zoom is allowed again for accessibility). */
+@media (pointer: coarse) {
+  .team-code-input,
+  .operator .team-name-input,
+  .match-operate__team-code,
+  .operator .match-operate__team-name-input {
+    font-size: 16px;
+  }
 }
 
 .team-name-input {
@@ -313,7 +362,7 @@ body.operator {
 }
 
 .pv-nav-bar__action.is-active {
-  background: var(--pv-fill-tertiary);
+  background: var(--pv-gray-fill);
   font-weight: 600;
 }
 
@@ -391,9 +440,10 @@ html.is-electron .op-section > .pv-group {
 }
 
 html.is-electron .op-section.is-live > .pv-group {
+  border-color: var(--pv-on-air);
   box-shadow:
     var(--pv-shadow-group),
-    0 0 0 2px rgba(52, 199, 89, 0.22);
+    0 0 0 2px var(--pv-on-air-ring);
 }
 
 /* Wide desktop browser: also drop the 720px phone column */

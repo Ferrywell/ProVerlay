@@ -33,6 +33,16 @@ import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
 import { handleF1FieldChange, refreshF1LiveSection, handleF1Action, syncF1MvHelp } from '/public/shared/operate-handlers.js'
 import { F1_SOURCE_OPTIONS } from '/public/shared/f1-timing.js'
+import { offerTickerUndo } from '/public/shared/operate-handlers.js'
+import { withPending } from '/public/shared/toast.js'
+import { wireConnectionState } from '/public/shared/connection.js'
+import {
+  liveButtonClass,
+  liveButtonLabel,
+  onAirBadgeHtml,
+  syncLiveButton,
+  syncOnAirBadge
+} from '/public/shared/on-air.js'
 
 const root = document.getElementById('operator-root')
 const title = document.getElementById('op-title')
@@ -53,8 +63,13 @@ function sectionHead(graphic, statusText, { livePill = true, statusBind = false 
   const statusBlock = statusText
     ? `<p class="op-status"${statusAttr}>${statusText}</p>`
     : ''
+  // ON AIR badge and the Go live / Take off air button sit in the header row,
+  // away from clock and score buttons to avoid mis-taps.
   const pill = livePill
-    ? `<span class="pill ${graphic.visible ? 'pill--live' : 'pill--muted'}" data-bind="live-pill">${graphic.visible ? 'Live' : 'Off'}</span>`
+    ? `<div class="op-section-head__live">
+        ${onAirBadgeHtml(graphic.visible, { bind: true })}
+        <button type="button" class="button ${liveButtonClass(graphic.visible)} touch-btn" data-action="toggle-live" aria-pressed="${Boolean(graphic.visible)}">${liveButtonLabel(graphic.visible)}</button>
+      </div>`
     : ''
   if (!titleBlock && !statusBlock && !pill) return ''
   return `
@@ -67,9 +82,8 @@ function sectionHead(graphic, statusText, { livePill = true, statusBind = false 
     </header>`
 }
 
-function setConnectionStatus(connected) {
-  connectionStatus?.classList.toggle('is-connected', connected)
-  connectionStatus?.classList.toggle('is-offline', !connected)
+function getGraphicById(id) {
+  return (currentState?.graphics || []).find((g) => g.id === id) || null
 }
 
 function operatorGraphics() {
@@ -186,9 +200,6 @@ function matchCardTemplate(graphic) {
         <button type="button" class="button ${widgetVisible(d.widgets, 'clock') ? 'button--gray' : 'button--secondary'} touch-btn" data-action="toggle-clock-visible">
           ${widgetVisible(d.widgets, 'clock') ? 'Hide clock' : 'Show clock'}
         </button>
-        <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
-          ${graphic.visible ? 'Hide' : 'Go live'}
-        </button>
       </div>
       </div>
       <div class="penalty-section pv-group__cell${penalties.active ? ' is-active' : ''}"${showPenalties ? '' : ' hidden'}>
@@ -199,15 +210,15 @@ function matchCardTemplate(graphic) {
           </button>
         </div>
         <div class="penalty-score">
-          <span>${d.homeCode || 'HOME'} <span data-bind="pen-home">${penaltyCount(penalties.homeKicks)}</span></span>
+          <span>${escapeHtml(d.homeCode || 'HOME')} <span data-bind="pen-home">${penaltyCount(penalties.homeKicks)}</span></span>
           <span>—</span>
-          <span><span data-bind="pen-away">${penaltyCount(penalties.awayKicks)}</span> ${d.awayCode || 'AWAY'}</span>
+          <span><span data-bind="pen-away">${penaltyCount(penalties.awayKicks)}</span> ${escapeHtml(d.awayCode || 'AWAY')}</span>
         </div>
         <div class="op-toolbar" data-pen-toolbar>
-          <button class="button button--primary touch-btn" data-action="pen-home-goal" ${!penalties.active || nextSide !== 'home' ? 'disabled' : ''}>${d.homeCode} goal</button>
-          <button class="button button--danger touch-btn" data-action="pen-home-miss" ${!penalties.active || nextSide !== 'home' ? 'disabled' : ''}>${d.homeCode} miss</button>
-          <button class="button button--primary touch-btn" data-action="pen-away-goal" ${!penalties.active || nextSide !== 'away' ? 'disabled' : ''}>${d.awayCode} goal</button>
-          <button class="button button--danger touch-btn" data-action="pen-away-miss" ${!penalties.active || nextSide !== 'away' ? 'disabled' : ''}>${d.awayCode} miss</button>
+          <button class="button button--primary touch-btn" data-action="pen-home-goal" ${!penalties.active || nextSide !== 'home' ? 'disabled' : ''}>${escapeHtml(d.homeCode)} goal</button>
+          <button class="button button--danger touch-btn" data-action="pen-home-miss" ${!penalties.active || nextSide !== 'home' ? 'disabled' : ''}>${escapeHtml(d.homeCode)} miss</button>
+          <button class="button button--primary touch-btn" data-action="pen-away-goal" ${!penalties.active || nextSide !== 'away' ? 'disabled' : ''}>${escapeHtml(d.awayCode)} goal</button>
+          <button class="button button--danger touch-btn" data-action="pen-away-miss" ${!penalties.active || nextSide !== 'away' ? 'disabled' : ''}>${escapeHtml(d.awayCode)} miss</button>
           <button class="button button--secondary touch-btn" data-action="pen-undo">Undo last</button>
           <button class="button button--secondary touch-btn" data-action="pen-reset">Reset</button>
         </div>
@@ -226,7 +237,7 @@ function legacyCardTemplate(graphic) {
       <div class="pv-group__cell pv-group__cell--flush">
       <div class="score-teams">
         <div class="team-block">
-          <div class="team-name">${d.homeTeam}</div>
+          <div class="team-name">${escapeHtml(d.homeTeam)}</div>
           <div class="score-value">${d.homeScore}</div>
           <div class="score-actions">
             <button class="button button--gray touch-btn touch-btn--score" data-action="home-minus">−</button>
@@ -238,7 +249,7 @@ function legacyCardTemplate(graphic) {
           <div>${d.showClock ? `${d.minute}'` : ''}</div>
         </div>
         <div class="team-block">
-          <div class="team-name">${d.awayTeam}</div>
+          <div class="team-name">${escapeHtml(d.awayTeam)}</div>
           <div class="score-value">${d.awayScore}</div>
           <div class="score-actions">
             <button class="button button--gray touch-btn touch-btn--score" data-action="away-minus">−</button>
@@ -251,9 +262,6 @@ function legacyCardTemplate(graphic) {
       <div class="op-toolbar op-toolbar--primary">
         <button type="button" class="button button--gray touch-btn" data-action="minute-minus">−1 min</button>
         <button type="button" class="button button--gray touch-btn" data-action="minute-plus">+1 min</button>
-        <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
-          ${graphic.visible ? 'Hide' : 'Go live'}
-        </button>
       </div>
       </div>
       </div>
@@ -292,11 +300,8 @@ function lowerThirdShowCardTemplate(graphic) {
       </div>
       </div>
       <div class="pv-group__cell pv-group__cell--actions">
-      <div class="op-toolbar op-toolbar--primary">
-        <button type="button" class="button button--gray touch-btn" data-action="lt-hide" ${!graphic.visible ? 'disabled' : ''}>Hide</button>
-        <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
-          ${graphic.visible ? 'Hide' : 'Go live'}
-        </button>
+      <div class="op-toolbar op-toolbar--live">
+        <button type="button" class="button button--gray touch-btn" data-action="lt-hide" ${!graphic.visible ? 'disabled' : ''}>Clear lower third</button>
       </div>
       </div>
       </div>
@@ -404,13 +409,6 @@ function tickerCardTemplate(graphic) {
         <input type="range" min="16" max="200" step="2" data-field="ticker-fontsize" value="${d.fontSize ?? 30}" />
       </label>
       </div>
-      <div class="pv-group__cell pv-group__cell--actions">
-      <div class="op-toolbar op-toolbar--primary">
-        <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
-          ${graphic.visible ? 'Hide' : 'Go live'}
-        </button>
-      </div>
-      </div>
       </div>
     </section>
   `
@@ -474,13 +472,6 @@ function f1CardTemplate(graphic) {
           Import from MultiViewer
         </button>
         <p class="op-status f1-operate__import-status" data-bind="f1-import-status"></p>
-      </div>
-      <div class="pv-group__cell pv-group__cell--actions">
-      <div class="op-toolbar op-toolbar--primary">
-        <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
-          ${graphic.visible ? 'Hide' : 'Go live'}
-        </button>
-      </div>
       </div>
       </div>
     </section>
@@ -588,9 +579,6 @@ function hockeyCardTemplate(graphic) {
           ${clock.running ? 'Pause' : 'Start clock'}
         </button>
         <button type="button" class="button button--secondary touch-btn" data-action="reset-quarter">Reset quarter</button>
-        <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
-          ${graphic.visible ? 'Hide' : 'Go live'}
-        </button>
       </div>
       </div>
       </div>
@@ -648,16 +636,9 @@ function cardTemplate(graphic) {
 
 function updateLiveState(card, graphic) {
   card.classList.toggle('is-live', Boolean(graphic.visible))
-  const pill = card.querySelector('[data-bind="live-pill"]')
-  if (pill) {
-    pill.className = `pill ${graphic.visible ? 'pill--live' : 'pill--muted'}`
-    pill.textContent = graphic.visible ? 'Live' : 'Off'
-  }
+  syncOnAirBadge(card.querySelector('[data-bind="live-pill"]'), graphic.visible)
   const liveBtn = card.querySelector('[data-action="toggle-live"]')
-  if (liveBtn) {
-    liveBtn.className = `button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn`
-    liveBtn.textContent = graphic.visible ? 'Hide' : 'Go live'
-  }
+  if (liveBtn && liveBtn.dataset.pending !== '1') syncLiveButton(liveBtn, graphic.visible)
 }
 
 function updateMatchCard(card, graphic) {
@@ -759,6 +740,10 @@ async function handleAction(graphicId, action, event) {
   const latest = currentState.graphics.find((g) => g.id === graphicId)
   if (!latest) return
 
+  if (action === 'toggle-live') {
+    return toggleGraphic(graphicId, !latest.visible)
+  }
+
   if (latest.type === 'lowerThirdShow') {
     if (action === 'toggle-live') {
       await toggleGraphic(graphicId, !latest.visible)
@@ -815,9 +800,14 @@ async function handleAction(graphicId, action, event) {
       if (!text) return
       list.push(createTickerMessage(text, { enabled: false }))
     }
+    let removed = null
+    let removedIndex = -1
     if (action === 'ticker-del') {
       const idx = Number(event?.target?.closest('[data-action]')?.dataset.index)
-      if (!Number.isNaN(idx)) list.splice(idx, 1)
+      if (!Number.isNaN(idx) && list[idx]) {
+        removed = list.splice(idx, 1)[0]
+        removedIndex = idx
+      }
     }
     if (action === 'ticker-toggle') {
       const idx = Number(event?.target?.closest('[data-action]')?.dataset.index)
@@ -826,7 +816,8 @@ async function handleAction(graphicId, action, event) {
       }
     }
     data.messages = list
-    await patchGraphic(graphicId, { data })
+    const saved = await patchGraphic(graphicId, { data })
+    if (saved && removed) offerTickerUndo(graphicId, removed, removedIndex, getGraphicById)
     return
   }
 
@@ -911,6 +902,12 @@ function mountHandlers() {
     const card = btn.closest('[data-graphic-id]')
     if (!card) return
     event.preventDefault()
+    if (btn.dataset.action === 'toggle-live') {
+      withPending(btn, () => handleAction(card.dataset.graphicId, 'toggle-live', event)).then((updated) => {
+        if (updated && btn.isConnected) syncLiveButton(btn, updated.visible)
+      })
+      return
+    }
     handleAction(card.dataset.graphicId, btn.dataset.action, event)
   })
   root.addEventListener('change', (event) => {
@@ -1021,7 +1018,16 @@ function render() {
   const items = operatorGraphics()
 
   if (!items.length) {
-    root.innerHTML = '<section class="empty-state">No operator overlays configured. Enable “Operator” on a widget in the dashboard.</section>'
+    const hasAny = (currentState?.graphics || []).length > 0
+    root.innerHTML = hasAny
+      ? `<section class="empty-state">
+          <p class="empty-state__title">No widgets for live control</p>
+          <p>None of the widgets in this project are enabled for the operator. Enable “Operator” on a widget in the Dashboard.</p>
+        </section>`
+      : `<section class="empty-state">
+          <p class="empty-state__title">No widgets yet — add your first graphic</p>
+          <p>Open the Dashboard on a computer and choose <strong>Add widget</strong> or <strong>Create from design</strong>. New widgets appear here right away.</p>
+        </section>`
     document.body.classList.remove('operator--single', 'operator--multi')
     updateFocusChip(null, 0)
     ensureClockTimer()
@@ -1082,8 +1088,7 @@ function applyState(state) {
 wireRenderPreviewLinks(document, () => currentState?.settings)
 
 const socket = io()
-socket.on('connect', () => setConnectionStatus(true))
-socket.on('disconnect', () => setConnectionStatus(false))
+wireConnectionState(socket, { pill: connectionStatus, controls: [root] })
 socket.on('stateChanged', applyState)
 
 const DESK_KEY = 'pv-operator-desk'

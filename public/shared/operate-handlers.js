@@ -1,4 +1,12 @@
 import { patchGraphic, toggleGraphic } from '/public/shared/client.js'
+import { showToast, withPending } from '/public/shared/toast.js'
+import {
+  liveButtonClass,
+  liveButtonLabel,
+  onAirBadgeHtml,
+  syncLiveButton,
+  syncOnAirBadge
+} from '/public/shared/on-air.js'
 import { createTickerMessage, migrateTickerMessages, tickerMessageText } from '/public/shared/ticker-messages.js'
 import { formatClock, resolveLiveClock, widgetVisible } from '/public/shared/match-utils.js'
 import {
@@ -121,8 +129,6 @@ function isEmbeddedSection(section) {
 }
 
 export function operateShellHtml(graphic, { embedded = false } = {}) {
-  const live = graphic.visible ? 'Live' : 'Off'
-  const liveClass = graphic.visible ? 'pill--live' : 'pill--muted'
   const statusText = operateStatusLine(graphic)
   const titleBlock = embedded
     ? ''
@@ -136,13 +142,11 @@ export function operateShellHtml(graphic, { embedded = false } = {}) {
             ${titleBlock}
             <p class="op-status" data-bind="status-line">${escapeHtml(statusText)}</p>
           </div>
-          <span class="pill ${liveClass}" data-bind="live-pill">${live}</span>
+          ${onAirBadgeHtml(graphic.visible, { bind: true })}
         </header>
         <div class="pv-group__cell pv-group__cell--actions">
           <div class="op-toolbar op-toolbar--primary">
-            <button type="button" class="button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn" data-action="toggle-live">
-              ${graphic.visible ? 'Hide' : 'Go live'}
-            </button>
+            <button type="button" class="button ${liveButtonClass(graphic.visible)} touch-btn" data-action="toggle-live" aria-pressed="${Boolean(graphic.visible)}">${liveButtonLabel(graphic.visible)}</button>
           </div>
         </div>
         <div class="operate-widget-mount" data-operate-mount></div>
@@ -156,7 +160,7 @@ function tickerMessageRowHtml(m, i) {
       <input type="checkbox" class="ticker-msg-row__toggle" data-action="ticker-toggle" data-index="${i}" ${m.enabled ? 'checked' : ''} />
       <span class="ticker-msg-row__text">${escapeHtml(tickerMessageText(m))}</span>
     </label>
-    <button type="button" class="button button--danger button--icon" data-action="ticker-del" data-index="${i}" title="Remove permanently" aria-label="Remove message">×</button>
+    <button type="button" class="button button--danger button--icon" data-action="ticker-del" data-index="${i}" title="Remove message" aria-label="Remove message: ${escapeHtml(tickerMessageText(m))}">×</button>
   </li>`
 }
 
@@ -282,7 +286,7 @@ export function hockeyOperateHtml(graphic, { embedded = false } = {}) {
         <div class="match-operate__teams">
           <div class="match-operate__team">
             <input class="match-operate__team-code" type="text" maxlength="3" data-field="homeCode" value="${escapeHtml(d.homeCode || '')}" aria-label="Home team code" spellcheck="false" />
-            <label class="field" style="margin:0">
+            <label class="match-operate__color">
               <span class="visually-hidden">Home colour</span>
               <input type="color" data-field="homeColor" value="${homeColor}" aria-label="Home stripe colour" />
             </label>
@@ -298,7 +302,7 @@ export function hockeyOperateHtml(graphic, { embedded = false } = {}) {
           </div>
           <div class="match-operate__team">
             <input class="match-operate__team-code" type="text" maxlength="3" data-field="awayCode" value="${escapeHtml(d.awayCode || '')}" aria-label="Away team code" spellcheck="false" />
-            <label class="field" style="margin:0">
+            <label class="match-operate__color">
               <span class="visually-hidden">Away colour</span>
               <input type="color" data-field="awayColor" value="${awayColor}" aria-label="Away stripe colour" />
             </label>
@@ -871,10 +875,9 @@ function ensureOperateClockTimer() {
   }
 }
 
-export async function handleOperateAction(graphic, action, event, root) {
+export async function handleOperateAction(graphic, action, event, root, getGraphic) {
   if (action === 'toggle-live') {
-    await toggleGraphic(graphic.id, !graphic.visible)
-    return
+    return toggleGraphic(graphic.id, !graphic.visible)
   }
 
   if (graphic.type === 'matchScoreboard') {
@@ -920,10 +923,11 @@ export async function handleOperateAction(graphic, action, event, root) {
 
   if (action === 'ticker-del') {
     const idx = Number(event?.target?.closest('[data-action]')?.dataset.index)
-    if (Number.isNaN(idx)) return
-    list.splice(idx, 1)
+    if (Number.isNaN(idx) || !list[idx]) return
+    const [removed] = list.splice(idx, 1)
     data.messages = list
-    await patchGraphic(graphic.id, { data })
+    const saved = await patchGraphic(graphic.id, { data })
+    if (saved) offerTickerUndo(graphic.id, removed, idx, getGraphic)
     return
   }
 
@@ -936,7 +940,25 @@ export async function handleOperateAction(graphic, action, event, root) {
   }
 }
 
-export function wireOperateSection(root, getGraphic) {
+/**
+ * Deleting a ticker message is instant (no confirm on a live show) but can be
+ * undone from the toast for a few seconds.
+ */
+export function offerTickerUndo(graphicId, removed, index, getGraphic) {
+  showToast(`Message removed: “${tickerMessageText(removed)}”`, {
+    actionLabel: 'Undo',
+    duration: 8000,
+    onAction: async () => {
+      const latest = getGraphic?.(graphicId)
+      const messages = migrateTickerMessages(latest?.data?.messages || [])
+      if (messages.some((m) => m.id && m.id === removed.id)) return
+      messages.splice(Math.min(index, messages.length), 0, removed)
+      await patchGraphic(graphicId, { data: { messages } })
+    }
+  })
+}
+
+export function wireOperateSection(root, getGraphic, { onWentLive } = {}) {
   if (root.dataset.operateWired === '1') return
   root.dataset.operateWired = '1'
   clockRoots.add({ root, getGraphic })
@@ -948,7 +970,15 @@ export function wireOperateSection(root, getGraphic) {
     if (!section) return
     const graphic = getGraphic(section.dataset.graphicId)
     if (!graphic) return
-    await handleOperateAction(graphic, btn.dataset.action, event, section)
+    if (btn.dataset.action === 'toggle-live') {
+      const updated = await withPending(btn, () => handleOperateAction(graphic, 'toggle-live', event, section, getGraphic))
+      if (updated) {
+        syncLiveButton(btn, updated.visible)
+        if (updated.visible) onWentLive?.(updated)
+      }
+      return
+    }
+    await handleOperateAction(graphic, btn.dataset.action, event, section, getGraphic)
   })
 
   root.addEventListener('change', async (event) => {
@@ -958,7 +988,7 @@ export function wireOperateSection(root, getGraphic) {
       if (!section) return
       const graphic = getGraphic(section.dataset.graphicId)
       if (!graphic) return
-      await handleOperateAction(graphic, 'ticker-toggle', event, section)
+      await handleOperateAction(graphic, 'ticker-toggle', event, section, getGraphic)
       return
     }
 
@@ -1022,18 +1052,11 @@ export function wireOperateSection(root, getGraphic) {
 export function refreshOperateSection(section, graphic) {
   if (!section || !graphic) return
   section.classList.toggle('is-live', Boolean(graphic.visible))
-  const pill = section.querySelector('[data-bind="live-pill"]')
-  if (pill) {
-    pill.className = `pill ${graphic.visible ? 'pill--live' : 'pill--muted'}`
-    pill.textContent = graphic.visible ? 'Live' : 'Off'
-  }
+  syncOnAirBadge(section.querySelector('[data-bind="live-pill"]'), graphic.visible)
   const status = section.querySelector('[data-bind="status-line"]')
   if (status) status.textContent = operateStatusLine(graphic)
   const liveBtn = section.querySelector('[data-action="toggle-live"]')
-  if (liveBtn) {
-    liveBtn.className = `button ${graphic.visible ? 'button--gray' : 'button--live'} touch-btn`
-    liveBtn.textContent = graphic.visible ? 'Hide' : 'Go live'
-  }
+  if (liveBtn && liveBtn.dataset.pending !== '1') syncLiveButton(liveBtn, graphic.visible)
   const mount = section.querySelector('[data-operate-mount]')
   if (!mount) return
   if (graphic.type === 'customTicker') {

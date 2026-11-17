@@ -6,6 +6,7 @@ import {
 } from '/public/shared/operate-handlers.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
+import { wireConnectionState } from '/public/shared/connection.js'
 
 const widgetId = resolveOperateWidgetId()
 const root = document.getElementById('operate-root')
@@ -15,13 +16,16 @@ const connectionStatus = document.getElementById('connection-status')
 
 let currentState = null
 
-function setConnectionStatus(connected) {
-  connectionStatus?.classList.toggle('is-connected', connected)
-  connectionStatus?.classList.toggle('is-offline', !connected)
-}
-
 function getGraphic(id) {
   return currentState?.graphics?.find((g) => g.id === id) || null
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
 }
 
 function renderMissing(message) {
@@ -38,7 +42,7 @@ function render() {
 
   const graphic = getGraphic(widgetId)
   if (!graphic) {
-    renderMissing(`Widget <code>${widgetId}</code> not found in the active project.`)
+    renderMissing(`Widget <code>${escapeHtml(widgetId)}</code> not found in the active project. <a href="/control">Back to the Dashboard</a>`)
     return
   }
 
@@ -92,8 +96,7 @@ function applyState(state) {
 wireRenderPreviewLinks(document, () => currentState?.settings)
 
 const socket = io()
-socket.on('connect', () => setConnectionStatus(true))
-socket.on('disconnect', () => setConnectionStatus(false))
+wireConnectionState(socket, { pill: connectionStatus, controls: [root] })
 socket.on('stateChanged', applyState)
 
 fetch('/api/state')
