@@ -1,72 +1,84 @@
-# ProVerlay — Product Vision
+# ProVerlay — product overview
 
-## Identiteit
+ProVerlay is a local tool for live broadcast graphics: you set up overlays on a Mac
+(or any machine that runs Node), operate them from a phone, tablet or Stream Deck,
+and play them out to OBS or vMix through a browser source.
 
-ProVerlay is **geen Holographics-kloon**. Het is een eigen product met:
+## Principles
 
-- Apple Tahoe-achtige interface (licht, glass, rustig)
-- Dashboard + apart **operator-paneel** voor touch (iPad/iPhone)
-- Klant-branding als first-class concept
-- Custom overlays (PNG-design + live data) per project
-- Output naar **OBS en vMix** via browser input (CEF)
-- Doel: **standalone app** Mac + Windows (roadmap F3)
-
-**Planning:** zie de [GitHub issues](https://github.com/Ferrywell/ProVerlay/issues)
-
-## Kernbelofte
-
-> Klant branding erin. Overlay live. Score bedienen vanaf iPad. Stream Deck via Companion.
+- A calm, light interface (glass panels, system fonts) rather than a dense broadcast
+  console.
+- A desktop **dashboard** for setup, and a separate touch **operator** panel for
+  live control on iPad/iPhone.
+- Branding is a first-class concept: every project has its own colours, fonts and
+  assets.
+- Custom overlays can be built from a PNG design plus live data fields.
+- Output to **OBS and vMix** via their Chromium-based browser inputs.
+- Runs locally on your production network; no cloud account.
 
 ## Interfaces
 
-| Interface | Doel | Device |
-|-----------|------|--------|
-| `/control` | Setup, branding, overlay overzicht | Mac / desktop |
-| `/operator` | Live bediening (score, toggles) | iPhone / iPad |
-| `/editor` | WYSIWYG placement (score strips) | Desktop |
-| `/compose` | Design importeren (PNG → widget) | Desktop |
-| `/render` | OBS / vMix browser output | N/A |
+| Route | Purpose | Device |
+|-------|---------|--------|
+| `/control` | Dashboard: projects, widgets, going live | Mac / desktop |
+| `/operator` | Live control: score, clock, toggles | iPhone / iPad |
+| `/operate?graphic=<id>` | Full-page operate view for one widget | Any |
+| `/project` | Edit project: canvas, branding, assets | Desktop |
+| `/design` | Setup hub for custom designs | Desktop |
+| `/layout` | Overlay layout: free placement of widgets | Desktop |
+| `/editor` | WYSIWYG scoreboard editor (PNG + text fields) | Desktop |
+| `/compose` | Import a design (PNG → widget), beta | Desktop |
+| `/render` | Output for OBS / vMix | Browser source |
 
-Root `/` detecteert apparaat:
+The root `/` detects the device: phones and tablets go to `/operator`, desktops to
+`/control`. Override with `/?view=control` or `/?view=operator`. Opening `/control`
+on a phone or tablet redirects to `/operator`.
 
-- Phone/tablet → `/operator`
-- Desktop → `/control`
+## Ways to trigger graphics
 
-## Trigger-methoden
+1. **Dashboard** — put widgets live or take them off air.
+2. **Operator on a phone/tablet** — score, clock, toggles over the local network.
+3. **Bitfocus Companion / Stream Deck** — see [COMPANION.md](COMPANION.md).
+4. **REST API and Socket.io** — for your own automation, see
+   [ARCHITECTURE.md](ARCHITECTURE.md).
 
-1. **Web dashboard** — overlays aan/uit
-2. **Operator mobiel** — score, klok, toggles (lokaal netwerk)
-3. **Companion / Stream Deck** — toggles en acties
-4. **REST API** — automatisering
+## Branding
 
-## Klant branding
+- Bundled presets in `templates/brands/*.json`; your own presets in
+  `data/brands/*.json` (they override bundled presets with the same id).
+- Per project: assets, fonts and colours (*Edit project → Client branding*).
+- The render applies the project brand through CSS variables from `state.brand`.
 
-- Presets in `data/brands/*.json`
-- Per project: assets, fonts, kleuren
-- Render gebruikt CSS variables van `state.brand`
+## Widget types
 
-## Widgettypes (huidig)
+| Type | Dashboard label | On operator | Use |
+|------|-----------------|:-----------:|-----|
+| `matchScoreboard` | Match score | yes | Match score and clock, optional PNG strip |
+| `hockeyScorebug` | Hockey scorebug | yes | Q1–Q4 countdown clock, team codes and colours |
+| `f1Timing` | F1 timing | yes | F1 position tower, manual or MultiViewer live ([F1-TIMING.md](F1-TIMING.md)) |
+| `customTicker` | Ticker | yes | Scrolling ticker |
+| `lowerThirdShow` | Lower thirds | yes | Roster of people; put one on air with a click |
+| `quizShow` | Quiz | yes | Multiple-choice question with reveal |
+| `streamCountdown` | Stream countdown | no | Countdown to the stream start |
+| `lowerThird` | Lower third (single) | no | One name/title lower third |
+| `message` | Message | no | Text message / break slide |
 
-| Type | Operator | Gebruik |
-|------|----------|---------|
-| `matchScoreboard` | ✅ | Wedstrijdscore + klok |
-| `customTicker` | ✅ | Tickertape over PNG |
-| `streamCountdown` | ❌ | Start countdown |
-| `lowerThird` | ❌ | Enkele lower third |
-| `message` | ❌ | Bericht / break |
-
-**Gepland (F2+):** `lowerThirdShow` (roster), `logoBug`, animatie-presets — zie roadmap.
+"On operator" is set per widget type when the widget is created.
 
 ## Platform
 
-- **Nu:** Node-server (`npm start`), browser-UI’s
-- **Vereiste:** Windows-compatibel (geen Mac-only APIs)
-- **Poort:** **2014**
-- **Output hosts:** [OBS](https://obsproject.com) Browser Source · [vMix](https://www.vmix.com) Web Browser — zie [VMIX.md](./VMIX.md)
+- Server: Node.js (`npm start`), browser UIs, port **2014**.
+- Desktop app: macOS on Apple Silicon ([APP.md](APP.md)). A Windows build is planned;
+  the server already runs anywhere Node runs.
+- Output hosts: [OBS](https://obsproject.com) Browser Source and
+  [vMix](https://www.vmix.com) Web Browser — see [OBS-VMIX.md](OBS-VMIX.md).
 
-## Niet in scope (nu)
+## Out of scope (for now)
 
-- Automatische NPO/sync-pagina voor kijkers
-- OCR live wedstrijdklok
-- Particle/confetti effecten (CEF-performance)
-- Cloud multi-tenant
+- Automatic sync with an external broadcast for viewers (watch-along is manual)
+- OCR of a live match clock
+- Particle/confetti effects (too heavy for CEF browser inputs)
+- Cloud or multi-tenant hosting
+- User accounts / authentication (see [SECURITY.md](../SECURITY.md))
+
+Planning happens in [GitHub issues](https://github.com/Ferrywell/ProVerlay/issues).

@@ -1,3 +1,5 @@
+> **Note:** this is an internal guide for AI-assisted development by the maintainers (in Dutch). If you want to contribute, read [CONTRIBUTING.md](CONTRIBUTING.md) instead.
+
 # ProVerlay — Agent Orchestration
 
 Dit document stuurt de samenwerking tussen vier agents aan.
