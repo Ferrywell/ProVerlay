@@ -11,10 +11,34 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
-Preparing ProVerlay for its open-source release.
+## [0.7.0] - 2026-11-17
+
+First open-source release: hardened server, a first test suite, UX and render fixes,
+and a clean repository.
+
+### Security
+
+- Origin/Host check on the REST API and the Socket.io handshake; requests from
+  non-local web origins are refused (403). Requests without an Origin (Companion,
+  scripts) still work.
+- Project ids are validated against the registry; path traversal on asset routes
+  is no longer possible.
+- Uploads are limited to images (png, jpg, webp, gif) and fonts (ttf, otf, woff,
+  woff2); every response sends `X-Content-Type-Options: nosniff`.
+- `.proverlay` imports are size- and entry-limited and extracted to a staging folder.
+- The Socket.io write events were removed; the socket API is read-only.
 
 ### Added
 
+- Atomic endpoints `POST /api/graphics/:id/score` and `POST /api/graphics/:id/clock`
+  for match and hockey scoreboards.
+- Test suite (`npm test`, built-in `node:test`) and CI on macOS, Windows and Linux.
+- Rolling `project.json.bak` backups; startup falls back to the backup or the blank
+  project instead of crashing.
+- Toast notifications, a connection banner that blocks live controls while
+  disconnected, an overlap warning when two on-air graphics share a position, and
+  undo for deleting ticker messages.
+- Editor empty state with PNG upload and drag-and-drop.
 - GPL-3.0 license for the application; MIT license for the Companion module
   (`companion/LICENSE`).
 - English README and documentation, including a new
@@ -26,6 +50,16 @@ Preparing ProVerlay for its open-source release.
 
 ### Changed
 
+- Invalid API payloads are rejected with 400 instead of being stored.
+- One "ON AIR" language and colour across dashboard, operator, operate and layout;
+  "Go live" / "Take off air" buttons.
+- All UI text in English, including the Electron tray menu and dialogs.
+- Higher-contrast accent and text colours; pinch-zoom allowed on operator pages.
+- Every widget type is visible with its default settings, including Match score and
+  Stream countdown without a PNG strip.
+- Editor and render share one clock-plate geometry (true WYSIWYG).
+- Count-down clocks round up, count-up clocks round down, consistently.
+- Node.js 22 or newer is required (`.nvmrc`).
 - New installs start with a single blank project; the seed script only produces the
   blank project.
 - Brand presets ship in `templates/brands/`; your own presets live in `data/brands/`
@@ -46,6 +80,14 @@ Preparing ProVerlay for its open-source release.
 
 ### Fixed
 
+- The server no longer crashes on malformed requests or socket messages.
+- A bad PATCH or a broken imported project can no longer make the server unable to
+  start.
+- Concurrent changes (for example iPad and Stream Deck at the same time) are no
+  longer lost; graphic ids are unique.
+- One faulty graphic no longer stops the whole render.
+- Team codes are no longer truncated in the operate panels.
+- Fresh installs and fresh clones start correctly.
 - Companion: `npm run test:connection` failed because the script used CommonJS
   `require` in an ES module package.
 - Companion: **Set primary color** changed an unused field; it now sets the project
@@ -147,7 +189,8 @@ Preparing ProVerlay for its open-source release.
   operator, scoreboard editor, render page for OBS/vMix, project system with
   `.proverlay` export/import, and the Bitfocus Companion module.
 
-[Unreleased]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.8...HEAD
+[Unreleased]: https://github.com/Ferrywell/ProVerlay/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.8...v0.7.0
 [0.6.8]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.4...v0.6.6
