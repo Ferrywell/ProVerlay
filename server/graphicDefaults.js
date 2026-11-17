@@ -143,6 +143,19 @@ export function defaultStreamCountdownData() {
   }
 }
 
+/*
+ * Default positions are chosen so widgets that are typically live at the same
+ * time do not overlap (render.js supports center, top-left/-center/-right,
+ * bottom-left/-center, bottom-full and custom = data.placementFree x/y %):
+ *   matchScoreboard / hockeyScorebug  top-center  (alternatives for one show)
+ *   streamCountdown                   center      (pre-show)
+ *   customTicker                      bottom-full
+ *   message                           custom, bottom center just above the ticker
+ *   lowerThird / lowerThirdShow       bottom-left
+ *   quizShow                          top-left    (panel itself sits left, see data.panel)
+ *   f1Timing                          custom      (left side, data.placementFree)
+ * Only newly created widgets use these; existing projects keep their positions.
+ */
 const GRAPHIC_TEMPLATES = {
   matchScoreboard: (name) => ({
     type: 'matchScoreboard',
@@ -167,7 +180,7 @@ const GRAPHIC_TEMPLATES = {
     name,
     visible: false,
     soloVisible: false,
-    position: 'top-center',
+    position: 'center',
     operator: false,
     data: defaultStreamCountdownData()
   }),
@@ -194,16 +207,16 @@ const GRAPHIC_TEMPLATES = {
     name,
     visible: false,
     soloVisible: false,
-    position: 'bottom-center',
+    position: 'custom',
     operator: false,
-    data: { text: 'Message' }
+    data: { text: 'Message', placementFree: { x: 50, y: 82 } }
   }),
   quizShow: (name) => ({
     type: 'quizShow',
     name,
     visible: false,
     soloVisible: false,
-    position: 'bottom-left',
+    position: 'top-left',
     operator: true,
     data: defaultQuizShowData()
   }),
@@ -239,7 +252,7 @@ export function defaultQuizShowData() {
     ],
     activeQuestionId: null,
     revealed: false,
-    // Paneel links zodat presentatoren rechts in beeld blijven
+    // Panel on the left so presenters stay visible on the right
     panel: { x: 4, y: 50, width: 44 }
   }
 }
