@@ -1,3 +1,4 @@
+import { sharedSocket } from '/public/shared/connection.js'
 import { hexFromColor, hexToColor } from '/public/shared/client.js'
 import { showToast, withPending } from '/public/shared/toast.js'
 
@@ -589,8 +590,8 @@ loadActiveProject().catch((err) => setStatus(err.message || 'Failed to load proj
 
 // Live updates: project list changes from any client, and a project switch
 // made elsewhere (dashboard, Companion) reloads this page's forms.
-if (typeof window.io === 'function') {
-  const socket = window.io()
+const socket = sharedSocket()
+if (socket) {
   socket.on('projectsChanged', (list) => {
     if (!Array.isArray(list)) return
     projects = list

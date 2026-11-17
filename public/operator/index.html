@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>ProVerlay — Operator</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="/public/shared/app-shell.js"></script>
     <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
     <link rel="stylesheet" href="/public/shared/tahoe.css" />
     <link rel="stylesheet" href="/public/shared/form-controls.css" />
@@ -12,28 +14,10 @@
     <link rel="stylesheet" href="/public/operator/operator.css" />
   </head>
   <body class="operator">
-    <header class="pv-nav-bar">
-      <div class="pv-nav-bar__side pv-nav-bar__side--start">
-        <a href="/design" class="pv-nav-bar__back" aria-label="Design setup">
-          <span class="pv-nav-bar__chevron" aria-hidden="true"></span>
-          <span class="pv-nav-bar__back-label">Design</span>
-        </a>
-      </div>
-      <div class="pv-nav-bar__title pv-nav-bar__title--brand">
-        <img class="app-brand__mark app-brand__mark--sm" src="/public/shared/proverlay-logo.png" alt="" width="28" height="28" />
-        <div class="pv-nav-bar__title-text">
-          <h1 id="op-title">Live control</h1>
-        </div>
-      </div>
-      <div class="pv-nav-bar__side pv-nav-bar__side--end">
-        <button type="button" class="pv-nav-bar__action pv-nav-bar__hide-narrow" id="desk-mode-toggle" aria-pressed="false" title="Desk mode: two columns on wide screens">
-          Desk
-        </button>
-        <div class="pill pill--sync is-connecting pv-nav-bar__sync" id="connection-status" role="status" aria-live="polite">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span class="status-label">Connecting…</span>
-        </div>
-        <a href="/render" class="pv-nav-bar__action">Preview</a>
+    <header class="pv-app-header" data-section="operator">
+      <div class="pv-app-header__title"><h1 id="op-title">Operator</h1></div>
+      <div class="pv-app-header__actions">
+        <button type="button" class="button button--ghost button--compact pv-app-header__toggle pv-app-header__hide-narrow" id="desk-mode-toggle" aria-pressed="false" title="Desk mode: two columns on wide screens">Desk</button>
       </div>
     </header>
 
@@ -41,8 +25,8 @@
 
     <main id="operator-root" class="op-main"></main>
 
-    <script src="/public/shared/app-shell.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/public/shared/app-header.js"></script>
     <script type="module" src="/public/operator/operator.js"></script>
   </body>
 </html>

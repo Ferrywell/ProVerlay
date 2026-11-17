@@ -4,26 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ProVerlay — Edit project</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="/public/shared/app-shell.js"></script>
     <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
     <link rel="stylesheet" href="/public/shared/tahoe.css" />
     <link rel="stylesheet" href="/public/shared/form-controls.css" />
     <link rel="stylesheet" href="/public/project/project.css" />
   </head>
   <body class="project-page">
-    <header class="pv-nav-bar pv-nav-bar--page">
-      <div class="pv-nav-bar__side pv-nav-bar__side--start">
-        <a href="/control" class="pv-nav-bar__back" aria-label="Back to dashboard">
-          <span class="pv-nav-bar__chevron" aria-hidden="true"></span>
-          <span class="pv-nav-bar__back-label">Dashboard</span>
-        </a>
-      </div>
-      <div class="pv-nav-bar__title pv-nav-bar__title--brand">
-        <img class="app-brand__mark app-brand__mark--sm" src="/public/shared/proverlay-logo.png" alt="" width="28" height="28" />
-        <div class="pv-nav-bar__title-text">
-          <h1 id="project-title">Edit project</h1>
-        </div>
-      </div>
-      <div class="pv-nav-bar__side pv-nav-bar__side--end" aria-hidden="true"></div>
+    <header class="pv-app-header" data-section="design" data-back-href="/design" data-back-label="Design">
+      <div class="pv-app-header__title"><h1 id="project-title">Edit project</h1></div>
     </header>
 
     <main class="project-grid">
@@ -195,7 +185,7 @@
     </dialog>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/public/shared/app-shell.js"></script>
+    <script type="module" src="/public/shared/app-header.js"></script>
     <script type="module" src="/public/project/project.js"></script>
   </body>
 </html>

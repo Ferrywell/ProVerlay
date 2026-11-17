@@ -32,7 +32,7 @@ import {
 import { operateCardHtml, refreshOperateCard, wireOperateRoot } from '/public/shared/operate-card.js'
 import { resolveHockeyTypography } from '/public/shared/hockey-utils.js'
 import { showToast, showErrorToast, withPending, copyTextWithFallback } from '/public/shared/toast.js'
-import { wireConnectionState } from '/public/shared/connection.js'
+import { sharedSocket, wireConnectionState } from '/public/shared/connection.js'
 import {
   findOnAirOverlaps,
   overlapWarningText,
@@ -208,9 +208,8 @@ function activeProjectId() {
 
 // Selecteren in de dropdown wisselt NIET van project; dat gebeurt pas via de
 // expliciete "Activate this project"-knop (veilig tijdens een live stream).
-function syncProjectUI({ preserveSelection = true } = {}) {
+function syncProjectUI({ preserveSelection = true, activeId = activeProjectId() } = {}) {
   if (!projectSwitcher) return
-  const activeId = activeProjectId()
   const active = projects.find((p) => p.id === activeId)
   if (projectActiveName) projectActiveName.textContent = active?.name || '—'
   const selectionPending =
@@ -221,6 +220,37 @@ function syncProjectUI({ preserveSelection = true } = {}) {
   }
 }
 
+// Fill the project dropdown from `projects`. Keeps a pending (not yet
+// activated) selection unless `select` asks for a specific project.
+function renderProjectOptions({ select } = {}) {
+  if (!projectSwitcher) return
+  // The list's own flag wins: a projectsChanged can arrive before the
+  // stateChanged that carries the new projectId.
+  const activeId = projects.find((p) => p.active)?.id || activeProjectId()
+  // A real pending choice differs from the project that was active when the
+  // list was last drawn (not just from the new active one).
+  const previousActive = projectSwitcher.dataset.activeId || ''
+  const pending = projectSwitcher.value !== previousActive ? projectSwitcher.value : ''
+  projectSwitcher.dataset.activeId = activeId
+  projectSwitcher.innerHTML = projects
+    .map((p) => {
+      const isActive = p.id === activeId
+      return `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}${isActive ? ' — active' : ''}</option>`
+    })
+    .join('')
+  if (!projects.length) {
+    projectSwitcher.innerHTML = '<option value="">No projects</option>'
+  }
+  if (select && projects.some((p) => p.id === select)) {
+    projectSwitcher.value = select
+  } else if (pending && pending !== activeId && projects.some((p) => p.id === pending)) {
+    projectSwitcher.value = pending
+  } else if (activeId) {
+    projectSwitcher.value = activeId
+  }
+  syncProjectUI({ activeId })
+}
+
 async function loadProjects({ select } = {}) {
   if (!projectSwitcher) return
   setProjectBusy(true)
@@ -229,22 +259,7 @@ async function loadProjects({ select } = {}) {
     const res = await fetch('/api/projects')
     if (!res.ok) throw new Error('Could not load projects')
     projects = await res.json()
-    const activeId = activeProjectId()
-    projectSwitcher.innerHTML = projects
-      .map((p) => {
-        const isActive = p.active || p.id === activeId
-        return `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}${isActive ? ' — active' : ''}</option>`
-      })
-      .join('')
-    if (!projects.length) {
-      projectSwitcher.innerHTML = '<option value="">No projects</option>'
-    }
-    if (select && projects.some((p) => p.id === select)) {
-      projectSwitcher.value = select
-    } else if (activeId) {
-      projectSwitcher.value = activeId
-    }
-    syncProjectUI()
+    renderProjectOptions({ select })
     setProjectStatus('')
   } catch (err) {
     setProjectStatus(err.message || 'Failed to load projects', 'error')
@@ -1815,12 +1830,19 @@ copyBtn?.addEventListener('click', async () => {
 wireGraphicsListActions()
 wireRenderPreviewLinks(document, () => currentState?.settings)
 
-const socket = io()
+const socket = sharedSocket()
 wireConnectionState(socket, {
   pill: connectionStatus,
   controls: [document.querySelector('.shell-grid')]
 })
 socket.on('stateChanged', applyState)
+// Project created/renamed/duplicated/deleted/imported/activated in another
+// window (or via Companion): refresh the dropdown right away.
+socket.on('projectsChanged', (list) => {
+  if (!Array.isArray(list)) return
+  projects = list
+  renderProjectOptions()
+})
 
 fetch('/api/state')
   .then((res) => res.json())

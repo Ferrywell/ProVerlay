@@ -5,7 +5,11 @@ the dashboard, operator, editor or project pages.
 
 ## Direction
 
-- Light theme with warm off-white backgrounds (`--pv-bg` in `public/shared/tahoe.css`).
+- Light theme with warm off-white backgrounds (`--pv-bg` in `public/shared/tahoe.css`),
+  plus a calm dark theme for dark control rooms. Both use the same tokens: dark values
+  live under `prefers-color-scheme: dark` and `html[data-theme="dark"]`; the header menu
+  offers System / Light / Dark (stored per device). Never hard-code colours in page CSS —
+  use a token so both themes work. `/render` has no theme.
 - Glass panels using `backdrop-filter` blur, with a solid fallback where blur is not
   supported.
 - System font stack: SF Pro on macOS, Segoe UI on Windows.
@@ -16,6 +20,16 @@ the dashboard, operator, editor or project pages.
 
 The render output (`/render`) is a separate concern: it is transparent and only shows
 the graphics, styled by the project brand.
+
+## App header
+
+Every page except `/render` uses the shared header (`public/shared/app-header.js`,
+styles in `tahoe.css` → `.pv-app-header`): logo + page title, the **project chip**
+(active project; switch project, confirm when something is ON AIR; "Manage projects…"),
+main navigation (Dashboard, Operator, Layout, Design — in the ⋯ menu below 1100 px),
+page actions, the connection pill, **Preview** and the ⋯ menu (navigation + theme).
+Pages provide only `.pv-app-header__title` and `.pv-app-header__actions` in their markup.
+Below 768 px secondary items (`.pv-app-header__hide-narrow`) hide so nothing overlaps.
 
 ## Two control surfaces
 

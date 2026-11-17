@@ -11,6 +11,20 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+### Added
+
+- One shared app header on every page (except `/render`): page title, a project chip to
+  switch the active project (asks for confirmation while something is ON AIR) or manage
+  projects, consistent navigation, the connection pill and one "Preview" label everywhere.
+- Dark mode for all control pages, following the system setting or forced to Light/Dark
+  from the header menu (stored per device). `/render` is unchanged.
+
+### Changed
+
+- The project chip and the dashboard's project list update live when a project is
+  created, renamed, duplicated, deleted, imported or activated in another window.
+- On `/operator` the header no longer goes back to the Design setup page during a show.
+
 ## [0.7.0] - 2026-11-17
 
 First open-source release: hardened server, a first test suite, UX and render fixes,

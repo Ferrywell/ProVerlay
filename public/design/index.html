@@ -4,28 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ProVerlay — Design</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="/public/shared/app-shell.js"></script>
     <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
     <link rel="stylesheet" href="/public/shared/tahoe.css" />
     <link rel="stylesheet" href="/public/shared/form-controls.css" />
     <link rel="stylesheet" href="/public/design/design.css" />
   </head>
   <body class="design-hub">
-    <header class="pv-nav-bar">
-      <div class="pv-nav-bar__side pv-nav-bar__side--start">
-        <a href="/control" class="pv-nav-bar__back" aria-label="Back to dashboard">
-          <span class="pv-nav-bar__chevron" aria-hidden="true"></span>
-          <span class="pv-nav-bar__back-label">Dashboard</span>
-        </a>
-      </div>
-      <div class="pv-nav-bar__title pv-nav-bar__title--brand">
-        <img class="app-brand__mark app-brand__mark--sm" src="/public/shared/proverlay-logo.png" alt="" width="28" height="28" />
-        <div class="pv-nav-bar__title-text">
-          <h1>Design</h1>
-          <span class="pv-nav-bar__subtitle">Setup checklist</span>
-        </div>
-      </div>
-      <div class="pv-nav-bar__side pv-nav-bar__side--end">
-        <a href="/operator" class="pv-nav-bar__action">Operator</a>
+    <header class="pv-app-header" data-section="design">
+      <div class="pv-app-header__title">
+        <h1>Design</h1>
+        <span class="pv-app-header__subtitle pv-app-header__hide-narrow">Setup checklist</span>
       </div>
     </header>
 
@@ -80,6 +70,7 @@
       </ol>
     </main>
 
-    <script src="/public/shared/app-shell.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/public/shared/app-header.js"></script>
   </body>
 </html>

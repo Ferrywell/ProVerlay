@@ -8,6 +8,20 @@
 
 const BANNER_TEXT = 'Disconnected — changes are not sent'
 
+let pageSocket = null
+
+/**
+ * One Socket.io connection per page, shared by the page script and the app
+ * header (project chip, connection pill). Returns null when the socket.io
+ * client script is not loaded.
+ */
+export function sharedSocket() {
+  if (pageSocket) return pageSocket
+  if (typeof window.io !== 'function') return null
+  pageSocket = window.io()
+  return pageSocket
+}
+
 function setPill(pill, mode) {
   if (!pill) return
   pill.classList.toggle('is-connected', mode === 'connected')
@@ -39,6 +53,7 @@ function ensureBanner() {
  */
 export function wireConnectionState(socket, { pill = null, controls = [], onChange } = {}) {
   const banner = ensureBanner()
+  if (pill) pill.dataset.pvWired = '1'
   let connected = Boolean(socket.connected)
   setPill(pill, connected ? 'connected' : 'connecting')
 

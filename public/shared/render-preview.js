@@ -61,6 +61,8 @@ export async function openRenderPreview(path = '/render', settings) {
 
 export function wireRenderPreviewLinks(root = document, getSettings) {
   root.addEventListener('click', (event) => {
+    // Already handled (e.g. the app header's Preview link opens the window itself).
+    if (event.defaultPrevented) return
     const link = event.target.closest('a[href]')
     if (!link) return
     const path = normalizeRenderPath(link.getAttribute('href'))

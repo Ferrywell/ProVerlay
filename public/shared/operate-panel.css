@@ -585,8 +585,8 @@
 .f1-mv-help {
   padding: var(--pv-space-sm) var(--pv-space-md);
   border-radius: var(--pv-radius-md, 12px);
-  background: color-mix(in srgb, var(--pv-fill-secondary, #e8e8ed) 70%, transparent);
-  border: 1px solid color-mix(in srgb, var(--pv-separator, #d2d2d7) 80%, transparent);
+  background: color-mix(in srgb, var(--pv-fill-secondary) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pv-separator) 80%, transparent);
 }
 
 .f1-mv-help__lead {
@@ -613,18 +613,18 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--pv-fill-secondary, #d1d1d6);
+  background: color-mix(in srgb, var(--pv-text-tertiary) 45%, transparent);
   flex: none;
   transition: background 300ms ease;
 }
 
 .f1-status-dot.is-live {
-  background: #34c759;
-  box-shadow: 0 0 6px rgba(52, 199, 89, 0.55);
+  background: var(--pv-live-dot);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--pv-live-dot) 55%, transparent);
 }
 
 .f1-status-dot.is-off {
-  background: #ff3b30;
+  background: var(--pv-offline-dot);
 }
 
 [data-bind='f1-preview']:empty {

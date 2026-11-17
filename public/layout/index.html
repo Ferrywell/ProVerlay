@@ -4,26 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ProVerlay — Overlay layout</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="/public/shared/app-shell.js"></script>
     <link rel="icon" href="/public/shared/proverlay-logo.png" type="image/png" />
     <link rel="stylesheet" href="/public/shared/tahoe.css" />
     <link rel="stylesheet" href="/public/shared/form-controls.css" />
     <link rel="stylesheet" href="/public/layout/layout.css" />
   </head>
   <body class="layout-app">
-    <header class="layout-header glass">
-      <div class="layout-header__start">
-        <a class="button button--secondary" href="/control">← Dashboard</a>
-        <a href="/control" class="app-brand app-brand--inline">
-          <img class="app-brand__mark" src="/public/shared/proverlay-logo.png" alt="" width="40" height="40" />
-          <span class="app-brand__copy">
-            <span class="app-brand__name">ProVerlay</span>
-            <span class="app-brand__page">Overlay layout</span>
-          </span>
-        </a>
-      </div>
-      <div class="layout-header__end">
-        <p class="layout-status" id="layout-status" role="status" aria-live="polite"></p>
-        <a class="button button--secondary" href="/render">Live preview</a>
+    <header class="pv-app-header" data-section="layout">
+      <div class="pv-app-header__title"><h1>Overlay layout</h1></div>
+      <div class="pv-app-header__actions">
+        <p class="layout-status pv-app-header__hide-narrow" id="layout-status" role="status" aria-live="polite"></p>
       </div>
     </header>
 
@@ -94,7 +86,7 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/public/shared/app-shell.js"></script>
+    <script type="module" src="/public/shared/app-header.js"></script>
     <script type="module" src="/public/layout/layout.js"></script>
   </body>
 </html>

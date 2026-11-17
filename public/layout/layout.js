@@ -1,3 +1,4 @@
+import { sharedSocket } from '/public/shared/connection.js'
 import { isStripLayout, resolvePlacement, projectCanvas } from '/public/shared/canvas-layout.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 
@@ -519,7 +520,7 @@ function applyState(next) {
 
 wireRenderPreviewLinks(document, () => state?.settings)
 
-const socket = io()
+const socket = sharedSocket()
 socket.on('stateChanged', (next) => {
   if (drag) return // niet hertekenen midden in een sleepactie
   applyState(next)

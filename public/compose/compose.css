@@ -1,7 +1,6 @@
 .compose-app.editor-app {
   height: 100vh;
   overflow: hidden;
-  padding-bottom: var(--pv-space-sm);
 }
 
 .compose-app .compose-main {
@@ -10,7 +9,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--pv-space-md);
-  padding: 0 var(--pv-space-sm) var(--pv-space-sm);
+  padding: var(--pv-space-md) var(--pv-space-sm) var(--pv-space-sm);
   width: 100%;
   max-width: none;
   margin: 0;
@@ -43,13 +42,13 @@
   border-radius: 999px;
   border: 1px solid var(--pv-border);
   color: var(--pv-text-secondary);
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--pv-surface-faint);
 }
 
 .compose-phase.is-active {
   border-color: var(--pv-accent);
   color: var(--pv-accent);
-  background: rgba(0, 122, 255, 0.08);
+  background: var(--pv-accent-soft);
 }
 
 .compose-phase.is-done {
@@ -87,7 +86,7 @@
 
 .compose-upload.is-dragover {
   border-color: var(--pv-accent);
-  background: rgba(0, 122, 255, 0.06);
+  background: var(--pv-accent-soft);
 }
 
 .compose-upload__title {
@@ -130,7 +129,7 @@
   align-items: center;
   justify-content: center;
   padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--pv-fill-quiet);
 }
 
 /* Asset-native preview: fill available space, not capped at 960px project frame */
@@ -194,7 +193,7 @@
   border: 1px solid var(--pv-border);
   border-radius: var(--pv-radius-sm);
   padding: 0.65rem;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--pv-surface-subtle);
 }
 
 .compose-region-card.is-selected {
@@ -220,7 +219,8 @@
   border-radius: var(--pv-radius-sm);
   padding: 0.45rem 0.55rem;
   font: inherit;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--pv-field-bg);
+  color: var(--pv-text);
 }
 
 .compose-region-card__row {
@@ -232,7 +232,7 @@
 
 .compose-region-card__remove {
   font-size: 0.78rem;
-  color: var(--pv-danger, #c62828);
+  color: var(--pv-danger);
   background: none;
   border: none;
   cursor: pointer;
