@@ -5,8 +5,13 @@ can trigger graphics from a Stream Deck or any other Companion surface. The modu
 [`companion/LICENSE`](../companion/LICENSE)); the rest of ProVerlay is GPL-3.0.
 
 Installation and development steps are in [`companion/README.md`](../companion/README.md). The user help that
-Companion shows is [`companion/companion/HELP.md`](../companion/companion/HELP.md). Requires **Companion 4.3+**
-(module API 2.x, Node 22 runtime).
+Companion shows is [`companion/companion/HELP.md`](../companion/companion/HELP.md). Tested with **Companion 4.3+
+and 5.x** (module API 2.x, Node 22 runtime).
+
+Companion 5 does not load a developer module through a symlink or junction (`ERR_ACCESS_DENIED` on `manifest.json`,
+the connection keeps crashing), so `npm run setup-dev:node` in `companion/` copies the module into the
+developer-modules folder. Run it again after changing the module. `--link` keeps the old symlink setup for
+Companion 4.x.
 
 ## How it talks to ProVerlay
 

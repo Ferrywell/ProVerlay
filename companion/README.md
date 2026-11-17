@@ -4,7 +4,8 @@
 live graphics: put graphics on air, change scores, run match and hockey clocks, drive tickers, countdowns, lower
 thirds, quizzes and messages from a Stream Deck.
 
-Requires **Companion 4.3+** (module API 2.x, Node 22 runtime) and a running ProVerlay server (default port **2014**).
+Tested with **Companion 4.3+ and 5.x** (module API 2.x, Node 22 runtime). Needs a running ProVerlay server (default
+port **2014**).
 
 This module is licensed under the **MIT license** (see [LICENSE](LICENSE)). The rest of the ProVerlay repository is
 licensed under GPL-3.0.
@@ -18,16 +19,24 @@ it is what Companion shows under the module's help button. The integration overv
 Until the module is in the Companion module store, load it as a developer module:
 
 1. Start ProVerlay (Mac app, or `npm start` in the repository root).
-2. Link and install the module:
+2. Copy and install the module:
 
    ```bash
    cd companion
-   npm run setup-dev        # macOS / Linux (bash)
-   npm run setup-dev:node   # any OS, also Windows (creates a directory junction)
+   npm run setup-dev:node   # any OS, also Windows
+   npm run setup-dev        # the same, from bash
    ```
 
-   This links `~/companion-module-dev/companion-module-proverlay` to this folder and installs the dependencies. Set
-   `COMPANION_DEV_PATH` to use another folder.
+   This copies this folder (without `node_modules`, `.git`, `pkg/` and `*.tgz`) to
+   `~/companion-module-dev/companion-module-proverlay` and runs `npm install --omit=dev` in the copy. Set
+   `COMPANION_DEV_PATH` to use another folder. **Run it again after changing the module**; Companion picks up the new
+   copy.
+
+   Companion 5 does not load a symlinked or junctioned module: it runs modules under Node's permission model, resolves
+   the link to the real path and then denies reading `manifest.json` through the link path (`ERR_ACCESS_DENIED`, the
+   connection keeps restarting as _Crashed_). That is why the script copies. On Companion 4.x you can still link
+   instead, so edits show up without re-running: `npm run setup-dev:node -- --link` (a directory junction on
+   Windows).
 
 3. In the **Companion Launcher** (not the web UI): cog icon → **Advanced** → **Developer modules path:**
    `~/companion-module-dev` (the parent folder, not the module folder), then restart Companion.
@@ -36,6 +45,7 @@ Until the module is in the Companion module store, load it as a developer module
 | Error                               | Cause                                                                        |
 | ----------------------------------- | ---------------------------------------------------------------------------- |
 | Connection not found or not running | Wrong developer path, or the module crashes on start (check the log)         |
+| Crashed, `ERR_ACCESS_DENIED`        | Companion 5 with a linked module: run `npm run setup-dev:node` (copy)        |
 | Bad config                          | Host or port is not valid                                                    |
 | Connection failure                  | ProVerlay is not running on the configured host/port (module keeps retrying) |
 
