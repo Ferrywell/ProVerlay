@@ -404,10 +404,16 @@ function hideAllInspectorPanels() {
 }
 
 function editSettingsUrl(graphic) {
-  if (graphic.type === 'matchScoreboard' || graphic.type === 'lowerThirdShow') {
-    return `/editor?graphic=${encodeURIComponent(graphic.id)}`
-  }
   return `/control?configure=${encodeURIComponent(graphic.id)}`
+}
+
+/** PNG design editor for a widget; linked from its Edit settings panel. */
+function designEditorUrl(graphic) {
+  return `/editor?graphic=${encodeURIComponent(graphic.id)}`
+}
+
+function pointDesignEditorLinks(panel, graphic) {
+  for (const link of panel.querySelectorAll('[data-design-editor]')) link.href = designEditorUrl(graphic)
 }
 
 function isConfigureMode(graphic) {
@@ -437,6 +443,7 @@ function showSettingsInspector(graphic) {
   if (graphic.type === 'matchScoreboard') {
     if (widgetPanel) {
       widgetPanel.hidden = false
+      pointDesignEditorLinks(widgetPanel, graphic)
       matchSession.sync(graphic)
     }
   } else if (graphic.type === 'customTicker') {
@@ -453,6 +460,7 @@ function showSettingsInspector(graphic) {
     if (opening) closeRosterForm()
     if (rosterPanel) {
       rosterPanel.hidden = false
+      pointDesignEditorLinks(rosterPanel, graphic)
       fillRosterPanel(graphic)
       rosterTemplateSession.sync(graphic)
     }
