@@ -188,7 +188,8 @@ export default class ProVerlayInstance extends InstanceBase {
    * Returns true when the definitions were rebuilt.
    */
   applyState(state, { force = false } = {}) {
-    const signature = graphicsSignature(state)
+    // The connection label is part of the preset texts ($(label:variable)).
+    const signature = `${this.label}\n${graphicsSignature(state)}`
     const rebuild = force || signature !== this.signature
     if (rebuild) {
       this.signature = signature
