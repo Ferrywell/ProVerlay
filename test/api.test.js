@@ -350,7 +350,14 @@ test('lower third entries: concurrent adds are all kept', async () => {
 })
 
 test('f1Timing MultiViewer host must be local', async () => {
-  const g = await createGraphic('f1Timing')
+  // The F1 tower is experimental; creating one needs the flag (see experimental.test.js).
+  process.env.PROVERLAY_EXPERIMENTAL = 'f1'
+  let g
+  try {
+    g = await createGraphic('f1Timing')
+  } finally {
+    delete process.env.PROVERLAY_EXPERIMENTAL
+  }
   for (const host of ['8.8.8.8', 'example.com', 'evil.example.org', 5]) {
     const res = await srv.patch(`/api/graphics/${g.id}`, { data: { multiviewer: { host } } })
     assert.equal(res.status, 400, `${host} → ${res.status}`)

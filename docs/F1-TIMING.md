@@ -1,12 +1,25 @@
 # F1 timing tower
 
+> **Experimental.** The F1 tower is not part of the open-source release's widget set.
+> The code stays, but the *Add widget* menu, the operator and the Companion presets
+> only offer it when ProVerlay runs with the environment variable
+> `PROVERLAY_EXPERIMENTAL=f1`. Projects that already contain a tower keep rendering it
+> and keep its dashboard card, with or without the flag.
+>
+> - From source: `PROVERLAY_EXPERIMENTAL=f1 npm start`
+> - Mac app (quit ProVerlay first):
+>   `PROVERLAY_EXPERIMENTAL=f1 /Applications/ProVerlay.app/Contents/MacOS/ProVerlay`
+> - Windows app (quit ProVerlay first, then in PowerShell):
+>   `$env:PROVERLAY_EXPERIMENTAL = "f1"; & "$env:LOCALAPPDATA\Programs\ProVerlay\ProVerlay.exe"`
+
 A live F1 position tower in pill style. It shows the top N (default 5) plus a focus
 driver (default VER) as a separate row below the tower whenever that driver is outside
 the top N.
 
 ## Create the widget
 
-Dashboard → **Overlays** → widget type **F1 timing** → **Add widget**.
+With the flag on: Dashboard → **Overlays** → widget type **F1 timing (experimental)** →
+**Add widget**.
 
 ## Data sources
 

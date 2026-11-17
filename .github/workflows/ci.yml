@@ -4,9 +4,17 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Manual run (Actions → CI → Run workflow) also tests on macOS.
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+# A newer push to the same branch/PR replaces the older run (cancelled runs send no
+# failure email; several quick merges to main used to queue several full runs).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -15,7 +23,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # macOS only on a manual run: GitHub's hosted macOS runners are often out of
+        # capacity, and a job that is never picked up is cancelled after about an hour
+        # and reported as a failed run (an email every time) although no test failed.
+        # The tests are plain Node and platform-neutral; Linux + Windows cover them, and
+        # every release tag runs them on macOS again before building the Mac app.
+        os: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["ubuntu-latest","windows-latest","macos-latest"]') || fromJSON('["ubuntu-latest","windows-latest"]') }}
         node: [22]
     env:
       # The Electron binary is only needed for packaging, not for server tests.

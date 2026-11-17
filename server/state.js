@@ -23,6 +23,7 @@ import {
 } from './tickerMessages.js'
 import { penaltiesFeatureEnabled } from '../public/shared/match-utils.js'
 import { migrateLegacyImages } from './imageMigration.js'
+import { experimentalFeatures } from './experimental.js'
 import { enqueueWrite, writeJsonAtomic } from './writeQueue.js'
 import {
   HttpError,
@@ -183,6 +184,8 @@ export function getState() {
     projectId: activeProjectId,
     projectName: activeProjectName,
     customCssVersion: activeCustomCssVersion,
+    // Enabled experimental flags (PROVERLAY_EXPERIMENTAL), so every client hides the same things
+    experimental: experimentalFeatures(),
     serverNow: Date.now()
   }
 }
@@ -451,12 +454,12 @@ function notify() {
 }
 
 function stripMeta(stateObj) {
-  const { projectId, projectName, customCssVersion, serverNow, ...rest } = stateObj
+  const { projectId, projectName, customCssVersion, experimental, serverNow, ...rest } = stateObj
   return rest
 }
 
 /** Remove runtime-only fields that must never be persisted to project.json. */
-const EPHEMERAL_KEYS = ['serverNow', 'projectName', 'customCssVersion']
+const EPHEMERAL_KEYS = ['serverNow', 'projectName', 'customCssVersion', 'experimental']
 
 export function stripEphemeralFields(state) {
   if (!state || !EPHEMERAL_KEYS.some((key) => Object.hasOwn(state, key))) return state
