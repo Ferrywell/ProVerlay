@@ -573,7 +573,7 @@ function buildHockeyScorebug(data, graphicId) {
   return `
     <div class="hockey-bug${breakClass}" data-hockey-id="${graphicId}" style="${vars}">
       <div class="hockey-arm hockey-arm--home">
-        <span class="hockey-code" data-bind="homeCode">${escape(data.homeCode || 'NED')}</span>
+        <span class="hockey-code" data-bind="homeCode">${escape(data.homeCode || 'HOME')}</span>
         <span class="hockey-score"><span class="score-el-text score-el-text--animated" data-score-bind="homeScore" data-graphic-id="${graphicId}">${escape(String(data.homeScore ?? 0))}</span></span>
       </div>
       <div class="hockey-clock">
@@ -582,7 +582,7 @@ function buildHockeyScorebug(data, graphicId) {
       </div>
       <div class="hockey-arm hockey-arm--away">
         <span class="hockey-score"><span class="score-el-text score-el-text--animated" data-score-bind="awayScore" data-graphic-id="${graphicId}">${escape(String(data.awayScore ?? 0))}</span></span>
-        <span class="hockey-code" data-bind="awayCode">${escape(data.awayCode || 'SPA')}</span>
+        <span class="hockey-code" data-bind="awayCode">${escape(data.awayCode || 'AWAY')}</span>
       </div>
     </div>
   `
@@ -612,8 +612,8 @@ function updateHockeyScorebug(layer, graphic) {
   applyHockeyTypographyVars(bug, d.style)
   bug.classList.toggle('hockey-bug--break', live.period === 'break')
 
-  setHockeyText(bug.querySelector('[data-bind="homeCode"]'), d.homeCode || 'NED', { animate: true })
-  setHockeyText(bug.querySelector('[data-bind="awayCode"]'), d.awayCode || 'SPA', { animate: true })
+  setHockeyText(bug.querySelector('[data-bind="homeCode"]'), d.homeCode || 'HOME', { animate: true })
+  setHockeyText(bug.querySelector('[data-bind="awayCode"]'), d.awayCode || 'AWAY', { animate: true })
   setHockeyText(bug.querySelector('[data-bind="period"]'), hockeyPeriodLabel(live.period), { animate: true })
   setHockeyText(bug.querySelector('[data-bind="clock"]'), formatHockeyClock(d.clock || {}))
 

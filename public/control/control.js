@@ -1190,7 +1190,7 @@ function fillWidgetForm(graphic = matchGraphic()) {
   widgetForm.showNames.checked = Boolean(d.showNames)
   widgetForm.clockMinute.value = clk.minute ?? 0
   widgetForm.clockSecond.value = clk.second ?? 0
-  widgetForm.clockPeriod.value = clk.period || 'second_half'
+  widgetForm.clockPeriod.value = clk.period || 'first_half'
   widgetForm.clockStoppage.checked = Boolean(clk.stoppageTime)
   widgetForm.animEnabled.checked = d.animation?.enabled !== false
   widgetForm.animDuration.value = d.animation?.durationMs ?? 420
