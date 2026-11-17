@@ -16,9 +16,11 @@ import {
   projectFontOptions,
   fillFontSelect
 } from '/public/shared/project-fonts.js'
-import { freezeClock, startRunningClock, resolveLiveClock, penaltiesFeatureEnabled } from '/public/shared/match-utils.js'
+import { resolveLiveClock, penaltiesFeatureEnabled } from '/public/shared/match-utils.js'
 import { applyServerTimeFromState } from '/public/shared/server-time.js'
-import { adjustMatchClock } from '/public/shared/operate-match.js'
+import { clockOp, enqueue } from '/public/shared/operate-ui.js'
+import { diffPatch, isEmptyPatch } from '/public/shared/patch-diff.js'
+import { createFormSession, saveFormSession } from '/public/control/settings-form.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import {
   formatCountdown,
@@ -28,7 +30,7 @@ import {
   countdownShouldTick
 } from '/public/shared/countdown-utils.js'
 import { operateCardHtml, refreshOperateCard, wireOperateRoot } from '/public/shared/operate-card.js'
-import { defaultHockeyTypography, resolveHockeyTypography } from '/public/shared/hockey-utils.js'
+import { resolveHockeyTypography } from '/public/shared/hockey-utils.js'
 import { showToast, showErrorToast, withPending, copyTextWithFallback } from '/public/shared/toast.js'
 import { wireConnectionState } from '/public/shared/connection.js'
 import {
@@ -401,31 +403,46 @@ function getGraphicById(id) {
   return (currentState?.graphics || []).find((g) => g.id === id) || null
 }
 
+/** Graphic whose Edit settings panel is open (null when none). */
+let settingsGraphicId = null
+
+/** Forget every open Edit settings form (another widget selected / operate mode). */
+function closeSettingsSessions() {
+  settingsGraphicId = null
+  for (const session of settingsSessions()) session.close()
+}
+
 function showSettingsInspector(graphic) {
   if (inspectorEmpty) inspectorEmpty.hidden = true
+  // This runs on every state broadcast: only reset sub-forms when the panel
+  // opens for another widget, so a person/question being edited stays open.
+  const opening = settingsGraphicId !== graphic.id
+  if (opening) closeSettingsSessions()
+  settingsGraphicId = graphic.id
   if (graphic.type === 'matchScoreboard') {
     if (widgetPanel) {
       widgetPanel.hidden = false
-      fillWidgetForm(graphic)
+      matchSession.sync(graphic)
     }
   } else if (graphic.type === 'customTicker') {
     if (tickerPanel) {
       tickerPanel.hidden = false
-      fillTickerForm(graphic)
+      tickerSession.sync(graphic)
     }
   } else if (graphic.type === 'streamCountdown') {
     if (countdownPanel) {
       countdownPanel.hidden = false
-      fillCountdownForm(graphic)
+      countdownSession.sync(graphic)
     }
   } else if (graphic.type === 'lowerThirdShow') {
-    closeRosterForm()
+    if (opening) closeRosterForm()
     if (rosterPanel) {
       rosterPanel.hidden = false
       fillRosterPanel(graphic)
+      rosterTemplateSession.sync(graphic)
     }
   } else if (graphic.type === 'quizShow') {
-    closeQuizForm()
+    if (opening) closeQuizForm()
     if (quizPanel) {
       quizPanel.hidden = false
       fillQuizPanel(graphic)
@@ -433,12 +450,12 @@ function showSettingsInspector(graphic) {
   } else if (graphic.type === 'hockeyScorebug') {
     if (hockeyPanel) {
       hockeyPanel.hidden = false
-      fillHockeyTypeForm(graphic)
+      hockeySession.sync(graphic)
     }
   }
   if (transitionPanel) {
     transitionPanel.hidden = false
-    fillTransitionPanel(graphic)
+    transitionSession.sync(graphic)
   }
 }
 
@@ -462,22 +479,25 @@ function showOperateInspector(graphic) {
 function fillTransitionPanel(graphic) {
   if (!transitionPanel || !graphic) return
   const t = graphic.transition || {}
-  if (transitionIn && document.activeElement !== transitionIn) transitionIn.value = t.in || 'auto'
-  if (transitionOut && document.activeElement !== transitionOut) transitionOut.value = t.out || 'auto'
-  if (transitionDuration && document.activeElement !== transitionDuration) {
-    transitionDuration.value = t.duration ?? 450
+  if (transitionIn) transitionIn.value = t.in || 'auto'
+  if (transitionOut) transitionOut.value = t.out || 'auto'
+  if (transitionDuration) transitionDuration.value = t.duration ?? 450
+}
+
+function transitionPayload(v) {
+  return {
+    transition: {
+      in: v['transition-in'] || 'auto',
+      out: v['transition-out'] || 'auto',
+      duration: Math.min(3000, Math.max(100, Number(v['transition-duration']) || 450))
+    }
   }
 }
 
 async function saveTransition() {
-  const graphic = getSelectedGraphic()
-  if (!graphic) return
-  await patchGraphic(graphic.id, {
-    transition: {
-      in: transitionIn?.value || 'auto',
-      out: transitionOut?.value || 'auto',
-      duration: Math.min(3000, Math.max(100, Number(transitionDuration?.value) || 450))
-    }
+  await saveFormSession(transitionSession, transitionSession.graphicId, {
+    successMessage: 'Transition saved',
+    emptyMessage: ''
   })
 }
 
@@ -556,8 +576,14 @@ function rosterFilter(entries = []) {
   })
 }
 
+/** Fields of the person being edited, as opened (to PATCH only what changed). */
+let rosterFormBase = null
+
 function openRosterForm(entry = null) {
   if (!rosterEntryForm) return
+  rosterFormBase = entry
+    ? { name: entry.name || '', title: entry.title || '', company: entry.company || '' }
+    : null
   rosterEntryForm.hidden = false
   if (rosterFormTitle) rosterFormTitle.textContent = entry ? 'Edit person' : 'Add person'
   if (rosterEntryId) rosterEntryId.value = entry?.id || ''
@@ -576,8 +602,6 @@ function fillRosterPanel(graphic = rosterGraphic()) {
   if (!rosterList || !graphic) return
   const entries = rosterFilter(graphic.data?.entries || [])
   const activeId = graphic.data?.activeEntryId
-  const bg = graphic.data?.template?.layout?.background || ''
-  if (rosterBackground) rosterBackground.value = bg
 
   if (!entries.length) {
     rosterList.innerHTML = '<li class="inspector-empty-state">No people yet. Click Add.</li>'
@@ -623,6 +647,7 @@ function refreshInspector() {
   if (widgetRemove) widgetRemove.disabled = !graphic
 
   if (!graphic) {
+    closeSettingsSessions()
     updateSidePanelFocus('empty')
     if (inspectorEmpty) inspectorEmpty.hidden = false
     if (inspectorEmptyText) {
@@ -639,6 +664,7 @@ function refreshInspector() {
     return
   }
 
+  closeSettingsSessions()
   updateSidePanelFocus('operate')
   showOperateInspector(graphic)
 }
@@ -900,7 +926,10 @@ async function refreshCountdownFontSelect(selected = '') {
     { value: '', label: 'Client branding (default)' },
     ...projectFontOptions(fonts, { includeBrand: false })
   ]
-  fillFontSelect(select, options, selected || '')
+  // Rebuilding the options must not undo a font the user picked but did not save yet.
+  const edited = countdownSession.graphicId && countdownSession.isDirty('fontFamily')
+  fillFontSelect(select, options, edited ? select.value : selected || '')
+  if (!edited && countdownSession.graphicId) countdownSession.acceptCurrent('fontFamily')
 }
 
 const TICKER_PREVIEW_ID = '__dashboard-ticker-preview__'
@@ -1003,7 +1032,8 @@ function fillTickerForm(graphic = tickerGraphic()) {
   scheduleTickerPreview()
 }
 
-async function fillCountdownForm(graphic = countdownGraphic()) {
+/** Synchronous fill (the font list itself is refreshed by syncProjectBrandFonts). */
+function fillCountdownForm(graphic = countdownGraphic()) {
   if (!countdownForm || !graphic || graphic.type !== 'streamCountdown') return
   const d = graphic.data || {}
   countdownForm.targetDateTime.value = toDatetimeLocalValue(d.targetDateTime)
@@ -1014,8 +1044,25 @@ async function fillCountdownForm(graphic = countdownGraphic()) {
   if (countdownForm.position) {
     countdownForm.position.value = graphic.position || 'top-center'
   }
-  await refreshCountdownFontSelect(d.fontFamily || '')
-  updateCountdownPreview()
+  const fontSelect = countdownForm.fontFamily
+  if (fontSelect && [...fontSelect.options].some((o) => o.value === (d.fontFamily || ''))) {
+    fontSelect.value = d.fontFamily || ''
+  }
+}
+
+function countdownPayload(v) {
+  return {
+    position: v.position || 'top-center',
+    data: {
+      // datetime-local has minute precision; an empty field leaves the target alone.
+      targetDateTime: v.targetDateTime ? fromDatetimeLocalValue(v.targetDateTime) : undefined,
+      format: v.format || 'mm:ss',
+      fontSize: Number(v.fontSize) || 96,
+      fontFamily: String(v.fontFamily || '').trim(),
+      color: v.color,
+      hideWhenExpired: Boolean(v.hideWhenExpired)
+    }
+  }
 }
 
 function hockeyGraphic() {
@@ -1036,20 +1083,6 @@ const HOCKEY_TYPE_FIELDS = [
   { key: 'period', sizeId: 'hockey-period-size', weightId: 'hockey-period-weight', outId: 'hockey-period-size-out' }
 ]
 
-function hockeyTypographyFromForm() {
-  if (!hockeyTypeForm) return defaultHockeyTypography()
-  const typography = {}
-  for (const { key, sizeId, weightId } of HOCKEY_TYPE_FIELDS) {
-    const sizeEl = document.getElementById(sizeId)
-    const weightEl = document.getElementById(weightId)
-    typography[key] = {
-      size: Math.min(1.5, Math.max(0.5, (Number(sizeEl?.value) || 100) / 100)),
-      weight: Number(weightEl?.value) === 700 ? 700 : 400
-    }
-  }
-  return typography
-}
-
 function fillHockeyTypeForm(graphic = hockeyGraphic()) {
   if (!hockeyTypeForm || !graphic || graphic.type !== 'hockeyScorebug') return
   const typography = resolveHockeyTypography(graphic.data?.style)
@@ -1059,27 +1092,37 @@ function fillHockeyTypeForm(graphic = hockeyGraphic()) {
     const weightEl = document.getElementById(weightId)
     const outEl = document.getElementById(outId)
     const pct = Math.round(cat.size * 100)
-    if (sizeEl && document.activeElement !== sizeEl) {
+    if (sizeEl) {
       sizeEl.value = String(pct)
       if (outEl) outEl.textContent = String(pct)
     }
-    if (weightEl && document.activeElement !== weightEl) {
-      weightEl.value = String(cat.weight)
+    if (weightEl) weightEl.value = String(cat.weight)
+  }
+}
+
+/** Typography from a control-value map (keys are the form field names, e.g. codeSize). */
+function hockeyPayload(v) {
+  const typography = {}
+  for (const { key } of HOCKEY_TYPE_FIELDS) {
+    typography[key] = {
+      size: Math.min(1.5, Math.max(0.5, (Number(v[`${key}Size`]) || 100) / 100)),
+      weight: Number(v[`${key}Weight`]) === 700 ? 700 : 400
     }
   }
+  return { data: { style: { typography } } }
 }
 
 let hockeyTypePatchTimer = null
 function scheduleHockeyTypePatch() {
   clearTimeout(hockeyTypePatchTimer)
-  hockeyTypePatchTimer = setTimeout(pushHockeyTypography, 120)
+  hockeyTypePatchTimer = setTimeout(pushHockeyTypography, 250)
 }
 
 async function pushHockeyTypography() {
-  const graphic = hockeyGraphic()
-  if (!graphic || hockeyPanel?.hidden) return
-  await patchGraphic(graphic.id, {
-    data: { style: { typography: hockeyTypographyFromForm() } }
+  if (!hockeySession.graphicId || hockeyPanel?.hidden) return
+  await saveFormSession(hockeySession, hockeySession.graphicId, {
+    successMessage: 'Typography saved',
+    emptyMessage: ''
   })
 }
 
@@ -1143,54 +1186,56 @@ function syncClockControlButtons(graphic = matchGraphic()) {
   clockPause.setAttribute('aria-pressed', String(!running))
 }
 
-function widgetPayloadFromForm() {
-  const data = new FormData(widgetForm)
-  const existingClock = matchGraphic()?.data?.clock || {}
-  const formMinute = Number(data.get('clockMinute')) || 0
-  const formSecond = Number(data.get('clockSecond')) || 0
-
-  let clock = { ...existingClock }
-  if (existingClock.running) {
-    const live = resolveLiveClock(existingClock)
-    clock = { ...clock, minute: live.minute, second: live.second }
-  } else {
-    clock = { ...clock, minute: formMinute, second: formSecond }
-  }
-  clock.period = data.get('clockPeriod')
-  if (!penaltiesFeatureEnabled() && clock.period === 'penalties') {
-    clock.period = 'second_half'
-  }
-  clock.stoppageTime = data.get('clockStoppage') === 'on'
-
-  const graphic = matchGraphic()
-  const layout = { ...(graphic?.data?.layout || {}) }
-  layout.clockPlateWidth = Math.min(50, Math.max(0, Number(data.get('clockPlateWidth')) || 0))
-
+/** PATCH body for the match form (scores and the clock time are never part of it). */
+function matchPayload(v) {
+  let period = v.clockPeriod
+  if (!penaltiesFeatureEnabled() && period === 'penalties') period = 'second_half'
   return {
-    position: data.get('position'),
+    position: v.position,
     data: {
-      layout,
-      homeCode: String(data.get('homeCode') || '').toUpperCase(),
-      awayCode: String(data.get('awayCode') || '').toUpperCase(),
-      homeName: String(data.get('homeName') || ''),
-      awayName: String(data.get('awayName') || ''),
-      showCodes: data.get('wHomeCode') === 'on' || data.get('wAwayCode') === 'on',
-      showNames: data.get('showNames') === 'on',
+      layout: { clockPlateWidth: Math.min(50, Math.max(0, Number(v.clockPlateWidth) || 0)) },
+      homeCode: String(v.homeCode || '').toUpperCase(),
+      awayCode: String(v.awayCode || '').toUpperCase(),
+      homeName: String(v.homeName || ''),
+      awayName: String(v.awayName || ''),
+      showCodes: Boolean(v.wHomeCode || v.wAwayCode),
+      showNames: Boolean(v.showNames),
       widgets: {
-        homeCode: data.get('wHomeCode') === 'on',
-        awayCode: data.get('wAwayCode') === 'on',
-        homeScore: data.get('wHomeScore') === 'on',
-        awayScore: data.get('wAwayScore') === 'on',
-        clock: data.get('wClock') === 'on',
-        penalties: penaltiesFeatureEnabled() ? data.get('wPenalties') === 'on' : false
+        homeCode: Boolean(v.wHomeCode),
+        awayCode: Boolean(v.wAwayCode),
+        homeScore: Boolean(v.wHomeScore),
+        awayScore: Boolean(v.wAwayScore),
+        clock: Boolean(v.wClock),
+        penalties: penaltiesFeatureEnabled() ? Boolean(v.wPenalties) : false
       },
-      clock,
+      clock: { period, stoppageTime: Boolean(v.clockStoppage) },
       animation: {
-        enabled: data.get('animEnabled') === 'on',
-        durationMs: Number(data.get('animDuration')) || 420
+        enabled: Boolean(v.animEnabled),
+        durationMs: Number(v.animDuration) || 420
       }
     }
   }
+}
+
+/** Switching to the penalties period opens the shootout (same as the operate card). */
+function withPenaltyStart(patch) {
+  if (patch.data?.clock?.period === 'penalties' && penaltiesFeatureEnabled()) {
+    return { ...patch, data: { ...patch.data, penalties: { active: true } } }
+  }
+  return patch
+}
+
+const MATCH_TIME_KEYS = ['clockMinute', 'clockSecond']
+
+function matchFormClockMs() {
+  const v = matchSession.values()
+  const minute = Math.max(0, Math.trunc(Number(v.clockMinute) || 0))
+  const second = Math.min(59, Math.max(0, Math.trunc(Number(v.clockSecond) || 0)))
+  return (minute * 60 + second) * 1000
+}
+
+function matchTimeEdited() {
+  return MATCH_TIME_KEYS.some((k) => matchSession.isDirty(k))
 }
 
 async function loadNetworkUrls() {
@@ -1256,8 +1301,9 @@ function tickWidgetClockFields() {
   const graphic = matchGraphic()
   if (!graphic?.data?.clock?.running || !widgetForm) return
   const live = resolveLiveClock(graphic.data.clock)
-  if (document.activeElement !== widgetForm.clockMinute) widgetForm.clockMinute.value = live.minute
-  if (document.activeElement !== widgetForm.clockSecond) widgetForm.clockSecond.value = live.second
+  // Follow the running clock unless the user is typing a new time.
+  if (document.activeElement !== widgetForm.clockMinute) matchSession.setServerValue('clockMinute', String(live.minute))
+  if (document.activeElement !== widgetForm.clockSecond) matchSession.setServerValue('clockSecond', String(live.second))
   syncClockControlButtons(graphic)
 }
 
@@ -1271,70 +1317,118 @@ function ensureWidgetClockTimer() {
   }
 }
 
-widgetForm?.addEventListener('submit', async (event) => {
-  event.preventDefault()
-  const graphic = matchGraphic()
-  if (!graphic) return
-  const payload = widgetPayloadFromForm()
-  await patchGraphic(graphic.id, payload)
+/* ------------------------------------------------- Edit settings sessions */
+
+const matchSession = createFormSession({
+  root: widgetForm,
+  fill: fillWidgetForm,
+  payload: matchPayload,
+  volatile: MATCH_TIME_KEYS
 })
 
-async function applyWidgetVisibilityInstant() {
-  const graphic = matchGraphic()
-  if (!graphic) return
-  await patchGraphic(graphic.id, widgetPayloadFromForm())
+const tickerSession = createFormSession({
+  root: tickerForm,
+  fill: fillTickerForm,
+  payload: tickerPayload,
+  afterSync: scheduleTickerPreview
+})
+
+const countdownSession = createFormSession({
+  root: countdownForm,
+  // Duration fields only feed the Start countdown button; they are not settings.
+  controls: () => [...(countdownForm?.elements || [])].filter((el) => !['startMinutes', 'startSeconds'].includes(el.name)),
+  fill: fillCountdownForm,
+  payload: countdownPayload,
+  afterSync: updateCountdownPreview
+})
+
+const hockeySession = createFormSession({
+  root: hockeyTypeForm,
+  fill: fillHockeyTypeForm,
+  payload: hockeyPayload
+})
+
+const rosterTemplateSession = createFormSession({
+  root: rosterPanel,
+  controls: () => [rosterBackground],
+  noticeBefore: rosterBackground?.closest('label') || undefined,
+  fill: (graphic) => {
+    if (rosterBackground) rosterBackground.value = graphic.data?.template?.layout?.background || ''
+  },
+  payload: (v) => ({ data: { template: { layout: { background: String(v['roster-background'] || '').trim() } } } })
+})
+
+const transitionSession = createFormSession({
+  root: transitionPanel?.querySelector('.form-grid') || transitionPanel,
+  fill: fillTransitionPanel,
+  payload: transitionPayload
+})
+
+function settingsSessions() {
+  return [matchSession, tickerSession, countdownSession, hockeySession, rosterTemplateSession, transitionSession]
 }
 
-;['wHomeCode', 'wAwayCode', 'wHomeScore', 'wAwayScore', 'wClock', ...(penaltiesFeatureEnabled() ? ['wPenalties'] : [])].forEach((name) => {
+/* ------------------------------------------------------------ match form */
+
+widgetForm?.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  const id = matchSession.graphicId
+  if (!id) return
+  const submit = event.submitter || widgetForm.querySelector('[type="submit"]')
+  const timeEdited = matchTimeEdited()
+  await withPending(submit, () =>
+    saveFormSession(matchSession, id, {
+      prepare: withPenaltyStart,
+      extra: timeEdited ? () => clockOp(id, 'set', matchFormClockMs()) : undefined
+    })
+  )
+})
+
+const WIDGET_TOGGLE_KEYS = ['wHomeCode', 'wAwayCode', 'wHomeScore', 'wAwayScore', 'wClock', 'wPenalties']
+
+// Overlay part checkboxes apply instantly — only that checkbox, not other edits in progress.
+WIDGET_TOGGLE_KEYS.forEach((name) => {
+  if (name === 'wPenalties' && !penaltiesFeatureEnabled()) return
   widgetForm?.elements[name]?.addEventListener('change', () => {
-    applyWidgetVisibilityInstant()
+    const id = matchSession.graphicId
+    if (!id) return
+    saveFormSession(matchSession, id, { keys: [name], successMessage: 'Saved', emptyMessage: '' })
   })
 })
 
-clockStart?.addEventListener('click', async () => {
-  const graphic = matchGraphic()
-  if (!graphic) return
-  const payload = widgetPayloadFromForm()
-  payload.data.clock = startRunningClock(freezeClock(payload.data.clock))
-  await patchGraphic(graphic.id, payload)
-  syncClockControlButtons({ ...graphic, data: { ...graphic.data, clock: payload.data.clock } })
-})
+/**
+ * Clock buttons use the atomic clock endpoint. Start and Sync time apply a
+ * time typed in the form first; Pause just freezes the live clock.
+ */
+async function runMatchClock(button, action) {
+  const id = matchSession.graphicId
+  if (!id) return
+  await withPending(button, async () => {
+    if (action !== 'pause' && matchTimeEdited()) {
+      const ok = await saveFormSession(matchSession, id, {
+        keys: MATCH_TIME_KEYS,
+        prepare: () => ({}),
+        extra: () => clockOp(id, 'set', matchFormClockMs()),
+        successMessage: action ? '' : 'Clock time set'
+      })
+      if (!ok) return
+    } else if (!action) {
+      // Sync with an untouched form: re-apply the time shown.
+      if (await clockOp(id, 'set', matchFormClockMs())) showToast('Clock time set', { type: 'success', duration: 2500 })
+      return
+    }
+    if (action) await clockOp(id, action)
+  })
+}
 
-clockPause?.addEventListener('click', async () => {
-  const graphic = matchGraphic()
-  if (!graphic) return
-  const payload = widgetPayloadFromForm()
-  payload.data.clock = freezeClock(payload.data.clock)
-  await patchGraphic(graphic.id, payload)
-  syncClockControlButtons({ ...graphic, data: { ...graphic.data, clock: payload.data.clock } })
-})
+clockStart?.addEventListener('click', () => runMatchClock(clockStart, 'start'))
+clockPause?.addEventListener('click', () => runMatchClock(clockPause, 'pause'))
+clockSync?.addEventListener('click', () => runMatchClock(clockSync, null))
 
-clockSync?.addEventListener('click', async () => {
-  const graphic = matchGraphic()
-  if (!graphic) return
-  const payload = widgetPayloadFromForm()
-  const clk = payload.data.clock
-  if (clk.running) {
-    payload.data.clock = startRunningClock(clk)
-  }
-  await patchGraphic(graphic.id, payload)
-})
-
-async function nudgeClock(seconds) {
-  const graphic = matchGraphic()
-  if (!graphic) return
-  const nextClock = adjustMatchClock(graphic.data?.clock || {}, seconds)
-  currentState = {
-    ...currentState,
-    graphics: currentState.graphics.map((g) =>
-      g.id === graphic.id ? { ...g, data: { ...g.data, clock: nextClock } } : g
-    )
-  }
-  tickWidgetClockFields()
-  const card = dashboardOperateRoot?.querySelector(`[data-graphic-id="${graphic.id}"]`)
-  if (card) refreshOperateCard(card, { ...graphic, data: { ...graphic.data, clock: nextClock } })
-  await patchGraphic(graphic.id, { data: { clock: nextClock } })
-  syncClockControlButtons({ ...graphic, data: { ...graphic.data, clock: nextClock } })
+function nudgeClock(seconds) {
+  const id = matchSession.graphicId
+  if (!id) return
+  return clockOp(id, 'adjust', seconds * 1000)
 }
 
 clockSecMinus?.addEventListener('click', () => nudgeClock(-1))
@@ -1383,7 +1477,16 @@ tickerBgUpload?.addEventListener('change', async () => {
     if (tickerForm?.barHeight) tickerForm.barHeight.value = layout.barHeight ?? 230
     const barHeightField = document.getElementById('ticker-bar-height-field')
     if (barHeightField) barHeightField.hidden = !isFullFrameBackground(layout)
-    await patchGraphic(graphic.id, { data: { layout } })
+    // Only the layout keys the new image changed (background, size, bar height).
+    const layoutPatch = diffPatch(graphic.data?.layout || {}, layout)
+    const saved = isEmptyPatch(layoutPatch)
+      ? true
+      : await enqueue(graphic.id, () => patchGraphic(graphic.id, { data: { layout: layoutPatch } }))
+    if (saved) {
+      tickerSession.acceptCurrent('background')
+      tickerSession.acceptCurrent('barHeight')
+      showToast('Background replaced', { type: 'success', duration: 2500 })
+    }
     scheduleTickerPreview()
   } catch (err) {
     showErrorToast(err.message || 'Upload failed')
@@ -1397,45 +1500,47 @@ tickerBgUpload?.addEventListener('change', async () => {
 tickerForm?.addEventListener('input', scheduleTickerPreview)
 tickerForm?.addEventListener('change', scheduleTickerPreview)
 
-tickerForm?.addEventListener('submit', async (event) => {
-  event.preventDefault()
-  const graphic = tickerGraphic()
-  if (!graphic) return
-  const data = new FormData(tickerForm)
-  const lines = String(data.get('messages') || '')
+/** Messages for the textarea lines, keeping id/enabled of lines that already existed. */
+function tickerMessagesFromText(text, storedMessages) {
+  const lines = String(text || '')
     .split('\n')
     .map((m) => m.trim())
     .filter(Boolean)
-  const existing = migrateTickerMessages(graphic.data?.messages || [])
+  const existing = migrateTickerMessages(storedMessages || [])
   const byText = new Map(existing.map((m) => [m.text, m]))
-  const messages = lines.map((text) => {
-    const prev = byText.get(text)
-    return prev ? { ...prev, text } : createTickerMessage(text, { enabled: false })
+  return lines.map((line) => {
+    const prev = byText.get(line)
+    return prev ? { ...prev, text: line } : createTickerMessage(line, { enabled: false })
   })
-  await patchGraphic(graphic.id, {
+}
+
+function tickerPayload(v) {
+  const graphic = getGraphicById(tickerSession.graphicId) || tickerGraphic()
+  const storedLayout = graphic?.data?.layout || {}
+  return {
     data: {
-      messages,
-      speed: formNumber(data.get('speed'), 90),
-      textInsetLeft: clampInsetPercent(
-        document.getElementById('tickerInsetLeftNum')?.value ?? data.get('textInsetLeft'),
-        16
-      ),
-      textInsetRight: clampInsetPercent(
-        document.getElementById('tickerInsetRightNum')?.value ?? data.get('textInsetRight'),
-        1
-      ),
-      fadeWidth: formNumber(data.get('fadeWidth'), 4),
-      fontSize: Number(data.get('fontSize')) || 30,
-      color: data.get('color'),
+      // The whole array is only sent when the text changed.
+      messages: tickerMessagesFromText(v.messages, graphic?.data?.messages),
+      speed: formNumber(v.speed, 90),
+      textInsetLeft: clampInsetPercent(v.tickerInsetLeftNum ?? v.textInsetLeft, 16),
+      textInsetRight: clampInsetPercent(v.tickerInsetRightNum ?? v.textInsetRight, 1),
+      fadeWidth: formNumber(v.fadeWidth, 4),
+      fontSize: Number(v.fontSize) || 30,
+      color: v.color,
       layout: {
-        ...(graphic.data?.layout || {}),
-        background: String(data.get('background') || '').trim(),
-        ...(isFullFrameBackground(graphic.data?.layout || {})
-          ? { barHeight: Math.max(80, Number(data.get('barHeight')) || 230) }
-          : {})
+        background: String(v.background || '').trim(),
+        barHeight: isFullFrameBackground(storedLayout) ? Math.max(80, Number(v.barHeight) || 230) : undefined
       }
     }
-  })
+  }
+}
+
+tickerForm?.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  const id = tickerSession.graphicId
+  if (!id) return
+  const submit = event.submitter || tickerForm.querySelector('[type="submit"]')
+  await withPending(submit, () => saveFormSession(tickerSession, id, { successMessage: 'Ticker saved' }))
 })
 
 countdownForm?.addEventListener('input', updateCountdownPreview)
@@ -1451,19 +1556,22 @@ hockeyTypeForm?.addEventListener('input', (event) => {
 })
 hockeyTypeForm?.addEventListener('change', scheduleHockeyTypePatch)
 
-document.getElementById('countdown-start-duration')?.addEventListener('click', async () => {
-  const graphic = countdownGraphic()
-  if (!graphic || !countdownForm) return
+const countdownStartDuration = document.getElementById('countdown-start-duration')
+countdownStartDuration?.addEventListener('click', async () => {
+  const id = countdownSession.graphicId
+  if (!id || !countdownForm) return
   const data = new FormData(countdownForm)
   const targetDateTime = countdownTargetFromDuration(data.get('startMinutes'), data.get('startSeconds'))
   countdownForm.targetDateTime.value = toDatetimeLocalValue(targetDateTime)
-  await patchGraphic(graphic.id, {
-    data: {
-      ...graphic.data,
-      targetDateTime
-    }
-  })
   updateCountdownPreview()
+  // Only the target time — never the rest of the (possibly stale) data.
+  const saved = await withPending(countdownStartDuration, () =>
+    enqueue(id, () => patchGraphic(id, { data: { targetDateTime } }))
+  )
+  if (saved) {
+    countdownSession.acceptCurrent('targetDateTime')
+    showToast('Countdown started', { type: 'success', duration: 2500 })
+  }
 })
 
 rosterSearch?.addEventListener('input', () => fillRosterPanel())
@@ -1531,11 +1639,31 @@ quizEntryForm?.addEventListener('submit', async (event) => {
   } else {
     questions.push({ id: `q-${Date.now().toString(36)}`, ...entry })
   }
-  await patchGraphic(graphic.id, { data: { questions } })
+  // Built from the latest server state at save time; the array is replaced whole.
+  const saved = await enqueue(graphic.id, () => patchGraphic(graphic.id, { data: { questions } }))
+  if (!saved) return
   closeQuizForm()
+  showToast('Question saved', { type: 'success', duration: 2500 })
 })
 
 rosterAdd?.addEventListener('click', () => openRosterForm())
+
+/** Lower-thirds entry request. Resolves to the JSON body, or null after an error toast. */
+async function rosterRequest(url, init, failureText) {
+  let res
+  try {
+    res = await fetch(url, init)
+  } catch {
+    showErrorToast(`${failureText} — ProVerlay server unreachable`)
+    return null
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    showErrorToast(`${failureText}: ${body?.error || `Request failed (HTTP ${res.status})`}`)
+    return null
+  }
+  return res.json().catch(() => ({}))
+}
 
 rosterCancel?.addEventListener('click', () => closeRosterForm())
 
@@ -1547,7 +1675,7 @@ rosterList?.addEventListener('click', async (event) => {
   const deleteId = event.target.closest('[data-roster-delete]')?.dataset.rosterDelete
 
   if (showId) {
-    await fetch(`/api/graphics/${graphic.id}/entries/${showId}/show`, { method: 'POST' })
+    await rosterRequest(`/api/graphics/${graphic.id}/entries/${showId}/show`, { method: 'POST' }, 'Could not show person')
     return
   }
   if (editId) {
@@ -1557,7 +1685,7 @@ rosterList?.addEventListener('click', async (event) => {
   }
   if (deleteId) {
     if (!confirm('Delete this person?')) return
-    await fetch(`/api/graphics/${graphic.id}/entries/${deleteId}`, { method: 'DELETE' })
+    await rosterRequest(`/api/graphics/${graphic.id}/entries/${deleteId}`, { method: 'DELETE' }, 'Person not deleted')
   }
 })
 
@@ -1571,56 +1699,39 @@ rosterEntryForm?.addEventListener('submit', async (event) => {
     company: rosterCompany?.value?.trim() || ''
   }
   const id = rosterEntryId?.value
-  if (id) {
-    await fetch(`/api/graphics/${graphic.id}/entries/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-  } else {
-    await fetch(`/api/graphics/${graphic.id}/entries`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
+  const body = id && rosterFormBase ? diffPatch(rosterFormBase, payload) : payload
+  if (id && isEmptyPatch(body)) {
+    closeRosterForm()
+    return
   }
+  const saved = await rosterRequest(
+    id ? `/api/graphics/${graphic.id}/entries/${id}` : `/api/graphics/${graphic.id}/entries`,
+    {
+      method: id ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    },
+    'Person not saved'
+  )
+  if (!saved) return
   closeRosterForm()
+  showToast('Person saved', { type: 'success', duration: 2500 })
 })
 
 rosterSaveTemplate?.addEventListener('click', async () => {
-  const graphic = rosterGraphic()
-  if (!graphic) return
-  const background = rosterBackground?.value?.trim() || ''
-  await patchGraphic(graphic.id, {
-    data: {
-      template: {
-        ...(graphic.data?.template || {}),
-        layout: {
-          ...(graphic.data?.template?.layout || {}),
-          background
-        }
-      }
-    }
-  })
+  const id = rosterTemplateSession.graphicId
+  if (!id) return
+  await withPending(rosterSaveTemplate, () =>
+    saveFormSession(rosterTemplateSession, id, { successMessage: 'Template saved' })
+  )
 })
 
 countdownForm?.addEventListener('submit', async (event) => {
   event.preventDefault()
-  const graphic = countdownGraphic()
-  if (!graphic) return
-  const data = new FormData(countdownForm)
-  await patchGraphic(graphic.id, {
-    position: data.get('position') || graphic.position || 'top-center',
-    data: {
-      targetDateTime: fromDatetimeLocalValue(data.get('targetDateTime')),
-      format: data.get('format') || 'mm:ss',
-      fontSize: Number(data.get('fontSize')) || 96,
-      fontFamily: String(data.get('fontFamily') || '').trim(),
-      color: data.get('color'),
-      hideWhenExpired: data.get('hideWhenExpired') === 'on',
-      layout: graphic.data?.layout || { refWidth: 480, refHeight: 140, background: '' }
-    }
-  })
+  const id = countdownSession.graphicId
+  if (!id) return
+  const submit = event.submitter || countdownForm.querySelector('[type="submit"]')
+  await withPending(submit, () => saveFormSession(countdownSession, id, { successMessage: 'Countdown saved' }))
 })
 
 let countdownPreviewTimer = null
