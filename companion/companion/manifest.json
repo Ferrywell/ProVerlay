@@ -5,7 +5,7 @@
   "name": "ProVerlay",
   "shortname": "proverlay",
   "description": "Control ProVerlay live broadcast graphics: show and hide graphics, scores and match/hockey clocks, tickers, countdowns, lower thirds, quizzes and messages.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "repository": "git+https://github.com/Ferrywell/ProVerlay.git",
   "bugs": "https://github.com/Ferrywell/ProVerlay/issues",

@@ -32,7 +32,7 @@ async function openZip(filePath) {
 }
 
 /** Asset types that may be uploaded, imported and served. No SVG/HTML: they can carry script. */
-export const ASSET_EXT_RE = /\.(png|jpe?g|webp|gif|ttf|otf|woff2?)$/i
+export const ASSET_EXT_RE = /\.(png|apng|jpe?g|webp|gif|svg|ttf|otf|woff2?)$/i
 
 /** Zip import limits (zip-bomb protection). */
 export const IMPORT_LIMITS = {
@@ -556,7 +556,7 @@ export async function saveAsset(projectId, filename, buffer) {
   if (!(await projectExists(projectId))) throw new HttpError(404, 'Project not found')
   const safe = path.basename(String(filename || '')).replace(/[^a-zA-Z0-9._-]/g, '_')
   if (!ASSET_EXT_RE.test(safe) || safe.startsWith('.')) {
-    throw badRequest('Unsupported file type. Allowed: png, jpg, jpeg, webp, gif, ttf, otf, woff, woff2')
+    throw badRequest('Unsupported file type. Allowed: png, apng, jpg, jpeg, webp, gif, svg, ttf, otf, woff, woff2')
   }
   const dir = assetsDir(projectId)
   await fs.mkdir(dir, { recursive: true })

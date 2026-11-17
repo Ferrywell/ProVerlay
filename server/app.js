@@ -14,6 +14,7 @@ import multer from 'multer'
 import { createApiRouter } from './api.js'
 import { loadState, getState, onStateChange, resetState } from './state.js'
 import { initF1Timing, shutdownF1Timing } from './f1Timing.js'
+import { initImageTimers, shutdownImageTimers } from './imageWidget.js'
 import { detectDevice, preferredDashboard } from './device.js'
 import {
   ASSET_EXT_RE,
@@ -32,6 +33,18 @@ import { isValidProjectId } from './validation.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
+
+/**
+ * Asset response headers. SVG files can carry scripts: opened directly (not
+ * through <img>) they would run on ProVerlay's origin, and there is no login.
+ * The sandbox CSP keeps them inert; as <img> they render as usual.
+ */
+function assetHeaders(res, filePath) {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  if (/\.svg$/i.test(filePath)) {
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox")
+  }
+}
 
 function sendPage(file) {
   return (_req, res) => res.sendFile(path.join(ROOT, 'public', file, 'index.html'))
@@ -98,7 +111,12 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     projectExists(projectId)
       .then((exists) => {
         if (!exists) return res.status(404).end()
-        express.static(assetsDir(projectId), { dotfiles: 'deny', index: false, redirect: false })(req, res, next)
+        express.static(assetsDir(projectId), {
+          dotfiles: 'deny',
+          index: false,
+          redirect: false,
+          setHeaders: assetHeaders
+        })(req, res, next)
       })
       .catch(next)
   })
@@ -189,6 +207,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
         .catch((err) => console.error('[socket] projectsChanged failed:', err.message))
     })
     initF1Timing(io)
+    initImageTimers()
     started = true
     await new Promise((resolve, reject) => {
       const onError = (err) => {
@@ -215,6 +234,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     if (!started) return
     started = false
     shutdownF1Timing()
+    shutdownImageTimers()
     unsubscribe?.()
     unsubscribe = null
     unsubscribeProjects?.()

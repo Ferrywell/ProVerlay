@@ -61,6 +61,7 @@ on a phone or tablet redirects to `/operator`.
 | `streamCountdown` | Stream countdown | no | Countdown to the stream start |
 | `lowerThird` | Lower third (single) | no | One name/title lower third |
 | `message` | Message | no | Text message / break slide |
+| `image` | Image | yes | Pre-designed graphics (PNG lower thirds, logos, sponsor boards, full-screen slides): a list with one image on air, Next/Previous, optional auto-hide and carousel |
 
 Experimental, not in the menus of the open-source release: `f1Timing` (F1 timing tower).
 Start ProVerlay with `PROVERLAY_EXPERIMENTAL=f1` to add one, see [F1-TIMING.md](F1-TIMING.md).

@@ -155,6 +155,7 @@ export function defaultStreamCountdownData() {
  *   lowerThird / lowerThirdShow       bottom-left
  *   quizShow                          top-left    (panel itself sits left, see data.panel)
  *   f1Timing                          custom      (left side, data.placementFree; experimental)
+ *   image                             center      (free placement, original size)
  * Only newly created widgets use these; existing projects keep their positions.
  */
 const GRAPHIC_TEMPLATES = {
@@ -230,6 +231,15 @@ const GRAPHIC_TEMPLATES = {
     operator: true,
     data: defaultF1TimingData()
   }),
+  image: (name) => ({
+    type: 'image',
+    name,
+    visible: false,
+    soloVisible: false,
+    position: 'center',
+    operator: true,
+    data: defaultImageData()
+  }),
   hockeyScorebug: (name) => ({
     type: 'hockeyScorebug',
     name,
@@ -239,6 +249,17 @@ const GRAPHIC_TEMPLATES = {
     operator: true,
     data: defaultHockeyScorebugData()
   })
+}
+
+export function defaultImageData() {
+  return {
+    images: [],
+    activeImageId: null,
+    variant: 'free',
+    size: { mode: 'original' },
+    autoHideMs: 0,
+    rotation: { enabled: false, intervalMs: 8000 }
+  }
 }
 
 export function defaultQuizShowData() {

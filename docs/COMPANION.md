@@ -88,6 +88,9 @@ backoff); the upgrade script removes them from existing connections.
 | Lower thirds: show speaker (`lower_third_show`)               | speaker                                                    | lowerThirdShow                     |
 | Lower thirds: next / previous speaker (`lower_third_step`)    | graphic, direction, wrap                                   | lowerThirdShow                     |
 | Lower thirds: hide (`lower_third_hide`)                       | graphic                                                    | lowerThirdShow                     |
+| Image: show image (`image_show`)                              | image                                                      | image                              |
+| Image: next / previous image (`image_step`)                   | graphic, direction, wrap                                   | image                              |
+| Image: hide (`image_hide`)                                    | graphic                                                    | image                              |
 | Quiz: show question (`quiz_show`)                             | question                                                   | quizShow                           |
 | Quiz: reveal / hide / toggle answer (`quiz_reveal`)           | graphic, mode                                              | quizShow                           |
 | Quiz: hide (`quiz_hide`)                                      | graphic                                                    | quizShow                           |
@@ -105,6 +108,7 @@ the server only stores `break`). With *includeBreaks* the order is Q1 → break 
 | Graphic on air, solo (`graphic_solo_on_air`)    | `graphic.soloVisible`                                      | red (ON AIR)  |
 | Clock running (`clock_running`)                 | `data.clock.running && data.clock.runningSince`            | green         |
 | Speaker on air (`lower_third_entry_active`)     | roster visible and `data.activeEntryId` is this speaker    | red (ON AIR)  |
+| Image on air (`image_active`)                   | image widget visible and `data.activeImageId` is this image | red (ON AIR)  |
 | Quiz question on air (`quiz_question_active`)   | quiz visible and `data.activeQuestionId` is this question  | red (ON AIR)  |
 | Answer revealed (`quiz_revealed`)               | `data.revealed`                                            | yellow        |
 | Ticker message enabled (`ticker_message_enabled`) | message `enabled`                                        | green         |
@@ -128,6 +132,7 @@ the server only stores `break`). With *includeBreaks* the order is Q1 → break 
 | `speaker_<id>_name`, `speaker_<id>_title`    | Active speaker                                                   |
 | `quiz_<id>_question`, `quiz_<id>_revealed`   | Active question, revealed flag                                   |
 | `message_<id>`                               | Message text                                                     |
+| `image_<id>_name`                            | Name of the active image (Image widget)                          |
 
 The legacy `theme` variable was removed (the server no longer has a theme field).
 
@@ -148,6 +153,7 @@ Generated from the active project: one section per widget type, one group per gr
 | ticker                | One toggle per message (green while enabled)                                                    |
 | countdown             | Start 5:00 / 10:00 / 15:00, stop (shows the remaining time)                                     |
 | lower-thirds roster   | One button per speaker (red while on air), previous / next speaker, hide                        |
+| image                 | One button per image (red while on air), previous / next image, hide                            |
 | quiz                  | One button per question (red while on air), reveal / hide answer (yellow), hide quiz            |
 | message               | On air toggle shows the message text                                                            |
 
@@ -160,7 +166,7 @@ Presets use the connection label in variable references, so they keep working wh
 ### When definitions are rebuilt
 
 Actions, feedbacks, variable definitions and presets are rebuilt only when the *graphics signature* changes: graphic
-ids, names and types, plus the items that appear in dropdowns (roster speakers, quiz questions, ticker messages).
+ids, names and types, plus the items that appear in dropdowns (roster speakers, quiz questions, ticker messages, images).
 Score, clock, visibility and active-entry changes only update variable values (diffed) and re-check feedbacks.
 Switching projects in ProVerlay changes the signature, so the module follows automatically.
 

@@ -39,7 +39,8 @@ runs on your own machine and network — no account, no cloud.
 ## Features
 
 - **Widgets:** match score (with optional PNG score strip), hockey scorebug, ticker,
-  stream countdown, single lower third, lower-thirds roster, quiz and message.
+  stream countdown, single lower third, lower-thirds roster, quiz, message, and an image
+  widget for pre-designed PNG lower thirds, logos and sponsor boards.
 - **One output URL** (`/render`) for all live widgets, plus a solo URL per widget
   (`/render?graphic=<id>`) when you want it on its own layer.
 - **Touch operator** for iPad and iPhone over the local network.

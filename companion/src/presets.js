@@ -5,6 +5,8 @@ import {
   TYPE_LABELS,
   graphicLabel,
   graphicsOf,
+  imageItems,
+  imageLabel,
   joinRef,
   quizQuestions,
   rosterEntries,
@@ -197,6 +199,31 @@ export function getPresetDefinitions(state, keys, label = 'proverlay') {
           [action('lower_third_hide', { graphic: g.id })],
           [onAir],
         ),
+      )
+    } else if (g.type === 'image') {
+      for (const img of imageItems(g)) {
+        const ref = joinRef(g.id, img.id)
+        add(
+          `image_${k}_${sanitize(img.id)}`,
+          button(
+            `${name}: ${imageLabel(img)}`,
+            truncate(imageLabel(img), 24),
+            [action('image_show', { image: ref })],
+            [feedback('image_active', { image: ref }, ON_AIR_STYLE)],
+          ),
+        )
+      }
+      for (const direction of ['previous', 'next']) {
+        add(
+          `image_${k}_${direction}`,
+          button(`${name}: ${direction} image`, direction === 'next' ? 'NEXT\nIMAGE' : 'PREV\nIMAGE', [
+            action('image_step', { graphic: g.id, direction, wrap: true }),
+          ]),
+        )
+      }
+      add(
+        `image_${k}_hide`,
+        button(`${name}: hide`, `HIDE\n${v(`image_${k}_name`)}`, [action('image_hide', { graphic: g.id })], [onAir]),
       )
     } else if (g.type === 'quizShow') {
       for (const q of quizQuestions(g)) {

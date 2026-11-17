@@ -43,6 +43,7 @@
               <option value="lowerThirdShow">Lower thirds</option>
               <option value="quizShow">Quiz</option>
               <option value="message">Message</option>
+              <option value="image">Image</option>
             </select>
           </label>
           <button class="button button--secondary" id="widget-add" type="button">Add widget</button>
@@ -416,6 +417,67 @@
               </label>
             </fieldset>
             <p class="op-status">Tip: turn the overlay on in the list so you see changes immediately in OBS or <code>/render</code>.</p>
+          </form>
+        </section>
+
+        <section class="glass panel panel--inspector" id="image-panel" hidden>
+          <div class="panel-head">
+            <h2>Images</h2>
+            <p>Pre-designed graphics (lower thirds, logos, sponsor boards, full-screen slides). Put one on air at a time, or step through the list.</p>
+          </div>
+          <div class="image-drop" id="image-drop" tabindex="0" role="button" aria-label="Add images: drop files here or press Enter to choose files">
+            <p class="image-drop__lead"><strong>Drop images here</strong> or <label class="image-drop__pick">choose files<input id="image-files" type="file" accept=".png,.apng,.jpg,.jpeg,.webp,.gif,.svg" multiple hidden /></label></p>
+            <p class="image-drop__hint">PNG, WebP, JPEG, SVG or animated GIF/APNG. Several at once is fine.</p>
+            <p class="image-drop__status" id="image-upload-status" aria-live="polite"></p>
+          </div>
+          <ul id="image-list" class="roster-list image-list"></ul>
+          <form id="image-settings" class="form-grid">
+            <label class="field">
+              <span>Placement</span>
+              <select name="variant">
+                <option value="free">Free placement</option>
+                <option value="lowerThirdSlot">Lower-third slot (bottom left)</option>
+                <option value="fullScreen">Full screen</option>
+              </select>
+            </label>
+            <label class="field" data-image-free-only>
+              <span>Overlay position</span>
+              <select name="position">
+                <option value="center">Center</option>
+                <option value="top-center">Top center</option>
+                <option value="top-left">Top left</option>
+                <option value="top-right">Top right</option>
+                <option value="bottom-center">Bottom center</option>
+                <option value="bottom-left">Bottom left</option>
+                <option value="bottom-full">Bottom full width</option>
+                <option value="custom">Custom (layout editor)</option>
+              </select>
+            </label>
+            <label class="field" data-image-free-only>
+              <span>Size</span>
+              <select name="sizeMode">
+                <option value="original">Original size</option>
+                <option value="fitWidth">Fit canvas width</option>
+                <option value="fitCanvas">Fit canvas</option>
+                <option value="percent">Percentage of canvas width</option>
+              </select>
+            </label>
+            <label class="field" data-image-percent>
+              <span>Width (% of canvas)</span>
+              <input name="sizePercent" type="number" min="1" max="100" step="1" />
+            </label>
+            <label class="field">
+              <span>Hide after (seconds, 0 = stay on air)</span>
+              <input name="autoHideSeconds" type="number" min="0" max="3600" step="1" />
+            </label>
+            <label class="field field--check">
+              <input name="rotationEnabled" type="checkbox" />
+              <span>Carousel: rotate through the list while on air</span>
+            </label>
+            <label class="field" data-image-rotation>
+              <span>Seconds per image</span>
+              <input name="rotationSeconds" type="number" min="2" max="600" step="1" />
+            </label>
           </form>
         </section>
 

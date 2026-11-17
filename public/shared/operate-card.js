@@ -8,7 +8,7 @@
  *   More     — secondary controls in a <details>: collapsed by default on phones,
  *              open on wider screens; the choice is remembered per widget type.
  *
- * Per-type modules (operate-match/-hockey/-f1/-widgets.js) provide:
+ * Per-type modules (operate-match/-hockey/-f1/-image/-widgets.js) provide:
  *   label, status(g), primary(g), more?(g), shape?(g), update(card, g),
  *   ticking?(g) + tick(card, g), polling?(g) + poll(card, g),
  *   action?(g, action, ctx), field?(g, field, value, ctx), liveFields?, onInput?
@@ -28,6 +28,7 @@ import { escapeHtml, setText } from '/public/shared/operate-ui.js'
 import { matchCard } from '/public/shared/operate-match.js'
 import { hockeyCard } from '/public/shared/operate-hockey.js'
 import { f1Card } from '/public/shared/operate-f1.js'
+import { imageCard } from '/public/shared/operate-image.js'
 import {
   countdownCard,
   lowerThirdCard,
@@ -46,7 +47,8 @@ const CARDS = {
   f1Timing: f1Card,
   streamCountdown: countdownCard,
   message: messageCard,
-  lowerThird: lowerThirdCard
+  lowerThird: lowerThirdCard,
+  image: imageCard
 }
 
 const FALLBACK_CARD = {

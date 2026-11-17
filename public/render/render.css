@@ -455,6 +455,37 @@ html[data-preview-window] .score-canvas--no-bg {
   height: auto;
 }
 
+/* Image widget sizes (original size keeps the rule above). Sizes follow the
+   canvas, so a 4K canvas gets a 4K image, not an upscaled 1080p one. */
+.graphic--image {
+  position: relative;
+}
+
+.graphic--image .graphic-image--fitWidth {
+  width: var(--canvas-w, 1920px);
+}
+
+.graphic--image .graphic-image--fitCanvas {
+  width: var(--canvas-w, 1920px);
+  height: var(--canvas-h, 1080px);
+  object-fit: contain;
+}
+
+/* --percent: width is set inline as a share of the canvas width */
+
+/* Full-screen variant: the layer covers the stage */
+.graphic-layer--stage .graphic--image {
+  width: 100%;
+  height: 100%;
+}
+
+/* Outgoing image while the next one fades/wipes in on top of it */
+.graphic--image .graphic-image.is-leaving {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
 .lt-board {
   position: relative;
   width: 100%;

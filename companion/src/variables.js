@@ -4,6 +4,8 @@ import {
   formatScoreClock,
   graphicLabel,
   graphicsOf,
+  imageItems,
+  imageLabel,
   isClockRunning,
   periodLabel,
   quizQuestions,
@@ -17,7 +19,7 @@ import {
  *   name_<key>, onair_<key>, solo_<key>
  *   score_<key>_home / _away, code_<key>_home / _away, clock_<key>, clock_<key>_running, period_<key>
  *   countdown_<key>, ticker_<key>_current, ticker_<key>_enabled,
- *   speaker_<key>_name / _title, quiz_<key>_question / _revealed, message_<key>
+ *   speaker_<key>_name / _title, quiz_<key>_question / _revealed, message_<key>, image_<key>_name
  */
 export function getVariableDefinitions(state, keys) {
   const defs = {
@@ -53,6 +55,8 @@ export function getVariableDefinitions(state, keys) {
       defs[`quiz_${k}_revealed`] = { name: `${label}: answer revealed` }
     } else if (g.type === 'message') {
       defs[`message_${k}`] = { name: `${label}: text` }
+    } else if (g.type === 'image') {
+      defs[`image_${k}_name`] = { name: `${label}: active image name` }
     }
   }
   return defs
@@ -106,6 +110,9 @@ export function getVariableValues(state, keys, nowMs) {
       values[`quiz_${k}_revealed`] = Boolean(d.revealed)
     } else if (g.type === 'message') {
       values[`message_${k}`] = String(d.text ?? '')
+    } else if (g.type === 'image') {
+      const img = imageItems(g).find((item) => item.id === d.activeImageId)
+      values[`image_${k}_name`] = img ? imageLabel(img) : ''
     }
   }
   return { ...values, ...getTimeVariableValues(state, keys, nowMs) }

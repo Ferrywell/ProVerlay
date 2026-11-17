@@ -5,6 +5,8 @@ import {
   SCORE_TYPES,
   findGraphic,
   graphicChoices,
+  imageChoices,
+  imageItems,
   isClockRunning,
   isHockeyQuarter,
   parseClockTime,
@@ -100,6 +102,8 @@ export function getActionDefinitions(self) {
   const rosters = graphicChoices(state, ['lowerThirdShow'], 'No lower-thirds rosters in the active project')
   const quizzes = graphicChoices(state, ['quizShow'], 'No quizzes in the active project')
   const messages = graphicChoices(state, ['message'], 'No message graphics in the active project')
+  const imageWidgets = graphicChoices(state, ['image'], 'No image widgets in the active project')
+  const images = imageChoices(state)
   const speakers = speakerChoices(state)
   const questions = questionChoices(state)
   const tickerItems = tickerMessageChoices(state)
@@ -412,6 +416,48 @@ export function getActionDefinitions(self) {
       options: [graphicOption(rosters, 'Roster')],
       callback: guarded(self, 'Hide lower third', async (o) => {
         const g = requireGraphic(self, o.graphic, ['lowerThirdShow'], 'lower-thirds roster')
+        await self.api.hide(g.id)
+      }),
+    },
+
+    /* ------------------------------------------------------------- image */
+    image_show: {
+      name: 'Image: show image',
+      options: [{ type: 'dropdown', id: 'image', label: 'Image', default: first(images), choices: images }],
+      callback: guarded(self, 'Show image', async (o) => {
+        const ref = requireRef(o.image, 'image')
+        await self.api.showImage(ref.graphicId, ref.itemId)
+      }),
+    },
+
+    image_step: {
+      name: 'Image: next / previous image',
+      options: [
+        graphicOption(imageWidgets, 'Image widget'),
+        {
+          type: 'dropdown',
+          id: 'direction',
+          label: 'Direction',
+          default: 'next',
+          choices: [
+            { id: 'next', label: 'Next' },
+            { id: 'previous', label: 'Previous' },
+          ],
+        },
+        { type: 'checkbox', id: 'wrap', label: 'Wrap around at the end of the list', default: true },
+      ],
+      callback: guarded(self, 'Next/previous image', async (o) => {
+        const g = requireGraphic(self, o.graphic, ['image'], 'image widget')
+        if (!imageItems(g).length) throw new Error('the image widget has no images')
+        await self.api.stepImage(g.id, o.direction === 'previous' ? 'previous' : 'next', o.wrap !== false)
+      }),
+    },
+
+    image_hide: {
+      name: 'Image: hide',
+      options: [graphicOption(imageWidgets, 'Image widget')],
+      callback: guarded(self, 'Hide image', async (o) => {
+        const g = requireGraphic(self, o.graphic, ['image'], 'image widget')
         await self.api.hide(g.id)
       }),
     },

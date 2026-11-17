@@ -24,6 +24,7 @@ test('presets: one section per widget type, one group per graphic', () => {
       'Lower thirds roster',
       'Quiz',
       'Message',
+      'Image',
       'F1 timing tower',
     ],
   )
@@ -95,8 +96,9 @@ test('variables: definitions and values per widget type', () => {
   const m = keys.get(IDS.match)
   const h = keys.get(IDS.hockey)
   assert.equal(values.project_name, 'Demo Cup')
-  assert.equal(values.graphic_count, 8)
-  assert.equal(values.visible_count, 2)
+  assert.equal(values.graphic_count, 9)
+  assert.equal(values.visible_count, 3)
+  assert.equal(values[`image_${keys.get(IDS.image)}_name`], 'Anna')
   assert.equal(values[`name_${m}`], 'Match')
   assert.equal(values[`onair_${m}`], true)
   assert.equal(values[`code_${m}_home`], 'AJA')
@@ -143,6 +145,8 @@ test('feedbacks: on air, solo, clock running, speaker, quiz', () => {
   assert.equal(check('clock_running', { graphic: IDS.match }), true)
   assert.equal(check('lower_third_entry_active', { speaker: `${IDS.roster}|sp-2` }), true)
   assert.equal(check('lower_third_entry_active', { speaker: `${IDS.roster}|sp-1` }), false)
+  assert.equal(check('image_active', { image: `${IDS.image}|img-2` }), true)
+  assert.equal(check('image_active', { image: `${IDS.image}|img-1` }), false)
   assert.equal(check('quiz_revealed', { graphic: IDS.quiz }), true)
   assert.equal(check('quiz_question_active', { question: `${IDS.quiz}|q-1` }), false, 'quiz is not on air')
   assert.equal(check('ticker_message_enabled', { message: `${IDS.ticker}|msg-1` }), true)

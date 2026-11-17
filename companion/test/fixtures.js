@@ -94,6 +94,20 @@ export function sampleState() {
         data: { text: 'Back in 5' },
       },
       {
+        id: 'image-iiii9999',
+        type: 'image',
+        name: 'Sponsors',
+        visible: true,
+        soloVisible: false,
+        data: {
+          activeImageId: 'img-2',
+          images: [
+            { id: 'img-1', src: 'main-sponsor.png', name: 'Main sponsor' },
+            { id: 'img-2', src: 'lt-anna.png', name: 'Anna' },
+          ],
+        },
+      },
+      {
         id: 'f1-timing-hhhh8888',
         type: 'f1Timing',
         name: 'F1',
@@ -114,6 +128,7 @@ export const IDS = {
   quiz: 'quiz-show-ffff6666',
   message: 'message-gggg7777',
   f1: 'f1-timing-hhhh8888',
+  image: 'image-iiii9999',
 }
 
 /** Records every API call; `fail` makes the next call reject. */
@@ -130,6 +145,8 @@ export function stubApi() {
     'score',
     'clock',
     'showEntry',
+    'showImage',
+    'stepImage',
   ]) {
     api[method] = async (...args) => {
       calls.push([method, ...args])

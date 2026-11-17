@@ -3,6 +3,7 @@ import {
   SCORE_TYPES,
   findGraphic,
   graphicChoices,
+  imageChoices,
   isClockRunning,
   questionChoices,
   speakerChoices,
@@ -38,6 +39,7 @@ export function getFeedbackDefinitions(self) {
   const scoreGraphics = graphicChoices(state, SCORE_TYPES, 'No match or hockey scoreboards in the active project')
   const quizzes = graphicChoices(state, ['quizShow'], 'No quizzes in the active project')
   const speakers = speakerChoices(state)
+  const images = imageChoices(state)
   const questions = questionChoices(state)
   const tickerItems = tickerMessageChoices(state)
   const graphic = (id) => findGraphic(self.state, id)
@@ -79,6 +81,19 @@ export function getFeedbackDefinitions(self) {
         const ref = splitRef(fb.options.speaker)
         const g = ref && graphic(ref.graphicId)
         return Boolean(g?.visible && g.data?.activeEntryId === ref.itemId)
+      },
+    },
+
+    image_active: {
+      type: 'boolean',
+      name: 'Image: image on air',
+      description: 'True while this image is the active one and its widget is on air.',
+      options: [{ type: 'dropdown', id: 'image', label: 'Image', default: first(images), choices: images }],
+      defaultStyle: ON_AIR_STYLE,
+      callback: (fb) => {
+        const ref = splitRef(fb.options.image)
+        const g = ref && graphic(ref.graphicId)
+        return Boolean(g?.visible && g.data?.activeImageId === ref.itemId)
       },
     },
 

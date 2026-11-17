@@ -49,6 +49,15 @@ import {
   showLowerThirdEntry,
   hideLowerThirdShow
 } from './lowerThirdEntries.js'
+import {
+  addImages,
+  deleteImage,
+  getImageGraphic,
+  reorderImages,
+  showImage,
+  stepImage,
+  updateImage
+} from './imageWidget.js'
 import { HttpError, badRequest, isPlainObject, isValidProjectId } from './validation.js'
 
 const execFileAsync = promisify(execFile)
@@ -405,6 +414,56 @@ export function createApiRouter({ getPort = () => Number(process.env.PORT || 201
   router.post('/graphics/:id/entries/:entryId/show', async (req, res) => {
     const graphic = await showLowerThirdEntry(req.params.id, req.params.entryId)
     if (!graphic) return res.status(404).json({ error: 'Entry not found' })
+    res.json(graphic)
+  })
+
+  /* --------------------------------------------------------------- image */
+
+  const IMAGE_NOT_FOUND = { error: 'Image widget not found' }
+
+  router.get('/graphics/:id/images', (req, res) => {
+    const graphic = getImageGraphic(req.params.id)
+    if (!graphic) return res.status(404).json(IMAGE_NOT_FOUND)
+    res.json(graphic.data?.images || [])
+  })
+
+  /** Add one image `{ src, name?, alt? }` or several `{ images: [...] }` (src = asset file name). */
+  router.post('/graphics/:id/images', async (req, res) => {
+    const images = await addImages(req.params.id, jsonBody(req))
+    if (!images) return res.status(404).json(IMAGE_NOT_FOUND)
+    res.status(201).json({ images, graphic: getGraphic(req.params.id) })
+  })
+
+  /** New order: `{ ids: [...] }` listing every image once. */
+  router.put('/graphics/:id/images/order', async (req, res) => {
+    const graphic = await reorderImages(req.params.id, jsonBody(req).ids)
+    if (!graphic) return res.status(404).json(IMAGE_NOT_FOUND)
+    res.json(graphic)
+  })
+
+  /** Next/previous image on air: `{ direction: 'next' | 'previous', wrap?: true }`. */
+  router.post('/graphics/:id/images/step', async (req, res) => {
+    const body = jsonBody(req)
+    const direction = body.direction === 'previous' ? 'previous' : 'next'
+    const graphic = await stepImage(req.params.id, direction, { wrap: body.wrap !== false })
+    if (!graphic) return res.status(404).json({ error: 'Image widget not found or it has no images' })
+    res.json(graphic)
+  })
+
+  router.patch('/graphics/:id/images/:imageId', async (req, res) => {
+    const image = await updateImage(req.params.id, req.params.imageId, jsonBody(req))
+    if (!image) return res.status(404).json({ error: 'Image not found' })
+    res.json({ image, graphic: getGraphic(req.params.id) })
+  })
+
+  router.delete('/graphics/:id/images/:imageId', async (req, res) => {
+    if (!(await deleteImage(req.params.id, req.params.imageId))) return res.status(404).json({ error: 'Image not found' })
+    res.json({ ok: true, graphic: getGraphic(req.params.id) })
+  })
+
+  router.post('/graphics/:id/images/:imageId/show', async (req, res) => {
+    const graphic = await showImage(req.params.id, req.params.imageId)
+    if (!graphic) return res.status(404).json({ error: 'Image not found' })
     res.json(graphic)
   })
 

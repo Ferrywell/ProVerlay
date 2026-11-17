@@ -139,8 +139,9 @@ test('import ignores path tricks and non-allow-listed asset types', async () => 
   assert.equal(res.status, 201, res.text)
   const files = (await fs.readdir(path.join(srv.dir, 'projects', res.json.id, 'assets'))).sort()
   assert.ok(!files.includes('page.html'))
-  assert.ok(!files.includes('vector.svg'))
   assert.ok(files.includes('ok.png'))
+  // SVG is an allowed image type (Image widget); it is served inert (see the uploads test).
+  assert.ok(files.includes('vector.svg'))
   await assert.rejects(fs.access(path.join(srv.dir, 'escape.png')))
   await assert.rejects(fs.access(path.join(srv.dir, 'projects', 'escape.png')))
 })
@@ -202,7 +203,7 @@ test('path traversal on asset routes is refused', async () => {
 })
 
 test('uploads: only allow-listed types, nosniff', async () => {
-  for (const name of ['evil.html', 'vector.svg', 'script.js', '.png', 'noext']) {
+  for (const name of ['evil.html', 'vector.svgz', 'page.xhtml', 'script.js', '.png', 'noext']) {
     const res = await srv.post('/api/projects/blank/assets', fileForm(Buffer.from('<script>1</script>'), name))
     assert.equal(res.status, 400, `${name} → ${res.status} ${res.text}`)
   }
@@ -215,6 +216,16 @@ test('uploads: only allow-listed types, nosniff', async () => {
   await fs.writeFile(path.join(srv.dir, 'projects', 'blank', 'assets', 'planted.html'), '<script>1</script>')
   assert.equal((await srv.get('/projects/blank/assets/planted.html')).status, 404)
   assert.equal((await srv.get('/projects/blank/assets/logo_two.png')).status, 200)
+
+  // SVG may carry scripts: allowed for the Image widget, but served inert (sandbox CSP, nosniff).
+  const svg = await srv.post('/api/projects/blank/assets', fileForm(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>'), 'logo.svg'))
+  assert.equal(svg.status, 200, svg.text)
+  const served = await srv.get('/projects/blank/assets/logo.svg')
+  assert.equal(served.status, 200)
+  assert.match(served.headers.get('content-security-policy') || '', /sandbox/)
+  assert.match(served.headers.get('content-security-policy') || '', /default-src 'none'/)
+  assert.equal(served.headers.get('x-content-type-options'), 'nosniff')
+  assert.equal((await srv.get('/projects/blank/assets/logo_two.png')).headers.get('content-security-policy'), null)
 })
 
 test('project.json.bak is kept as a rolling backup', async () => {

@@ -21,6 +21,8 @@ import { applyServerTimeFromState } from '/public/shared/server-time.js'
 import { clockOp, enqueue } from '/public/shared/operate-ui.js'
 import { diffPatch, isEmptyPatch } from '/public/shared/patch-diff.js'
 import { createFormSession, saveFormSession } from '/public/control/settings-form.js'
+import { createImagePanel } from '/public/control/image-panel.js'
+import { noteActiveProject } from '/public/shared/active-project.js'
 import { wireRenderPreviewLinks } from '/public/shared/render-preview.js'
 import {
   formatCountdown,
@@ -52,6 +54,7 @@ const TYPE_LABELS = {
   message: 'Message',
   f1Timing: 'F1 timing',
   hockeyScorebug: 'Hockey scorebug',
+  image: 'Image',
 }
 
 const COPY_ALL_RENDER_LABEL = 'Combined render URL'
@@ -173,6 +176,7 @@ const quizOptInputs = [0, 1, 2, 3].map((i) => document.getElementById(`quiz-opt-
 const quizCorrect = document.getElementById('quiz-correct')
 const quizCancel = document.getElementById('quiz-cancel')
 const transitionPanel = document.getElementById('transition-panel')
+const imagePanelEl = document.getElementById('image-panel')
 const transitionIn = document.getElementById('transition-in')
 const transitionOut = document.getElementById('transition-out')
 const transitionDuration = document.getElementById('transition-duration')
@@ -402,6 +406,7 @@ function hideAllInspectorPanels() {
   if (rosterPanel) rosterPanel.hidden = true
   if (quizPanel) quizPanel.hidden = true
   if (transitionPanel) transitionPanel.hidden = true
+  if (imagePanelEl) imagePanelEl.hidden = true
   if (dashboardOperatePanel) dashboardOperatePanel.hidden = true
 }
 
@@ -476,6 +481,11 @@ function showSettingsInspector(graphic) {
     if (hockeyPanel) {
       hockeyPanel.hidden = false
       hockeySession.sync(graphic)
+    }
+  } else if (graphic.type === 'image') {
+    if (imagePanelEl) {
+      imagePanelEl.hidden = false
+      imagePanel.sync(graphic)
     }
   }
   if (transitionPanel) {
@@ -1308,6 +1318,7 @@ function syncExperimentalAddOptions(state) {
 
 function applyState(state) {
   applyServerTimeFromState(state)
+  noteActiveProject(state)
   currentState = state
   syncExperimentalAddOptions(state)
   syncProjectBrandFonts(state).then(() => {
@@ -1405,8 +1416,13 @@ const transitionSession = createFormSession({
   payload: transitionPayload
 })
 
+const imagePanel = createImagePanel(imagePanelEl, {
+  getProjectId: () => currentState?.projectId || 'blank',
+  promptName: (opts) => promptName(opts)
+})
+
 function settingsSessions() {
-  return [matchSession, tickerSession, countdownSession, hockeySession, rosterTemplateSession, transitionSession]
+  return [matchSession, tickerSession, countdownSession, hockeySession, rosterTemplateSession, transitionSession, imagePanel]
 }
 
 /* ------------------------------------------------------------ match form */
@@ -1800,7 +1816,8 @@ widgetAdd?.addEventListener('click', async () => {
     quizShow: 'Quiz',
     message: 'Message',
     f1Timing: 'F1 timing',
-    hockeyScorebug: 'Hockey scorebug'
+    hockeyScorebug: 'Hockey scorebug',
+    image: 'Images'
   }
   const defaultName = defaultNames[type] || 'New widget'
   const name = await promptName({
