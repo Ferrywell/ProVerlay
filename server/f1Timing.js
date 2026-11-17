@@ -13,7 +13,10 @@
  *   the delay is a fine-tune (capture/encode offset), not stream latency.
  */
 
-import { getState, onStateChange } from './state.js'
+import dns from 'dns/promises'
+import net from 'net'
+import { getState, onStateChange, patchGraphic } from './state.js'
+import { isPrivateIp, isTrustedHostname } from './netSecurity.js'
 
 const POLL_MS_DEFAULT = 1000
 const POLL_MS_MIN = 250
@@ -23,6 +26,7 @@ const FETCH_TIMEOUT_MS = 3000
 // graphicId -> { timer, buffer: [{at, rows, session}], status, cfgKey }
 const pollers = new Map()
 let ioRef = null
+let unsubscribe = null
 
 /** 2026-grid fallback zodat manual mode direct bruikbaar is. */
 export function defaultF1Drivers() {
@@ -55,6 +59,23 @@ function baseUrl(cfg) {
   // IPv6-literals moeten in brackets: http://[::1]:10101/...
   const hostPart = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host
   return `http://${hostPart}:${cfg.port}/api/v1/live-timing`
+}
+
+/**
+ * MultiViewer runs on the operator's machine or LAN. Refuse anything else so
+ * a widget setting can not turn the server into a proxy to arbitrary hosts.
+ */
+export async function assertLocalMultiViewerHost(host) {
+  const name = String(host || '').trim().replace(/^\[|\]$/g, '')
+  if (!isTrustedHostname(name)) {
+    throw new Error('MultiViewer host must be localhost or a private-network address')
+  }
+  if (net.isIP(name)) return
+  const addresses = await dns.lookup(name, { all: true }).catch(() => [])
+  if (!addresses.length) throw new Error(`MultiViewer host "${name}" not found`)
+  if (!addresses.every((a) => isPrivateIp(a.address))) {
+    throw new Error('MultiViewer host must resolve to a private-network address')
+  }
 }
 
 async function fetchTopic(cfg, topic) {
@@ -127,6 +148,7 @@ async function pollOnce(graphicId, cfg) {
   if (entry.inFlight) return
   entry.inFlight = true
   try {
+    await assertLocalMultiViewerHost(cfg.host)
     const [timing, driverList, lapCount, trackStatus, appData] = await Promise.all([
       fetchTopic(cfg, 'TimingData'),
       fetchTopic(cfg, 'DriverList'),
@@ -282,6 +304,7 @@ export async function importDriversOnce(graphicId) {
 
   const cfg = f1Config(graphic)
   try {
+    await assertLocalMultiViewerHost(cfg.host)
     const [timing, driverList, appData] = await Promise.all([
       fetchTopic(cfg, 'TimingData'),
       fetchTopic(cfg, 'DriverList'),
@@ -294,7 +317,6 @@ export async function importDriversOnce(graphicId) {
         body: { error: 'No live timing data — is Live Timing running in MultiViewer?' }
       }
     }
-    const { patchGraphic } = await import('./state.js')
     await patchGraphic(graphicId, { data: { drivers: rows } })
     return { status: 200, body: { imported: rows.length } }
   } catch (err) {
@@ -312,6 +334,15 @@ export async function importDriversOnce(graphicId) {
 
 export function initF1Timing(io) {
   ioRef = io
-  onStateChange(reconcile)
+  unsubscribe?.()
+  unsubscribe = onStateChange(reconcile)
   reconcile(getState())
+}
+
+/** Stop all pollers and detach from state changes (server shutdown). */
+export function shutdownF1Timing() {
+  unsubscribe?.()
+  unsubscribe = null
+  for (const id of [...pollers.keys()]) stopPoller(id)
+  ioRef = null
 }

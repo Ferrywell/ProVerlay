@@ -4,52 +4,163 @@ import { fileURLToPath } from 'url'
 import {
   ensureProjectsLayout,
   getActiveProjectId,
+  getProjectMeta,
   projectFile,
-  touchActiveProject
+  quarantineFile,
+  readProjectData,
+  setActiveProjectId,
+  writeProjectData,
+  scheduleTouchProject
 } from './projects.js'
-import { DATA_DIR } from './paths.js'
+import { BLANK_PROJECT } from './projectSeed.js'
+import { getDataDir } from './paths.js'
 import {
   migrateStateTickers,
   normalizeTickerMessagesInput
 } from './tickerMessages.js'
 import { penaltiesFeatureEnabled } from '../public/shared/match-utils.js'
 import { enqueueWrite, writeJsonAtomic } from './writeQueue.js'
+import {
+  HttpError,
+  badRequest,
+  deepMerge,
+  isValidProjectId,
+  normalizeStatePatch,
+  validateGraphic,
+  validateGraphicPatch,
+  validateProjectState
+} from './validation.js'
+import { applyClockOp, applyScoreOp } from './clockOps.js'
+
+export { deepMerge }
 
 /** User brand presets (data dir) override the presets bundled in templates/brands. */
-const BRANDS_DIR = path.join(DATA_DIR, 'brands')
+const brandsDir = () => path.join(getDataDir(), 'brands')
 const BUNDLED_BRANDS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'brands')
 const BRAND_ID = /^[a-z0-9][a-z0-9-]*$/
-const LEGACY_SHOW = path.join(DATA_DIR, 'show.json')
 
 let state = null
 let activeProjectId = 'blank'
-let listeners = new Set()
+const listeners = new Set()
 
-export async function loadState() {
-  await ensureProjectsLayout()
-  activeProjectId = await getActiveProjectId()
-  const file = projectFile(activeProjectId)
-  const raw = await fs.readFile(file, 'utf8')
-  state = JSON.parse(raw)
-  state.projectId = activeProjectId
-  let migrated = migrateStateTickers(state)
+/* ------------------------------------------------------------- loading */
+
+function applyMigrations(data) {
+  let migrated = migrateStateTickers(data)
   migrated = migrateGraphicsSolo(migrated)
   migrated = migratePenaltiesDisabled(migrated)
   migrated = stripEphemeralFields(migrated)
-  if (migrated !== state) {
-    const { projectId: _drop, ...payload } = migrated
-    state = { ...payload, projectId: activeProjectId }
-    await fs.writeFile(file, JSON.stringify(payload, null, 2))
+  return migrated
+}
+
+function stripStored(data) {
+  const { projectId: _drop, ...payload } = data
+  return payload
+}
+
+/** Read, validate and migrate a project. Restores project.json from .bak if needed. */
+async function loadProject(id) {
+  const loaded = await readProjectData(id)
+  let data = loaded.data
+  if (loaded.source === 'backup') {
+    const moved = await quarantineFile(projectFile(id))
+    console.warn(
+      `[state] project "${id}": project.json unreadable (${loaded.error?.message}); ` +
+        `restored from project.json.bak (damaged file kept as ${path.basename(moved)})`
+    )
+    await writeJsonAtomic(projectFile(id), stripStored(data))
   }
+  const migrated = applyMigrations(data)
+  if (migrated !== data) {
+    data = migrated
+    await writeProjectData(id, stripStored(data))
+  }
+  return stripStored(data)
+}
+
+function describeLoadError(err) {
+  if (err?.code === 'ENOENT') return 'project.json is missing'
+  if (err?.code) return `project.json could not be read (${err.code})`
+  return err?.message || 'unknown error'
+}
+
+function adopt(id, data) {
+  activeProjectId = id
+  state = { ...data, projectId: id }
+}
+
+/**
+ * Startup load. Never throws because of a damaged project: falls back to the
+ * project's backup, then to the "blank" project (recreated if needed), so a
+ * bad file can not keep the server from starting during a show.
+ */
+async function loadStateUnlocked() {
+  await ensureProjectsLayout()
+  const wanted = await getActiveProjectId()
+  try {
+    adopt(wanted, await loadProject(wanted))
+    return state
+  } catch (err) {
+    console.error(`[state] active project "${wanted}" could not be loaded: ${describeLoadError(err)}`)
+  }
+
+  if (wanted !== 'blank') {
+    try {
+      const data = await loadProject('blank')
+      await setActiveProjectId('blank')
+      adopt('blank', data)
+      console.error('[state] fell back to the "blank" project; the damaged project was left untouched on disk')
+      return state
+    } catch (err) {
+      console.error(`[state] "blank" project could not be loaded either: ${describeLoadError(err)}`)
+    }
+  }
+
+  // Last resort: recreate the blank project (keeping the damaged file aside).
+  const blankFile = projectFile('blank')
+  await quarantineFile(blankFile)
+  await fs.mkdir(path.dirname(blankFile), { recursive: true })
+  const fresh = structuredClone(BLANK_PROJECT)
+  await writeJsonAtomic(blankFile, fresh)
+  await setActiveProjectId('blank')
+  adopt('blank', fresh)
+  console.error('[state] recreated an empty "blank" project')
   return state
 }
 
-export async function reloadState() {
-  const next = await loadState()
-  // Broadcast naar alle clients (render/operator), anders blijft bv. de
-  // OBS-render het oude project tonen na een project-switch of import.
-  notify()
-  return next
+export async function loadState() {
+  return enqueueWrite(() => loadStateUnlocked())
+}
+
+/** Drop in-memory state (tests / shutdown). */
+export function resetState() {
+  state = null
+  activeProjectId = 'blank'
+}
+
+/**
+ * Switch the active project. The candidate is loaded and validated first;
+ * the registry is only updated when that succeeds, so a damaged project can
+ * never become the active one and brick the next start.
+ * Returns the registry entry, or null when the project does not exist.
+ */
+export async function activateProject(id) {
+  if (!isValidProjectId(id)) return null
+  return enqueueWrite(async () => {
+    const meta = await getProjectMeta(id)
+    if (!meta) return null
+    let data
+    try {
+      data = await loadProject(id)
+    } catch (err) {
+      if (err?.code === 'ENOENT') return null
+      throw new HttpError(422, `Project "${id}" cannot be loaded: ${describeLoadError(err)}`)
+    }
+    const project = await setActiveProjectId(id)
+    adopt(id, data)
+    notify()
+    return project
+  })
 }
 
 export function getState() {
@@ -57,69 +168,128 @@ export function getState() {
   return { ...state, projectId: activeProjectId, serverNow: Date.now() }
 }
 
-export async function saveState(next) {
+export function getActiveId() {
+  return activeProjectId
+}
+
+/* ------------------------------------------------------------ mutations */
+
+/** Persist `next` as the active project's state. Caller holds the write queue. */
+async function commit(next) {
+  const payload = validateProjectState(stripMeta(next))
+  await writeProjectData(activeProjectId, payload)
+  state = { ...payload, projectId: activeProjectId }
+  scheduleTouchProject(activeProjectId)
+  notify()
+}
+
+/**
+ * Atomic read-modify-write of the whole state. `fn` receives a private copy
+ * of the current state and returns the next state (or null to abort without
+ * writing). Runs inside the write queue, so concurrent updates never get lost.
+ */
+export function updateState(fn) {
   return enqueueWrite(async () => {
-    const { projectId: _drop, ...payload } = next
-    state = { ...payload, projectId: activeProjectId }
-    await writeJsonAtomic(projectFile(activeProjectId), payload)
-    await touchActiveProject()
-    notify()
+    const current = structuredClone(stripMeta(getState()))
+    const next = await fn(current)
+    if (next == null) return null
+    await commit(next)
     return getState()
   })
 }
 
+/**
+ * Atomic read-modify-write of one graphic. Resolves to the updated graphic,
+ * or null when the graphic does not exist.
+ */
+export async function updateGraphic(id, fn) {
+  let updated = null
+  await updateState(async (current) => {
+    const index = current.graphics.findIndex((g) => g.id === id)
+    if (index === -1) return null
+    const next = await fn(current.graphics[index])
+    if (next == null) return null
+    validateGraphic(next, 'graphic', { strictFields: false })
+    if (next.id !== id) throw badRequest('id is immutable')
+    const graphics = [...current.graphics]
+    graphics[index] = next
+    updated = next
+    return { ...current, graphics }
+  })
+  return updated
+}
+
 export async function patchState(patch) {
-  const current = getState()
-  const merged = deepMerge(stripMeta(current), patch)
-  return saveState(merged)
+  const normalized = normalizeStatePatch(patch)
+  return updateState((current) => deepMerge(current, normalized))
 }
 
 export function getGraphic(id) {
   return getState().graphics.find((g) => g.id === id)
 }
 
+/** PATCH one graphic. Resolves to the updated graphic or null (not found). */
 export async function patchGraphic(id, patch) {
-  const current = stripMeta(getState())
-  const index = current.graphics.findIndex((g) => g.id === id)
-  if (index === -1) return null
-
-  const graphics = [...current.graphics]
-  const existing = graphics[index]
-  const merged = deepMerge(existing, patch)
-  if (existing.type === 'customTicker' && patch.data?.messages !== undefined) {
-    merged.data = {
-      ...merged.data,
-      messages: normalizeTickerMessagesInput(patch.data.messages, {
-        existing: existing.data?.messages
-      })
+  return updateGraphic(id, (existing) => {
+    validateGraphicPatch(existing, patch)
+    const merged = deepMerge(existing, patch)
+    if (existing.type === 'customTicker' && patch.data?.messages !== undefined) {
+      merged.data = {
+        ...merged.data,
+        messages: normalizeTickerMessagesInput(patch.data.messages, {
+          existing: existing.data?.messages
+        })
+      }
     }
-  }
-  graphics[index] = merged
-  return saveState({ ...current, graphics })
+    return merged
+  })
 }
 
 export async function addGraphic(graphic) {
-  const current = stripMeta(getState())
-  if (current.graphics.some((g) => g.id === graphic.id)) {
-    throw new Error('Graphic id already exists')
-  }
-  return saveState({ ...current, graphics: [...current.graphics, graphic] })
+  validateGraphic(graphic)
+  return updateState((current) => {
+    if (current.graphics.some((g) => g.id === graphic.id)) {
+      throw new HttpError(409, 'Graphic id already exists')
+    }
+    return { ...current, graphics: [...current.graphics, graphic] }
+  })
 }
 
 export async function removeGraphic(id) {
-  const current = stripMeta(getState())
-  const graphics = current.graphics.filter((g) => g.id !== id)
-  if (graphics.length === current.graphics.length) return null
-  return saveState({ ...current, graphics })
+  return updateState((current) => {
+    const graphics = current.graphics.filter((g) => g.id !== id)
+    if (graphics.length === current.graphics.length) return null
+    return { ...current, graphics }
+  })
 }
 
+/** Set (boolean) or flip (undefined) `visible`, computed inside the queue. */
 export async function setGraphicVisibility(id, visible) {
-  return patchGraphic(id, { visible: Boolean(visible) })
+  return updateGraphic(id, (g) => ({
+    ...g,
+    visible: visible === undefined ? !g.visible : Boolean(visible)
+  }))
 }
 
+/** Set (boolean) or flip (undefined) `soloVisible`, computed inside the queue. */
 export async function setGraphicSoloVisibility(id, soloVisible) {
-  return patchGraphic(id, { soloVisible: Boolean(soloVisible) })
+  return updateGraphic(id, (g) => ({
+    ...g,
+    soloVisible: soloVisible === undefined ? !g.soloVisible : Boolean(soloVisible)
+  }))
 }
+
+/** Atomic score change for matchScoreboard / hockeyScorebug. */
+export async function applyScore(id, body) {
+  return updateGraphic(id, (g) => applyScoreOp(g, body))
+}
+
+/** Atomic clock action for matchScoreboard / hockeyScorebug. */
+export async function applyClock(id, body) {
+  return updateGraphic(id, (g) => applyClockOp(g, body))
+}
+
+/* ----------------------------------------------------------- migrations */
 
 export function migrateGraphicsSolo(state) {
   if (!state?.graphics?.length) return state
@@ -158,6 +328,8 @@ export function migratePenaltiesDisabled(state) {
   return changed ? { ...state, graphics } : state
 }
 
+/* --------------------------------------------------------------- brands */
+
 async function readBrandDir(dir) {
   try {
     const files = await fs.readdir(dir)
@@ -178,21 +350,30 @@ async function readBrandDir(dir) {
 export async function listBrands() {
   const byId = new Map()
   for (const brand of await readBrandDir(BUNDLED_BRANDS_DIR)) byId.set(brand.id, brand)
-  for (const brand of await readBrandDir(BRANDS_DIR)) byId.set(brand.id, brand)
+  for (const brand of await readBrandDir(brandsDir())) byId.set(brand.id, brand)
   return [...byId.values()]
 }
 
 export async function applyBrand(brandId) {
-  if (!BRAND_ID.test(String(brandId || ''))) throw new Error('Invalid brand id')
+  if (!BRAND_ID.test(String(brandId || ''))) throw new HttpError(404, 'Brand not found')
   let raw
   try {
-    raw = await fs.readFile(path.join(BRANDS_DIR, `${brandId}.json`), 'utf8')
+    raw = await fs.readFile(path.join(brandsDir(), `${brandId}.json`), 'utf8')
   } catch {
-    raw = await fs.readFile(path.join(BUNDLED_BRANDS_DIR, `${brandId}.json`), 'utf8')
+    try {
+      raw = await fs.readFile(path.join(BUNDLED_BRANDS_DIR, `${brandId}.json`), 'utf8')
+    } catch {
+      throw new HttpError(404, 'Brand not found')
+    }
   }
-  const brand = JSON.parse(raw)
+  let brand
+  try {
+    brand = JSON.parse(raw)
+  } catch {
+    throw new HttpError(422, 'Brand preset is not valid JSON')
+  }
   return patchState({
-    brandId: brand.id,
+    brandId: typeof brand.id === 'string' ? brand.id : brandId,
     brand: {
       name: brand.name,
       fontFamily: brand.fontFamily,
@@ -202,6 +383,8 @@ export async function applyBrand(brandId) {
   })
 }
 
+/* -------------------------------------------------------------- events */
+
 export function onStateChange(fn) {
   listeners.add(fn)
   return () => listeners.delete(fn)
@@ -209,7 +392,13 @@ export function onStateChange(fn) {
 
 function notify() {
   const snapshot = getState()
-  for (const fn of listeners) fn(snapshot)
+  for (const fn of listeners) {
+    try {
+      fn(snapshot)
+    } catch (err) {
+      console.error('[state] listener failed:', err)
+    }
+  }
 }
 
 function stripMeta(stateObj) {
@@ -222,18 +411,4 @@ export function stripEphemeralFields(state) {
   if (!state || state.serverNow == null) return state
   const { serverNow: _drop, ...rest } = state
   return rest
-}
-
-function deepMerge(target, source) {
-  const out = { ...target }
-  for (const [key, value] of Object.entries(source)) {
-    if (Array.isArray(value)) {
-      out[key] = value
-    } else if (value && typeof value === 'object') {
-      out[key] = deepMerge(target[key] ?? {}, value)
-    } else {
-      out[key] = value
-    }
-  }
-  return out
 }

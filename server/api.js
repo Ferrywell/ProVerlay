@@ -3,31 +3,38 @@ import multer from 'multer'
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
+import crypto from 'crypto'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import {
   getState,
   patchState,
   getGraphic,
   patchGraphic,
   setGraphicVisibility,
+  setGraphicSoloVisibility,
   addGraphic,
   removeGraphic,
   listBrands,
   applyBrand,
-  reloadState
+  activateProject,
+  applyScore,
+  applyClock
 } from './state.js'
 import { detectDevice } from './device.js'
 import { buildNetworkUrls } from './network.js'
 import {
   listProjects,
   createProject,
-  activateProject,
   getActiveProjectId,
   exportProjectToZip,
   importProjectFromZip,
   saveAsset,
-  assetsDir
+  listAssets
 } from './projects.js'
 import { analyzeImageBuffer, buildGraphicDataFromCompose } from './composeAnalyze.js'
+import { createGraphicFromType } from './graphicDefaults.js'
+import { getLiveSnapshot, importDriversOnce } from './f1Timing.js'
 import {
   addLowerThirdEntry,
   updateLowerThirdEntry,
@@ -35,11 +42,64 @@ import {
   showLowerThirdEntry,
   hideLowerThirdShow
 } from './lowerThirdEntries.js'
+import { HttpError, badRequest, isPlainObject, isValidProjectId } from './validation.js'
 
+const execFileAsync = promisify(execFile)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } })
 
-export function createApiRouter() {
+/**
+ * Express 4 does not catch rejected promises from async handlers; an
+ * unhandled rejection used to take the whole server down. Every handler
+ * registered on the router is wrapped so errors reach the error middleware.
+ */
+export function wrapAsync(fn) {
+  if (typeof fn !== 'function' || fn.length === 4) return fn
+  return function asyncHandler(req, res, next) {
+    try {
+      const result = fn(req, res, next)
+      if (result && typeof result.then === 'function') result.catch(next)
+    } catch (err) {
+      next(err)
+    }
+  }
+}
+
+function asyncRouter() {
   const router = express.Router()
+  for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
+    const original = router[method].bind(router)
+    router[method] = (routePath, ...handlers) => original(routePath, ...handlers.flat().map(wrapAsync))
+  }
+  return router
+}
+
+/** Optional trimmed string field from a JSON body. */
+function optionalString(body, key, { max = 200 } = {}) {
+  const value = body?.[key]
+  if (value === undefined || value === null) return ''
+  if (typeof value !== 'string') throw badRequest(`${key}: expected a string`)
+  return value.trim().slice(0, max)
+}
+
+function jsonBody(req) {
+  const body = req.body === undefined ? {} : req.body
+  if (!isPlainObject(body)) throw badRequest('Body must be a JSON object')
+  return body
+}
+
+function requireProjectId(id) {
+  if (!isValidProjectId(id)) throw new HttpError(404, 'Project not found')
+  return id
+}
+
+function requireGraphic(id) {
+  const graphic = getGraphic(id)
+  if (!graphic) throw new HttpError(404, 'Graphic not found')
+  return graphic
+}
+
+export function createApiRouter({ getPort = () => Number(process.env.PORT || 2014) } = {}) {
+  const router = asyncRouter()
 
   router.get('/device', (req, res) => {
     const device = detectDevice(req.headers['user-agent'] || '')
@@ -47,18 +107,20 @@ export function createApiRouter() {
   })
 
   router.get('/network', (_req, res) => {
-    const port = Number(process.env.PORT || 2014)
-    res.json(buildNetworkUrls(port))
+    res.json(buildNetworkUrls(getPort()))
   })
+
+  /* ------------------------------------------------------------ projects */
 
   router.get('/projects', async (_req, res) => {
     res.json(await listProjects())
   })
 
   router.post('/projects', async (req, res) => {
-    const name = req.body?.name?.trim()
+    const body = jsonBody(req)
+    const name = optionalString(body, 'name', { max: 120 })
     if (!name) return res.status(400).json({ error: 'Name is required' })
-    const clientName = req.body?.clientName?.trim() || name
+    const clientName = optionalString(body, 'clientName', { max: 120 }) || name
     const project = await createProject(name, clientName)
     res.status(201).json(project)
   })
@@ -66,65 +128,37 @@ export function createApiRouter() {
   router.post('/projects/:id/activate', async (req, res) => {
     const project = await activateProject(req.params.id)
     if (!project) return res.status(404).json({ error: 'Project not found' })
-    await reloadState()
     res.json({ ...project, state: getState() })
   })
 
   router.get('/projects/active/export', async (_req, res) => {
-    try {
-      const id = await getActiveProjectId()
-      await exportProjectToZip(id, res)
-    } catch (err) {
-      res.status(404).json({ error: err.message || 'Export failed' })
-    }
+    const id = await getActiveProjectId()
+    await exportProjectToZip(id, res)
   })
 
   router.post('/projects/import', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file received' })
-    const temp = path.join(os.tmpdir(), `proverlay-import-${Date.now()}.zip`)
+    const temp = path.join(os.tmpdir(), `proverlay-import-${crypto.randomUUID()}.zip`)
     try {
       await fs.writeFile(temp, req.file.buffer)
       // Import activeert bewust niet: de operator kiest zelf wanneer hij
       // wisselt via "Activate this project" in het dashboard.
       const project = await importProjectFromZip(temp, req.file.originalname)
       res.status(201).json(project)
-    } catch (err) {
-      res.status(400).json({ error: err.message || 'Import failed' })
     } finally {
       await fs.unlink(temp).catch(() => {})
     }
   })
 
   router.get('/projects/:id/assets', async (req, res) => {
-    try {
-      const dir = assetsDir(req.params.id)
-      const entries = await fs.readdir(dir).catch(() => [])
-      const files = entries.filter((f) => /\.(png|jpe?g|webp|gif|ttf|otf|woff2?)$/i.test(f))
-      const items = await Promise.all(
-        files.map(async (filename) => {
-          const stat = await fs.stat(path.join(dir, filename)).catch(() => null)
-          return {
-            filename,
-            size: stat?.size || 0,
-            url: `/projects/${req.params.id}/assets/${encodeURIComponent(filename)}`
-          }
-        })
-      )
-      res.json(items)
-    } catch (err) {
-      res.status(500).json({ error: err.message || 'Failed to load assets' })
-    }
+    res.json(await listAssets(requireProjectId(req.params.id)))
   })
 
   router.post('/projects/:id/assets', upload.single('file'), async (req, res) => {
+    const id = requireProjectId(req.params.id)
     if (!req.file) return res.status(400).json({ error: 'No file received' })
-    try {
-      const filename = await saveAsset(req.params.id, req.file.originalname, req.file.buffer)
-      res.json({ filename, url: `/projects/${req.params.id}/assets/${encodeURIComponent(filename)}` })
-    } catch (err) {
-      const status = err.status || 500
-      res.status(status).json({ error: err.message || 'Upload failed' })
-    }
+    const filename = await saveAsset(id, req.file.originalname, req.file.buffer)
+    res.json({ filename, url: `/projects/${id}/assets/${encodeURIComponent(filename)}` })
   })
 
   router.post('/projects/:id/analyze-image', upload.single('file'), async (req, res) => {
@@ -134,7 +168,7 @@ export function createApiRouter() {
       return res.status(400).json({ error: 'Only PNG and WebP are supported' })
     }
     try {
-      const widgetType = req.body?.widgetType || 'matchScoreboard'
+      const widgetType = typeof req.body?.widgetType === 'string' ? req.body.widgetType : 'matchScoreboard'
       const result = await analyzeImageBuffer(req.file.buffer, { widgetType })
       res.json(result)
     } catch (err) {
@@ -143,39 +177,43 @@ export function createApiRouter() {
   })
 
   router.post('/projects/:id/compose-widget', async (req, res) => {
-    try {
-      const { createGraphicFromType } = await import('./graphicDefaults.js')
-      const type = req.body?.type
-      const name = req.body?.name?.trim() || 'New widget'
-      if (!type) return res.status(400).json({ error: 'Type is required' })
-      if (!req.body?.filename) return res.status(400).json({ error: 'PNG file missing' })
+    const body = jsonBody(req)
+    const type = body.type
+    const name = optionalString(body, 'name') || 'New widget'
+    if (!type) return res.status(400).json({ error: 'Type is required' })
+    if (typeof body.filename !== 'string' || !body.filename) {
+      return res.status(400).json({ error: 'PNG file missing' })
+    }
+    if (path.basename(body.filename) !== body.filename) throw badRequest('filename: invalid')
 
-      const graphic = createGraphicFromType(type, name)
+    const graphic = createGraphicFromType(type, name)
+    try {
       graphic.data = buildGraphicDataFromCompose({
         widgetType: type,
         name,
-        filename: req.body.filename,
-        width: Number(req.body.width) || 1920,
-        height: Number(req.body.height) || 1080,
-        regions: req.body.regions || [],
-        placement: req.body.placement,
-        designFrameWidth: Number(req.body.designFrameWidth) || 3840
+        filename: body.filename,
+        width: Number(body.width) || 1920,
+        height: Number(body.height) || 1080,
+        regions: Array.isArray(body.regions) ? body.regions : [],
+        placement: isPlainObject(body.placement) ? body.placement : undefined,
+        designFrameWidth: Number(body.designFrameWidth) || 3840
       })
-
-      await addGraphic(graphic)
-      res.status(201).json({ graphic, state: getState() })
     } catch (err) {
-      res.status(400).json({ error: err.message || 'Failed to create widget' })
+      throw badRequest(err.message || 'Failed to create widget')
     }
+
+    await addGraphic(graphic)
+    res.status(201).json({ graphic, state: getState() })
   })
+
+  /* --------------------------------------------------------------- state */
 
   router.get('/state', (_req, res) => {
     res.json(getState())
   })
 
   router.patch('/state', async (req, res) => {
-    const next = await patchState(req.body)
-    res.json(next)
+    res.json(await patchState(req.body))
   })
 
   router.get('/brands', async (_req, res) => {
@@ -183,29 +221,87 @@ export function createApiRouter() {
   })
 
   router.post('/brands/:id/apply', async (req, res) => {
-    try {
-      const next = await applyBrand(req.params.id)
-      res.json(next)
-    } catch {
-      res.status(404).json({ error: 'Brand not found' })
-    }
+    res.json(await applyBrand(req.params.id))
   })
+
+  /* ------------------------------------------------------------ graphics */
 
   router.get('/graphics', (_req, res) => {
     res.json(getState().graphics)
   })
 
+  router.post('/graphics', async (req, res) => {
+    const body = jsonBody(req)
+    const type = body.type
+    const name = optionalString(body, 'name') || 'New widget'
+    if (!type) return res.status(400).json({ error: 'Type is required' })
+    const graphic = createGraphicFromType(type, name)
+    await addGraphic(graphic)
+    res.status(201).json(graphic)
+  })
+
   router.get('/graphics/:id', (req, res) => {
-    const graphic = getGraphic(req.params.id)
+    res.json(requireGraphic(req.params.id))
+  })
+
+  router.patch('/graphics/:id', async (req, res) => {
+    const graphic = await patchGraphic(req.params.id, req.body)
     if (!graphic) return res.status(404).json({ error: 'Graphic not found' })
     res.json(graphic)
   })
 
-  router.patch('/graphics/:id', async (req, res) => {
-    const next = await patchGraphic(req.params.id, req.body)
+  router.delete('/graphics/:id', async (req, res) => {
+    const next = await removeGraphic(req.params.id)
     if (!next) return res.status(404).json({ error: 'Graphic not found' })
-    res.json(getGraphic(req.params.id))
+    res.json({ ok: true, state: getState() })
   })
+
+  router.post('/graphics/:id/hide', async (req, res) => {
+    const graphic = requireGraphic(req.params.id)
+    const next =
+      graphic.type === 'lowerThirdShow'
+        ? await hideLowerThirdShow(req.params.id)
+        : await setGraphicVisibility(req.params.id, false)
+    if (!next) return res.status(404).json({ error: 'Graphic not found' })
+    res.json(next)
+  })
+
+  router.post('/graphics/:id/toggle', async (req, res) => {
+    const body = jsonBody(req)
+    // Without `visible` the flip is computed inside the write queue.
+    const graphic = await setGraphicVisibility(
+      req.params.id,
+      body.visible !== undefined ? Boolean(body.visible) : undefined
+    )
+    if (!graphic) return res.status(404).json({ error: 'Graphic not found' })
+    res.json(graphic)
+  })
+
+  router.post('/graphics/:id/toggle-solo', async (req, res) => {
+    const body = jsonBody(req)
+    const graphic = await setGraphicSoloVisibility(
+      req.params.id,
+      body.soloVisible !== undefined ? Boolean(body.soloVisible) : undefined
+    )
+    if (!graphic) return res.status(404).json({ error: 'Graphic not found' })
+    res.json(graphic)
+  })
+
+  /** Atomic score change: { side: 'home'|'away', delta?: int (default 1) } or { side, value }. */
+  router.post('/graphics/:id/score', async (req, res) => {
+    const graphic = await applyScore(req.params.id, jsonBody(req))
+    if (!graphic) return res.status(404).json({ error: 'Graphic not found' })
+    res.json(graphic)
+  })
+
+  /** Atomic clock action: { action: start|pause|toggle|reset|adjust|set, ms? }. */
+  router.post('/graphics/:id/clock', async (req, res) => {
+    const graphic = await applyClock(req.params.id, jsonBody(req))
+    if (!graphic) return res.status(404).json({ error: 'Graphic not found' })
+    res.json(graphic)
+  })
+
+  /* ---------------------------------------------------- lower third show */
 
   router.get('/graphics/:id/entries', (req, res) => {
     const graphic = getGraphic(req.params.id)
@@ -216,17 +312,13 @@ export function createApiRouter() {
   })
 
   router.post('/graphics/:id/entries', async (req, res) => {
-    try {
-      const entry = await addLowerThirdEntry(req.params.id, req.body)
-      if (!entry) return res.status(404).json({ error: 'Lower thirds widget not found' })
-      res.status(201).json({ entry, graphic: getGraphic(req.params.id) })
-    } catch (err) {
-      res.status(400).json({ error: err.message || 'Failed to add person' })
-    }
+    const entry = await addLowerThirdEntry(req.params.id, jsonBody(req))
+    if (!entry) return res.status(404).json({ error: 'Lower thirds widget not found' })
+    res.status(201).json({ entry, graphic: getGraphic(req.params.id) })
   })
 
   router.patch('/graphics/:id/entries/:entryId', async (req, res) => {
-    const entry = await updateLowerThirdEntry(req.params.id, req.params.entryId, req.body)
+    const entry = await updateLowerThirdEntry(req.params.id, req.params.entryId, jsonBody(req))
     if (!entry) return res.status(404).json({ error: 'Entry not found' })
     res.json({ entry, graphic: getGraphic(req.params.id) })
   })
@@ -243,58 +335,21 @@ export function createApiRouter() {
     res.json(graphic)
   })
 
-  router.post('/graphics/:id/hide', async (req, res) => {
-    const graphic = getGraphic(req.params.id)
-    if (!graphic) return res.status(404).json({ error: 'Graphic not found' })
-    if (graphic.type === 'lowerThirdShow') {
-      const next = await hideLowerThirdShow(req.params.id)
-      return res.json(next)
-    }
-    await setGraphicVisibility(req.params.id, false)
-    res.json(getGraphic(req.params.id))
-  })
+  /* ------------------------------------------------------------------ F1 */
 
-  router.post('/graphics/:id/toggle', async (req, res) => {
-    const graphic = getGraphic(req.params.id)
-    if (!graphic) return res.status(404).json({ error: 'Graphic not found' })
-
-    const visible =
-      req.body?.visible !== undefined ? Boolean(req.body.visible) : !graphic.visible
-
-    await setGraphicVisibility(req.params.id, visible)
-    res.json(getGraphic(req.params.id))
-  })
-
-  router.post('/graphics/:id/toggle-solo', async (req, res) => {
-    const graphic = getGraphic(req.params.id)
-    if (!graphic) return res.status(404).json({ error: 'Graphic not found' })
-
-    const soloVisible =
-      req.body?.soloVisible !== undefined ? Boolean(req.body.soloVisible) : !graphic.soloVisible
-
-    const { setGraphicSoloVisibility } = await import('./state.js')
-    await setGraphicSoloVisibility(req.params.id, soloVisible)
-    res.json(getGraphic(req.params.id))
-  })
-
-  router.get('/f1/:id/live', async (req, res) => {
-    const { getLiveSnapshot } = await import('./f1Timing.js')
+  router.get('/f1/:id/live', (req, res) => {
     const snapshot = getLiveSnapshot(req.params.id)
     if (!snapshot) return res.status(404).json({ error: 'F1 timing graphic not found' })
     res.json(snapshot)
   })
 
   router.post('/f1/:id/import-drivers', async (req, res) => {
-    const { importDriversOnce } = await import('./f1Timing.js')
     const result = await importDriversOnce(req.params.id)
     res.status(result.status).json(result.body)
   })
 
   /** Probeert MultiViewer lokaal te openen (Mac/Windows/Linux); anders download-URL. */
   router.post('/system/open-multiviewer', async (_req, res) => {
-    const { execFile } = await import('node:child_process')
-    const { promisify } = await import('node:util')
-    const execFileAsync = promisify(execFile)
     const downloadUrl = 'https://multiviewer.app'
     try {
       if (process.platform === 'darwin') {
@@ -310,26 +365,6 @@ export function createApiRouter() {
     } catch {
       res.json({ ok: false, opened: false, url: downloadUrl })
     }
-  })
-
-  router.post('/graphics', async (req, res) => {
-    try {
-      const { createGraphicFromType } = await import('./graphicDefaults.js')
-      const type = req.body?.type
-      const name = req.body?.name?.trim() || 'New widget'
-      if (!type) return res.status(400).json({ error: 'Type is required' })
-      const graphic = createGraphicFromType(type, name)
-      await addGraphic(graphic)
-      res.status(201).json(graphic)
-    } catch (err) {
-      res.status(400).json({ error: err.message || 'Failed to create widget' })
-    }
-  })
-
-  router.delete('/graphics/:id', async (req, res) => {
-    const next = await removeGraphic(req.params.id)
-    if (!next) return res.status(404).json({ error: 'Graphic not found' })
-    res.json({ ok: true, state: getState() })
   })
 
   return router

@@ -1,46 +1,4 @@
-/**
- * FIFA-style clock formatting.
- * Regular: 55:15 (55 min, 15 sec)
- * Stoppage 2nd half: 90+1:22
- * Extra time 2nd period: 105+0:45 or 120+2:10
- */
-export function formatMatchClock(clock = {}) {
-  const minute = Number(clock.minute) || 0
-  const second = Number(clock.second) || 0
-  const period = clock.period || 'first_half'
-  const stoppage = Boolean(clock.stoppageTime)
-  const sec = String(second).padStart(2, '0')
-
-  if (stoppage) {
-    if (period === 'first_half') {
-      const added = Math.max(0, minute - 45)
-      return `45+${added}:${sec}`
-    }
-    if (period === 'second_half') {
-      const added = Math.max(0, minute - 90)
-      return `90+${added}:${sec}`
-    }
-    if (period === 'extra_first') {
-      const added = Math.max(0, minute - 105)
-      return `105+${added}:${sec}`
-    }
-    if (period === 'extra_second') {
-      const added = Math.max(0, minute - 120)
-      return `120+${added}:${sec}`
-    }
-  }
-
-  return `${minute}:${sec}`
-}
-
-export const PERIOD_LABELS = {
-  first_half: '1e helft',
-  second_half: '2e helft',
-  extra_first: 'Verlenging 1e',
-  extra_second: 'Verlenging 2e',
-  penalties: 'Penalties'
-}
-
+/** Default data for a new matchScoreboard (clock logic lives in public/shared/match-utils.js and server/clockOps.js). */
 export function defaultMatchData() {
   return {
     sport: 'football',
