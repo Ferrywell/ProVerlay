@@ -209,3 +209,199 @@ h1, h2 {
 .color-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* ---- Wide panels (projects, custom CSS) ---- */
+.panel--wide {
+  grid-column: 1 / -1;
+}
+
+.panel-head code,
+.custom-css__help code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.86em;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  background: var(--pv-gray-fill);
+}
+
+/* ---- Project list ---- */
+.project-list {
+  margin: var(--pv-space-md) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--pv-space-xs);
+}
+
+.project-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--pv-space-sm);
+  padding: var(--pv-space-sm) var(--pv-space-md);
+  border-radius: var(--pv-radius-sm);
+  border: 1px solid var(--pv-border);
+  background: rgba(255, 255, 255, 0.55);
+  transition: border-color 0.15s ease;
+}
+
+.project-row:hover {
+  border-color: var(--pv-border-strong);
+}
+
+.project-row.is-active {
+  border-color: var(--pv-accent);
+  box-shadow: inset 3px 0 0 var(--pv-accent);
+}
+
+.project-row__meta {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.project-row__name {
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-row__id {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.75rem;
+  color: var(--pv-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--pv-space-xs);
+  grid-column: 3;
+}
+
+.project-row__actions .button {
+  min-height: 36px;
+}
+
+.project-row__actions .button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- Custom CSS ---- */
+.custom-css {
+  display: grid;
+  gap: var(--pv-space-md);
+  margin-top: var(--pv-space-md);
+}
+
+.custom-css__field textarea {
+  min-height: 18rem;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+
+.custom-css__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pv-space-sm);
+}
+
+.custom-css__bar .button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.custom-css__size {
+  font-size: var(--pv-type-footnote);
+  color: var(--pv-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.custom-css__size.is-error {
+  color: var(--pv-danger);
+  font-weight: 600;
+}
+
+.custom-css__help {
+  border-top: 1px solid var(--pv-separator);
+  padding-top: var(--pv-space-sm);
+  font-size: 0.86rem;
+  color: var(--pv-text-secondary);
+}
+
+.custom-css__help summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--pv-text);
+}
+
+.custom-css__help-body p,
+.custom-css__help-body ul {
+  margin: var(--pv-space-xs) 0 0;
+  line-height: 1.6;
+}
+
+.custom-css__help-body ul {
+  padding-left: 1.1rem;
+}
+
+/* ---- Dialogs (rename / duplicate / delete) ---- */
+.project-dialog {
+  border: 0;
+  border-radius: var(--pv-radius);
+  padding: 0;
+  width: min(26rem, calc(100vw - 2rem));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.project-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.project-dialog__form {
+  display: grid;
+  gap: var(--pv-space-md);
+  padding: var(--pv-space-lg);
+}
+
+.project-dialog__form h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.project-dialog__text {
+  margin: 0;
+  color: var(--pv-text-secondary);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.project-dialog__actions {
+  display: flex;
+  gap: var(--pv-space-sm);
+  justify-content: flex-end;
+}
+
+@media (max-width: 700px) {
+  .project-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .project-row__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
