@@ -1391,8 +1391,13 @@ input[type='color']:focus-visible {
 }
 
 /* ---- Desktop app (Electron, hidden title bar) ---- */
-/* The app header is the window drag area. Only macOS draws the traffic
-   lights inside the page, so only there is space reserved on the left. */
+/* The app header is the window drag area.
+   - macOS draws the traffic lights inside the page: space on the left.
+   - Windows/Linux draw the caption buttons (minimise/maximise/close) over
+     the top-right of the page (titleBarOverlay, Window Controls Overlay):
+     space on the right. The width comes from env(titlebar-area-*), which is
+     0 when there is no overlay (e.g. a popup with a normal frame).
+     --pv-caption-inset can be set by hand to simulate it in a browser. */
 .is-electron .pv-app-header {
   -webkit-app-region: drag;
   user-select: none;
@@ -1400,6 +1405,14 @@ input[type='color']:focus-visible {
 
 .is-electron.is-macos .pv-app-header {
   padding-left: 84px;
+}
+
+.is-electron:not(.is-macos) {
+  --pv-caption-inset: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+}
+
+.is-electron:not(.is-macos) .pv-app-header {
+  padding-right: max(var(--pv-space-xl), calc(var(--pv-caption-inset) + var(--pv-space-md)));
 }
 
 .is-electron .pv-app-header a,
