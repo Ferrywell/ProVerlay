@@ -11,8 +11,22 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-17
+
+First Windows release (beta), the same overlay output on every OS, and fixes from a
+full Windows 11 beta test (#19) that also affect the Mac app.
+
 ### Added
 
+- **Windows app (beta)**: `ProVerlay-win-x64-setup.exe`, a per-user NSIS installer for
+  Windows 10/11 x64 (no admin rights; desktop and Start-menu shortcuts; the uninstaller
+  keeps your projects). Unsigned for now: SmartScreen asks for *More info → Run anyway*.
+  Every release builds, verifies, installs, starts and uninstalls it in CI.
+- Desktop app on Windows: frameless window with native caption buttons that follow the
+  Light/Dark theme, tray icon with Open Dashboard / Copy Operator URL / Copy Render URL /
+  Preferences / Quit, close-to-tray, a firewall explanation before Windows asks, and a
+  "Port already in use" dialog with *Choose Another Port…*.
+- Preferences window (Ctrl+, / Cmd+,): port, open the dashboard on start, start at login.
 - Bundled **Inter** 4.1 font (SIL Open Font License 1.1, Latin + Latin Extended variable
   subset, 137 KB) in `public/shared/fonts/`, loaded by `/render`, the scoreboard editor
   and the dashboard previews. The font menus offer it as "Inter (bundled)".
@@ -24,6 +38,17 @@ material. The entries below are reconstructed from that history; the tags
 
 ### Changed
 
+- Start at login opens ProVerlay in the background (server and tray, no dashboard
+  window).
+- New Match score widgets start in the 1st half; new Hockey scorebugs start at Q1 15:00
+  with HOME / AWAY. The hockey break label is "BREAK" instead of the Dutch "RUST" (on air,
+  in the operator and in the Companion variable). Saved projects are unchanged.
+- An imported project whose name already exists gets " (imported)" added to its name.
+- The network list leaves out link-local 169.254.x.x addresses that phones can't reach.
+- The Companion dev setup (`npm run setup-dev:node`) copies the module instead of linking
+  it; `--link` keeps the old behaviour for Companion 4.x.
+- Dependencies updated (`npm audit fix`, Express 4.22.3): fixes advisories in
+  `proxy-addr`, `body-parser`, `qs`, `multer`, `engine.io`, `ws` and `socket.io-parser`.
 - New projects and the bundled `demo-club` preset use `'Inter', system-ui, sans-serif`
   as the brand font instead of the OS UI font (SF Pro on a Mac, Segoe UI or Arial on
   Windows), so the same overlay looks identical in OBS/vMix on every machine. Existing
@@ -33,6 +58,20 @@ material. The entries below are reconstructed from that history; the tags
 
 ### Fixed
 
+- **OBS/vMix sources, operator and dashboard pages now reconnect after a clean
+  restart** of ProVerlay (port change, Quit + start again, update). Before, they kept
+  showing the last state until someone pressed Refresh.
+- **Lower thirds**: *Edit settings* opens the people list (it opened the image editor,
+  so people could not be added in the desktop app). Match score likewise; both panels
+  link to the design editor.
+- The app no longer mistakes another program on its port for ProVerlay.
+- Uninstalling on Windows removes the start-at-login entry.
+- The ticker no longer shows an empty brand tab when there is no brand name.
+- Leftover Dutch labels in the scoreboard editor are now English.
+- The first-run firewall note explains Windows' Public vs Private networks; the close-to-
+  tray notice can't be lost to Do Not Disturb; the window fits smaller or scaled screens;
+  Chromium caches stay out of the roaming profile on Windows; the export Save dialog has
+  a proper title; native select menus follow dark mode.
 - **Open MultiViewer** on Windows: the app was reported as opened even when MultiViewer
   was not installed, because `start multiviewer://` always succeeds. ProVerlay now
   checks the `multiviewer:` protocol registration first and offers the download page
@@ -262,7 +301,8 @@ and a clean repository.
   operator, scoreboard editor, render page for OBS/vMix, project system with
   `.proverlay` export/import, and the Bitfocus Companion module.
 
-[Unreleased]: https://github.com/Ferrywell/ProVerlay/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Ferrywell/ProVerlay/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.8...v0.7.0
 [0.6.8]: https://github.com/Ferrywell/ProVerlay/compare/v0.6.7...v0.6.8
