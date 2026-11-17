@@ -1,10 +1,11 @@
 # ProVerlay desktop app (Electron)
 
 The desktop app wraps the same Node server and browser UIs you get with `npm start`
-in an Electron shell with a menu-bar icon. Today it is built for **macOS on Apple
-Silicon** only.
+in an Electron shell with a menu-bar icon. Today it is built for **macOS**, with
+separate downloads for Apple Silicon (`ProVerlay-mac-arm64.zip`) and Intel
+(`ProVerlay-mac-x64.zip`).
 
-## Install (macOS, Apple Silicon)
+## Install (macOS)
 
 Download the latest release from the
 [releases page](https://github.com/Ferrywell/ProVerlay/releases).
@@ -18,8 +19,8 @@ Download the latest release from the
    ```
 
 The build is **ad-hoc signed** and not notarized with an Apple Developer ID, so
-Gatekeeper blocks it after download. This happens on every Apple Silicon Mac
-(M1/M2/M3/…); it is not an architecture problem. An Intel build is not available yet.
+Gatekeeper blocks it after download. This happens on every Mac, Apple Silicon or
+Intel; it is not an architecture problem.
 
 ## Behaviour
 

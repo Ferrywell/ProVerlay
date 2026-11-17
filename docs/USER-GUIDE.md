@@ -18,8 +18,9 @@ adding widgets, getting them into OBS or vMix and controlling them from an iPad.
 
 ## 1. First start
 
-**Mac app (Apple Silicon).** Download the latest release from the
-[releases page](https://github.com/Ferrywell/ProVerlay/releases), unzip it, move
+**Mac app.** Download the latest release from the
+[releases page](https://github.com/Ferrywell/ProVerlay/releases) (`ProVerlay-mac-arm64.zip`
+for Apple Silicon, `ProVerlay-mac-x64.zip` for Intel Macs), unzip it, move
 `ProVerlay.app` to Applications and open it with **right-click → Open** the first
 time (see [Gatekeeper](#macos-says-the-app-cant-be-opened) if that fails). The
 dashboard opens in the app window and a ProVerlay icon appears in the menu bar.

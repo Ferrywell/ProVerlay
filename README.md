@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://github.com/Ferrywell/ProVerlay/releases/latest"><img src="https://img.shields.io/github/v/release/Ferrywell/ProVerlay?label=release&color=378add" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-378add" alt="License: GPL-3.0"></a>
-  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon-1d1d1f?logo=apple" alt="macOS Apple Silicon">
+  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%C2%B7%20Intel-1d1d1f?logo=apple" alt="macOS Apple Silicon and Intel">
   <img src="https://img.shields.io/badge/output-OBS%20%C2%B7%20vMix-3b6d11" alt="OBS and vMix">
   <img src="https://img.shields.io/badge/Stream%20Deck-Companion-6e6e73" alt="Bitfocus Companion">
 </p>
@@ -51,7 +51,7 @@ runs on your own machine and network — no account, no cloud.
 - **F1 timing** from a running [MultiViewer](https://multiviewer.app) instance, or
   manual.
 - **REST API and Socket.io** for your own automation.
-- **Mac app** (Apple Silicon) with a menu-bar icon; or run the server from source on
+- **Mac app** (Apple Silicon and Intel) with a menu-bar icon; or run the server from source on
   any OS with Node.
 
 ## How it works
@@ -88,8 +88,7 @@ opens the operator automatically.
    [releases page](https://github.com/Ferrywell/ProVerlay/releases):
    `ProVerlay-mac-arm64.zip` for Apple Silicon (M1 and later) or
    `ProVerlay-mac-x64.zip` for Intel Macs. `SHA256SUMS.txt` lets you check the
-   download (`shasum -a 256 -c --ignore-missing SHA256SUMS.txt`). The Intel zip and
-   checksums are published from the release after v0.7.0 on.
+   download (`shasum -a 256 -c --ignore-missing SHA256SUMS.txt`).
 2. Unzip and move `ProVerlay.app` to **Applications**.
 3. The first time: **right-click → Open → Open**. If macOS still refuses:
    `xattr -cr /Applications/ProVerlay.app` (the app is ad-hoc signed, not notarized).
@@ -149,9 +148,9 @@ project on another machine. Imported projects are not activated until you click
 ## Platforms
 
 - **Server and browser UIs:** run anywhere Node 22 runs (macOS, Windows, Linux).
-- **Desktop app:** macOS on Apple Silicon for now. A Windows app is planned
+- **Desktop app:** macOS on Apple Silicon and Intel. A Windows app is planned
   (`electron-builder.yml` already has a Windows target) but is not built or tested
-  yet. An Intel Mac build is not available.
+  yet.
 
 ## Where your data lives
 
