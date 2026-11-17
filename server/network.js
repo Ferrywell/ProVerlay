@@ -1,7 +1,17 @@
 import os from 'os'
 
-export function getLocalAddresses() {
-  const nets = os.networkInterfaces()
+/** 169.254.0.0/16: self-assigned when an adapter got no DHCP lease. */
+export function isLinkLocalIPv4(address) {
+  return /^169\.254\.\d{1,3}\.\d{1,3}$/.test(String(address))
+}
+
+/**
+ * IPv4 addresses a phone, tablet or Companion on the LAN can use.
+ * Link-local addresses (169.254.x.x) belong to an unconfigured adapter and
+ * are unreachable from the LAN, so they are left out — unless there is
+ * nothing else, as with a direct cable between this computer and a device.
+ */
+export function getLocalAddresses(nets = os.networkInterfaces()) {
   const addresses = []
   for (const name of Object.keys(nets)) {
     for (const net of nets[name] || []) {
@@ -10,7 +20,8 @@ export function getLocalAddresses() {
       }
     }
   }
-  return addresses
+  const routable = addresses.filter(({ address }) => !isLinkLocalIPv4(address))
+  return routable.length ? routable : addresses
 }
 
 export function buildNetworkUrls(port) {

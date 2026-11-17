@@ -6,6 +6,8 @@
  *   and the live-control containers become inert (no taps, no keyboard) and dimmed.
  */
 
+import { reconnectAfterServerDisconnect } from '/public/shared/reconnect.js'
+
 const BANNER_TEXT = 'Disconnected — changes are not sent'
 
 let pageSocket = null
@@ -18,7 +20,7 @@ let pageSocket = null
 export function sharedSocket() {
   if (pageSocket) return pageSocket
   if (typeof window.io !== 'function') return null
-  pageSocket = window.io()
+  pageSocket = reconnectAfterServerDisconnect(window.io())
   return pageSocket
 }
 

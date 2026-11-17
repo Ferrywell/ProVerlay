@@ -438,6 +438,25 @@ export async function duplicateProject(id, rawName) {
 }
 
 /** "Name copy", "Name copy 2", … (first one not used by another project). */
+/**
+ * Display name for an imported project: the archive's own name, or with
+ * " (imported)" / " (imported 2)" … appended when a project already has that
+ * name (case-insensitive), so the project menu never lists two the same.
+ */
+export function importedName(base, registry) {
+  const key = (name) => String(name || '').replace(/\s+/g, ' ').trim().toLowerCase()
+  const clean = String(base || '').replace(/\s+/g, ' ').trim().slice(0, PROJECT_NAME_MAX) || 'Imported project'
+  const taken = new Set(registry.projects.map((p) => key(p.name)))
+  if (!taken.has(key(clean))) return clean
+  const stem = clean.slice(0, PROJECT_NAME_MAX - 16).trim()
+  const first = `${stem} (imported)`
+  if (!taken.has(key(first))) return first
+  for (let n = 2; ; n++) {
+    const candidate = `${stem} (imported ${n})`
+    if (!taken.has(key(candidate))) return candidate
+  }
+}
+
 function copyName(base, registry) {
   const names = new Set(registry.projects.map((p) => p.name))
   const first = `${base} copy`.slice(0, PROJECT_NAME_MAX)
@@ -712,13 +731,14 @@ export async function importProjectFromZip(tempPath, originalName = 'import.prov
       }
 
       const registry = await readRegistry()
-      const id = await uniqueProjectId(slugify(suggestedName), registry)
+      const name = importedName(suggestedName, registry)
+      const id = await uniqueProjectId(slugify(name), registry)
       await renameWithRetry(staging, projectDir(id))
       staging = null
 
       const entry = {
         id,
-        name: suggestedName,
+        name,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }

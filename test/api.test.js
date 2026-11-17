@@ -145,7 +145,7 @@ test('graphic PATCH: id/type immutable, typed fields, no container flips', async
   assert.equal(ok.json.visible, true)
   assert.equal(ok.json.data.homeScore, 2)
   assert.equal(ok.json.data.clock.minute, 10)
-  assert.equal(ok.json.data.clock.period, 'second_half', 'nested merge keeps siblings')
+  assert.equal(ok.json.data.clock.period, 'first_half', 'nested merge keeps siblings')
 
   const missing = await srv.patch('/api/graphics/does-not-exist', { visible: true })
   assert.equal(missing.status, 404)
@@ -281,11 +281,23 @@ test('atomic match clock: start, start-on-running keeps elapsed time, pause, adj
     [reset.json.data.clock.minute, reset.json.data.clock.second, reset.json.data.clock.running],
     [0, 0, false]
   )
-  assert.equal(reset.json.data.clock.period, 'second_half', 'other clock fields untouched')
+  assert.equal(reset.json.data.clock.period, 'first_half', 'other clock fields untouched')
 
   for (const body of [{ action: 'explode' }, { action: 'adjust' }, { action: 'set', ms: -1 }, {}]) {
     assert.equal((await srv.post(`/api/graphics/${g.id}/clock`, body)).status, 400, JSON.stringify(body))
   }
+})
+
+test('new score widgets start at the first period with neutral team codes', async () => {
+  const match = await createGraphic('matchScoreboard')
+  assert.equal(match.data.clock.period, 'first_half')
+  assert.deepEqual([match.data.clock.minute, match.data.clock.second], [0, 0])
+  assert.deepEqual([match.data.homeCode, match.data.awayCode], ['HOME', 'AWAY'])
+
+  const hockey = await createGraphic('hockeyScorebug')
+  assert.equal(hockey.data.clock.period, 'q1')
+  assert.equal(hockey.data.clock.remainingMs, hockey.data.clock.quarterMs, 'full quarter on the clock')
+  assert.deepEqual([hockey.data.homeCode, hockey.data.awayCode], ['HOME', 'AWAY'])
 })
 
 test('atomic hockey clock: start, start-on-running, pause, adjust, reset', async () => {
@@ -297,15 +309,17 @@ test('atomic hockey clock: start, start-on-running, pause, adjust, reset', async
   await sleep(30)
   const again = await srv.post(`/api/graphics/${g.id}/clock`, { action: 'start' })
   assert.equal(again.json.data.clock.runningSince, since)
-  assert.equal(again.json.data.clock.remainingMs, 775000)
+  assert.equal(again.json.data.clock.remainingMs, 900000)
 
   const pause = await srv.post(`/api/graphics/${g.id}/clock`, { action: 'pause' })
   const rem = pause.json.data.clock.remainingMs
   assert.equal(pause.json.data.clock.running, false)
-  assert.ok(rem < 775000 && rem > 770000, `remaining ${rem}`)
+  assert.ok(rem < 900000 && rem > 895000, `remaining ${rem}`)
 
-  const adj = await srv.post(`/api/graphics/${g.id}/clock`, { action: 'adjust', ms: 60_000 })
-  assert.equal(adj.json.data.clock.remainingMs, Math.min(900000, rem + 60_000))
+  const adj = await srv.post(`/api/graphics/${g.id}/clock`, { action: 'adjust', ms: -60_000 })
+  assert.equal(adj.json.data.clock.remainingMs, rem - 60_000)
+  const capped = await srv.post(`/api/graphics/${g.id}/clock`, { action: 'adjust', ms: 120_000 })
+  assert.equal(capped.json.data.clock.remainingMs, 900000, 'never more than a full quarter')
 
   const reset = await srv.post(`/api/graphics/${g.id}/clock`, { action: 'reset' })
   assert.equal(reset.json.data.clock.remainingMs, 900000)

@@ -4,15 +4,15 @@ import { defaultF1Drivers } from './f1Timing.js'
 
 export function defaultHockeyScorebugData() {
   return {
-    homeCode: 'NED',
-    awayCode: 'SPA',
+    homeCode: 'HOME',
+    awayCode: 'AWAY',
     homeScore: 0,
     awayScore: 0,
     homeColor: '#E5484D',
     awayColor: '#3E63DD',
     clock: {
-      period: 'q2',
-      remainingMs: 775000,
+      period: 'q1',
+      remainingMs: 900000,
       quarterMs: 900000,
       running: false,
       runningSince: null

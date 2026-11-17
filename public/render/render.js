@@ -28,6 +28,7 @@ import {
   resolveHockeyTypography,
   resolveLiveHockeyClock
 } from '/public/shared/hockey-utils.js'
+import { reconnectAfterServerDisconnect } from '/public/shared/reconnect.js'
 
 const stage = document.getElementById('stage')
 const layers = new Map()
@@ -485,10 +486,11 @@ function buildCustomTicker(rawData, graphicId) {
   if (asObject(data.layout).background) return html
   // No PNG bar uploaded: built-in dark bar with a brand-colour tab in the
   // left inset (where a PNG would normally carry the logo), so the text is
-  // legible over any video.
+  // legible over any video. Without a brand name there is no tab at all.
   const insetL = Number.isFinite(Number(data.textInsetLeft)) ? Number(data.textInsetLeft) : 16
   const label = brandName ? `<span class="ticker-default__label">${escape(brandName)}</span>` : ''
-  return `<div class="ticker-default" style="--ticker-tab-w:${Math.max(0, Math.min(40, insetL))}%">${html}${label}</div>`
+  const tabClass = brandName ? '' : ' ticker-default--no-tab'
+  return `<div class="ticker-default${tabClass}" style="--ticker-tab-w:${Math.max(0, Math.min(40, insetL))}%">${html}${label}</div>`
 }
 
 /** Relative luminance (0 dark … 1 light) of a #rgb/#rrggbb colour, or null. */
@@ -572,7 +574,7 @@ function buildHockeyScorebug(data, graphicId) {
   return `
     <div class="hockey-bug${breakClass}" data-hockey-id="${graphicId}" style="${vars}">
       <div class="hockey-arm hockey-arm--home">
-        <span class="hockey-code" data-bind="homeCode">${escape(data.homeCode || 'NED')}</span>
+        <span class="hockey-code" data-bind="homeCode">${escape(data.homeCode || 'HOME')}</span>
         <span class="hockey-score"><span class="score-el-text score-el-text--animated" data-score-bind="homeScore" data-graphic-id="${graphicId}">${escape(String(data.homeScore ?? 0))}</span></span>
       </div>
       <div class="hockey-clock">
@@ -581,7 +583,7 @@ function buildHockeyScorebug(data, graphicId) {
       </div>
       <div class="hockey-arm hockey-arm--away">
         <span class="hockey-score"><span class="score-el-text score-el-text--animated" data-score-bind="awayScore" data-graphic-id="${graphicId}">${escape(String(data.awayScore ?? 0))}</span></span>
-        <span class="hockey-code" data-bind="awayCode">${escape(data.awayCode || 'SPA')}</span>
+        <span class="hockey-code" data-bind="awayCode">${escape(data.awayCode || 'AWAY')}</span>
       </div>
     </div>
   `
@@ -611,8 +613,8 @@ function updateHockeyScorebug(layer, graphic) {
   applyHockeyTypographyVars(bug, d.style)
   bug.classList.toggle('hockey-bug--break', live.period === 'break')
 
-  setHockeyText(bug.querySelector('[data-bind="homeCode"]'), d.homeCode || 'NED', { animate: true })
-  setHockeyText(bug.querySelector('[data-bind="awayCode"]'), d.awayCode || 'SPA', { animate: true })
+  setHockeyText(bug.querySelector('[data-bind="homeCode"]'), d.homeCode || 'HOME', { animate: true })
+  setHockeyText(bug.querySelector('[data-bind="awayCode"]'), d.awayCode || 'AWAY', { animate: true })
   setHockeyText(bug.querySelector('[data-bind="period"]'), hockeyPeriodLabel(live.period), { animate: true })
   setHockeyText(bug.querySelector('[data-bind="clock"]'), formatHockeyClock(d.clock || {}))
 
@@ -1779,7 +1781,7 @@ async function applyState(state) {
 initRenderCompat()
 setupPreviewWindow()
 
-const socket = io()
+const socket = reconnectAfterServerDisconnect(io())
 socket.on('stateChanged', applyState)
 socket.on('f1TimingUpdate', (payload) => {
   if (!payload?.graphicId) return
