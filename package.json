@@ -10,7 +10,9 @@
     "test": "node --test test/*.test.js",
     "app": "electron .",
     "generate:seed": "node scripts/generate-seed-data.mjs",
-    "dist:mac": "node scripts/generate-seed-data.mjs && electron-builder --mac dir --arm64 && node scripts/package-mac-app.mjs arm64"
+    "dist:mac": "node scripts/generate-seed-data.mjs && electron-builder --mac dir --arm64 && node scripts/package-mac-app.mjs arm64",
+    "dist:mac:x64": "node scripts/generate-seed-data.mjs && electron-builder --mac dir --x64 && node scripts/package-mac-app.mjs x64",
+    "changelog": "node scripts/changelog-section.mjs"
   },
   "engines": {
     "node": ">=22"
