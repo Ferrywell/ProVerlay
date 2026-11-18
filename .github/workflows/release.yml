@@ -365,6 +365,8 @@ jobs:
           path: release
           merge-multiple: true
 
+      # The asset names and SHA256SUMS.txt are read by the in-app updater
+      # (electron/updater.js): renaming them breaks updating installed copies.
       - name: Checksums
         working-directory: release
         run: |

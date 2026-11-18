@@ -62,6 +62,25 @@ notes and the checksums.
 | `ProVerlay-win-x64-setup.exe` | Windows installer (x64, Windows 10 and later) |
 | `SHA256SUMS.txt` | SHA-256 checksums of the zips and the installer |
 
+These names are a contract: the in-app updater (`electron/updater.js`) looks for exactly
+these assets on the latest release and checks the download against `SHA256SUMS.txt`.
+Renaming one breaks updating for every installed copy. A release marked *pre-release*
+is never offered as an update.
+
+### Testing the in-app update
+
+Build the app locally (`npm run dist:mac`), copy `dist/mac-arm64/ProVerlay.app` to a
+folder you can write to and start it as an older version against its own data:
+
+```bash
+PROVERLAY_UPDATE_PRETEND_VERSION=0.0.1 PROVERLAY_USER_DATA_DIR=/tmp/pv-update-test PORT=2398 \
+  /tmp/pv-update-test/ProVerlay.app/Contents/MacOS/ProVerlay
+```
+
+Preferences → Updates then offers the latest release; *Install and Restart* replaces
+that copy and starts the new version. The helper's log is
+`$TMPDIR/ProVerlay-update-<version>/install-update.log`.
+
 Two separate zips rather than one universal app: each download is half the size, and
 the Intel build is a plain `electron-builder --x64` run on the same Apple Silicon
 runner (the app has no native modules, so nothing has to be compiled for x64).

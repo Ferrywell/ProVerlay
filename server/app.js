@@ -31,6 +31,7 @@ import { setDataDir } from './paths.js'
 import { drainWrites } from './writeQueue.js'
 import { originGuard, socketAllowRequest } from './netSecurity.js'
 import { isValidProjectId } from './validation.js'
+import { debugLog, describeClient, describeStateChange, onDebugLog, debugEntries } from './debugLog.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
@@ -73,6 +74,26 @@ function errorHandler(err, req, res, next) {
   res.status(status).type('text/plain').send(message || 'Request failed')
 }
 
+function isLoopback(address) {
+  const addr = String(address || '').replace(/^::ffff:/, '')
+  return addr === '127.0.0.1' || addr === '::1' || addr.startsWith('127.')
+}
+
+const cleanText = (value, max = 200) => String(value ?? '').slice(0, max)
+
+/** Log every API write (who, what, result); reads are not logged. */
+function logApiWrites(req, res, next) {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next()
+  const started = Date.now()
+  res.on('finish', () => {
+    const status = res.statusCode
+    debugLog('api', `${req.method} ${req.originalUrl.split('?')[0]} → ${status} (${Date.now() - started} ms) from ${describeClient(req)}`, {
+      level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info'
+    })
+  })
+  next()
+}
+
 /**
  * Build (but do not start) the server.
  * @param {{ dataDir?: string, port?: number, host?: string }} [options]
@@ -81,6 +102,56 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
   if (dataDir) setDataDir(dataDir)
 
   let boundPort = port
+  const debugClients = new Map() // socket.id -> what the page told us about itself
+  const renderErrorBudget = new Map() // socket.id -> { windowStart, count }
+
+  function registerDebugClient(socket, info) {
+    if (!info || typeof info !== 'object') return
+    const page = cleanText(info.page, 40).replace(/[^a-z0-9-]/gi, '') || 'page'
+    const width = Math.round(Number(info.width)) || 0
+    const height = Math.round(Number(info.height)) || 0
+    const obs = Boolean(info.obs)
+    const kind = page === 'render' ? (obs ? 'OBS browser source' : 'Render page') : `${page} page`
+    const where = isLoopback(socket.handshake.address) ? 'this computer' : String(socket.handshake.address).replace(/^::ffff:/, '')
+    const known = debugClients.get(socket.id)
+    const client = {
+      id: socket.id,
+      page,
+      label: `${kind} on ${where}${width && height ? ` (${width}×${height})` : ''}`,
+      obs,
+      obsVersion: cleanText(info.obsVersion, 40),
+      filter: cleanText(info.filter, 120),
+      userAgent: cleanText(socket.handshake.headers['user-agent'], 300),
+      address: where,
+      width,
+      height,
+      connectedAt: known?.connectedAt || new Date().toISOString(),
+      lastError: known?.lastError || null
+    }
+    debugClients.set(socket.id, client)
+    if (page === 'render' && !known) {
+      debugLog('render', `${client.label} connected${client.filter ? ` (only graphic ${client.filter})` : ''}`, {
+        detail: client.userAgent
+      })
+    }
+  }
+
+  function reportRenderError(socket, report) {
+    if (!report || typeof report !== 'object') return
+    // At most 20 reports per output per minute: a broken graphic re-renders often.
+    const now = Date.now()
+    const budget = renderErrorBudget.get(socket.id)
+    if (!budget || now - budget.windowStart > 60_000) renderErrorBudget.set(socket.id, { windowStart: now, count: 1 })
+    else if (++budget.count > 20) return
+    const client = debugClients.get(socket.id)
+    const graphicId = cleanText(report.graphicId, 120)
+    const graphic = graphicId ? getState().graphics.find((g) => g.id === graphicId) : null
+    const what = graphic ? `"${graphic.name || graphic.id}" (${graphic.type})` : graphicId || 'a graphic'
+    const message = `${client?.label || 'Render output'}: ${what} ${cleanText(report.phase, 80) || 'failed'}: ${cleanText(report.message, 300)}`
+    if (client) client.lastError = { at: new Date().toISOString(), message }
+    debugLog('render', message, { level: 'error', graphicId: graphicId || undefined, detail: cleanText(report.stack, 2000) || undefined })
+  }
+
   const app = express()
   app.disable('x-powered-by')
   const server = http.createServer(app)
@@ -94,7 +165,8 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
   })
   app.use(originGuard())
   app.use(express.json({ limit: '5mb' }))
-  app.use('/api', createApiRouter({ getPort: () => boundPort }))
+  app.use('/api', logApiWrites)
+  app.use('/api', createApiRouter({ getPort: () => boundPort, getDebugClients: () => [...debugClients.values()] }))
   app.use('/public', express.static(path.join(ROOT, 'public')))
   app.use('/templates', express.static(path.join(ROOT, 'templates')))
 
@@ -165,6 +237,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
   app.get('/compose', sendPage('compose'))
   app.get('/project', sendPage('project'))
   app.get('/data', sendPage('data'))
+  app.get('/debug', sendPage('debug'))
 
   app.get('/', (req, res) => {
     const device = detectDevice(req.headers['user-agent'] || '')
@@ -177,6 +250,9 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
 
   // Read-only socket API: clients receive `stateChanged` and may ask for
   // `getState`. All writes go through the REST API (validated, queued).
+  // Debug events: pages describe themselves (`debug:hello`), render pages
+  // report graphics that failed to draw (`debug:renderError`), and the Debug
+  // console (loopback only) joins the 'debug' room for live log lines.
   io.on('connection', (socket) => {
     try {
       socket.emit('stateChanged', getState())
@@ -191,10 +267,27 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
         ack({ error: err.message })
       }
     })
+    socket.on('debug:hello', (info) => registerDebugClient(socket, info))
+    socket.on('debug:renderError', (report) => reportRenderError(socket, report))
+    socket.on('debug:subscribe', (_payload, ack) => {
+      if (typeof ack !== 'function') return
+      if (!isLoopback(socket.handshake.address)) return ack({ error: 'The Debug console only works on the ProVerlay computer itself' })
+      socket.join('debug')
+      ack({ entries: debugEntries() })
+    })
+    socket.on('disconnect', () => {
+      renderErrorBudget.delete(socket.id)
+      const client = debugClients.get(socket.id)
+      if (!client) return
+      debugClients.delete(socket.id)
+      if (client.page === 'render') debugLog('render', `${client.label} disconnected`)
+    })
   })
 
   let unsubscribe = null
   let unsubscribeProjects = null
+  let unsubscribeDebug = null
+  let unsubscribeStateLog = null
   let started = false
 
   async function listen() {
@@ -202,6 +295,14 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     resetState()
     await loadState()
     unsubscribe = onStateChange((state) => io.emit('stateChanged', state))
+    let previous = getState()
+    unsubscribeStateLog = onStateChange((state) => {
+      for (const line of describeStateChange(previous, state)) {
+        debugLog('state', line.message, { graphicId: line.graphicId })
+      }
+      previous = state
+    })
+    unsubscribeDebug = onDebugLog((entry) => io.to('debug').emit('debug:log', entry))
     // Project list changed (create/rename/duplicate/delete/import/activate).
     unsubscribeProjects = onProjectsChange(() => {
       listProjects()
@@ -229,6 +330,8 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
       throw err
     })
     boundPort = server.address().port
+    const s = getState()
+    debugLog('server', `Server started on port ${boundPort} with project "${s.projectName || s.projectId}"`)
     server.on('error', (err) => console.error('[server] error:', err))
     return { port: boundPort, url: `http://127.0.0.1:${boundPort}` }
   }
@@ -243,6 +346,12 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     unsubscribe = null
     unsubscribeProjects?.()
     unsubscribeProjects = null
+    unsubscribeDebug?.()
+    unsubscribeDebug = null
+    unsubscribeStateLog?.()
+    unsubscribeStateLog = null
+    debugClients.clear()
+    renderErrorBudget.clear()
     await flushTouchProject()
     await drainWrites()
   }

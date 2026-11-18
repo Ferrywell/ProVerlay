@@ -21,6 +21,15 @@ export function sharedSocket() {
   if (pageSocket) return pageSocket
   if (typeof window.io !== 'function') return null
   pageSocket = reconnectAfterServerDisconnect(window.io())
+  // Listed in the Debug console (connected pages). No personal data: the
+  // page name and window size only.
+  pageSocket.on('connect', () => {
+    pageSocket.emit('debug:hello', {
+      page: window.location.pathname.split('/')[1] || 'home',
+      width: window.innerWidth,
+      height: window.innerHeight
+    })
+  })
   return pageSocket
 }
 

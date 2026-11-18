@@ -11,6 +11,36 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-18
+
+Update ProVerlay from inside the app, and a Debug console that shows what the server and
+the render outputs are doing.
+
+### Added
+
+- **In-app updates** (desktop app): *Preferences → Updates → Check for Updates* (also in
+  the macOS app menu and the tray menu). ProVerlay never checks or updates by itself.
+  *Download* fetches the file for this computer from the latest GitHub release and checks
+  its size and SHA-256 against `SHA256SUMS.txt`; on macOS the unpacked app is also
+  checked for a valid signature, ProVerlay's bundle id and the expected version.
+  *Install and Restart* (macOS) swaps the app after ProVerlay has quit, with the old app
+  put back if that fails; *Quit and Install* (Windows) starts the installer. Both ask
+  first and warn when graphics are on air. See [docs/APP.md](docs/APP.md#updates).
+- **Debug console** (*Preferences → Troubleshooting*, the menus, or `/debug` in a
+  browser on the ProVerlay computer): connected render outputs (OBS browser sources
+  recognised, with size and last error), open dashboards and operators; data sources and
+  F1 towers with where they read from and their status (MultiViewer address, poll and
+  delay, cars, snapshot buffer); per graphic whether it is on air and where its content
+  comes from; and a live, filterable log of state changes, API writes with who sent them,
+  data refreshes, MultiViewer connects and errors, image timers and graphics a render
+  output could not draw. *Copy report* copies it all for a bug report. Loopback only.
+  See [docs/APP.md](docs/APP.md#debug-console).
+
+### Changed
+
+- F1 timing: when MultiViewer cannot be reached the status now says why (not running or
+  live timing API off, network unreachable, timeout) instead of *fetch failed*.
+
 ## [0.10.1] - 2026-11-17
 
 ### Fixed

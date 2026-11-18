@@ -388,6 +388,18 @@ xattr -cr /Applications/ProVerlay.app
 - Check the **Live sync** pill in the dashboard header.
 - Refresh the browser input in OBS/vMix.
 - Check that a firewall or proxy does not block WebSocket connections on port 2014.
+- Open the **Debug console** (desktop app: Preferences → Troubleshooting; in a browser on
+  the ProVerlay computer: `http://localhost:2014/debug`). It shows whether OBS/vMix is
+  connected, which graphics are on air, where their content comes from (a data source,
+  MultiViewer) and any error a render output reported. See
+  [APP.md → Debug console](APP.md#debug-console).
+
+### Updating ProVerlay
+
+The desktop app checks for a new version only when you ask: **Preferences → Updates →
+Check for Updates**. Download and install from there; see
+[APP.md → Updates](APP.md#updates). Updating during a show takes the graphics off air
+for a few seconds.
 
 ## Security
 

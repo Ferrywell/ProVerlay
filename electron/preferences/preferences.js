@@ -135,6 +135,135 @@
     if (event.key === 'Escape' && !busy) bridge.close()
   })
 
+  /* ------------------------------------------------------------ updates */
+
+  var updateVersion = document.getElementById('update-version')
+  var updateCheck = document.getElementById('update-check')
+  var updatePanel = document.getElementById('update-panel')
+  var updateTitle = document.getElementById('update-title')
+  var updateDetail = document.getElementById('update-detail')
+  var updateProgress = document.getElementById('update-progress')
+  var updateNotes = document.getElementById('update-notes')
+  var updateCancel = document.getElementById('update-cancel')
+  var updateAction = document.getElementById('update-action')
+  var updateActions = document.getElementById('update-actions')
+  var updateNext = null // what updateAction does in the current phase
+
+  function megabytes(bytes) {
+    return (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1) + ' MB'
+  }
+
+  var lastUpdate = null
+
+  function renderUpdate(u) {
+    if (!u) return
+    if (!u.currentVersion && lastUpdate) u.currentVersion = lastUpdate.currentVersion
+    lastUpdate = u
+    updateVersion.textContent = 'ProVerlay ' + u.currentVersion
+    var busy = u.phase === 'checking' || u.phase === 'downloading' || u.phase === 'installing'
+    updateCheck.disabled = busy || u.phase === 'ready'
+    updatePanel.hidden = u.phase === 'idle'
+    updatePanel.classList.toggle('is-error', u.phase === 'error')
+    updateProgress.hidden = u.phase !== 'downloading'
+    updateCancel.hidden = u.phase !== 'downloading'
+    updateNotes.hidden = !u.version || u.phase === 'current' || u.phase === 'checking'
+    updateNext = null
+    var title = ''
+    var detail = ''
+    var action = ''
+    if (u.phase === 'checking') {
+      title = 'Checking for updates…'
+    } else if (u.phase === 'current') {
+      title = 'ProVerlay is up to date.'
+      detail = u.version && u.version !== u.currentVersion
+        ? 'The latest release is ' + u.version + '; you have ' + u.currentVersion + '.'
+        : 'Version ' + u.currentVersion + ' is the newest release.'
+    } else if (u.phase === 'unsupported') {
+      title = 'ProVerlay ' + u.version + ' is available.'
+      detail = u.reason || ''
+      action = 'Open Releases Page'
+      updateNext = 'page'
+    } else if (u.phase === 'available') {
+      title = 'ProVerlay ' + u.version + ' is available.'
+      detail = 'You have ' + u.currentVersion + '. Download ' + megabytes(u.size || 0) + '.'
+      if (u.canInstall) {
+        action = 'Download'
+        updateNext = 'download'
+      } else {
+        detail += ' ' + (u.installNote || '')
+        action = 'Open Releases Page'
+        updateNext = 'page'
+      }
+    } else if (u.phase === 'downloading') {
+      title = 'Downloading ProVerlay ' + u.version + '…'
+      var total = u.progress && u.progress.total
+      var received = (u.progress && u.progress.received) || 0
+      if (total) {
+        updateProgress.max = total
+        updateProgress.value = received
+        detail = megabytes(received) + ' of ' + megabytes(total)
+      } else {
+        updateProgress.removeAttribute('value')
+        detail = megabytes(received)
+      }
+    } else if (u.phase === 'ready') {
+      title = 'ProVerlay ' + u.version + ' is ready to install.'
+      detail = 'Downloaded and verified. Installing quits ProVerlay and opens the new version' +
+        (u.platform === 'win32' ? ' installer.' : '.')
+      action = u.platform === 'win32' ? 'Quit and Install' : 'Install and Restart'
+      updateNext = 'install'
+    } else if (u.phase === 'installing') {
+      title = 'Installing…'
+      detail = 'ProVerlay quits now and starts again in a moment.'
+    } else if (u.phase === 'error') {
+      title = u.during === 'download' ? 'The update could not be downloaded.' : u.during === 'install' ? 'The update could not be installed.' : 'Could not check for updates.'
+      detail = u.error || ''
+      if (u.during === 'download' || u.during === 'install') {
+        action = 'Open Releases Page'
+        updateNext = 'page'
+      }
+    }
+    updateTitle.textContent = title
+    updateDetail.textContent = detail
+    updateDetail.hidden = !detail
+    updateAction.textContent = action
+    updateAction.hidden = !action
+    updateAction.disabled = false
+    updateAction.classList.toggle('prefs__button--primary', updateNext === 'install')
+    updateActions.hidden = updateAction.hidden && updateCancel.hidden && updateNotes.hidden
+  }
+
+  async function runUpdate(step) {
+    try {
+      renderUpdate(await step())
+    } catch (err) {
+      renderUpdate({ phase: 'error', error: err && err.message ? err.message : String(err), currentVersion: '' })
+    }
+  }
+
+  updateCheck.addEventListener('click', function () {
+    runUpdate(bridge.update.check)
+  })
+  updateAction.addEventListener('click', function () {
+    if (updateNext === 'download') runUpdate(bridge.update.download)
+    else if (updateNext === 'install') {
+      updateAction.disabled = true
+      runUpdate(bridge.update.install)
+    } else if (updateNext === 'page') bridge.update.openReleasePage()
+  })
+  updateCancel.addEventListener('click', function () {
+    runUpdate(bridge.update.cancel)
+  })
+  updateNotes.addEventListener('click', function () {
+    bridge.update.openReleasePage()
+  })
+  bridge.update.onChange(renderUpdate)
+  bridge.update.get().then(renderUpdate, function () {})
+
+  document.getElementById('open-debug').addEventListener('click', function () {
+    bridge.openDebug()
+  })
+
   // Keep the window as tall as its content (alerts and notes come and go).
   if (typeof ResizeObserver === 'function') {
     new ResizeObserver(function () {
