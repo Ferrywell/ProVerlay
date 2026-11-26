@@ -700,3 +700,27 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--pv-space-sm);
 }
+
+/* Now playing card: the text that is (or would be) on screen */
+.op-now-playing__track {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Now playing card: Spotify account link */
+.op-spotify-account {
+  display: grid;
+  gap: var(--pv-space-sm);
+}
+.op-spotify-account .op-status {
+  margin: 0;
+}
+.op-spotify-login {
+  justify-self: start;
+  text-decoration: none;
+}
+.op-spotify-uri {
+  overflow-wrap: anywhere;
+  user-select: all;
+}

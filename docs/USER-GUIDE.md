@@ -136,6 +136,7 @@ In the dashboard, choose a **Widget type** and click **Add widget**.
 | Hockey scorebug | Team codes, scores, team colours and a Q1–Q4 countdown clock |
 | Ticker | Scrolling text bar |
 | Stream countdown | Countdown to the start of the stream |
+| Now playing (Spotify) | The track that Spotify is playing on the ProVerlay computer, or text you type |
 | Lower third (single) | One name + title |
 | Lower thirds | A roster of people; put one on air with a click |
 | Quiz | Multiple-choice question with answer reveal |
@@ -170,8 +171,79 @@ canvas resolution for the sharpest result.
 
 New widgets get a default position that does not collide with the others: match score
 and hockey scorebug at the top center, the stream countdown in the center, the ticker
-along the bottom, a message just above the ticker, lower thirds bottom left and the quiz
-on the left. You can change any of these in **Edit settings** or `/layout`.
+along the bottom, a message just above the ticker, lower thirds bottom left, the quiz
+on the left and now playing bottom right. You can change any of these in **Edit settings** or `/layout`.
+
+### Now playing: the track from Spotify
+
+Add a **Now playing (Spotify)** widget. It shows the title, artist and cover of the
+track that is playing, and follows along when the track changes. ProVerlay reads Spotify
+in one of two ways:
+
+1. **A linked Spotify account** (recommended). ProVerlay asks Spotify what your account
+   is playing, on any device: the music can play on another laptop or a phone. Cover art
+   works on macOS and Windows. You log in once; see below.
+2. **The Spotify app on the ProVerlay computer.** Used when no account is linked, and as
+   the fallback when the account cannot be read (no internet, Spotify busy, login
+   ended). No account needed.
+
+#### Link a Spotify account (once)
+
+Spotify only lets each person run one small app of their own, so you create it yourself.
+This takes about five minutes.
+
+1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard), log
+   in and choose **Create app**. Any name and description will do. Tick **Web API**.
+2. Under **Redirect URIs** add exactly the address the widget's live controls show under
+   *More*, for example `http://127.0.0.1:2014/api/spotify/callback`. It must be
+   `127.0.0.1`: Spotify does not accept `localhost`. If you change ProVerlay's port, add
+   the new address too.
+3. Save, open the app's **Settings** and copy the **Client ID**. ProVerlay does not need
+   the client secret.
+4. In ProVerlay, on the ProVerlay computer itself, open the now-playing widget's live
+   controls, then *More*. Paste the Client ID and click **Log in with Spotify**. Your
+   browser opens Spotify; allow access and come back to ProVerlay.
+
+Good to know:
+
+- Spotify requires **Premium** for the account that owns the app. If that subscription
+  ends, the link stops working until it is renewed.
+- One app can be used by **up to five Spotify accounts**. To read an account other than
+  the owner's, add it under *User Management* in the app's settings in the dashboard.
+- The login is kept on this computer (in ProVerlay's data folder), not in the project,
+  so it does not travel along with an exported `.proverlay` file. **Log out of Spotify**
+  in the same place removes it.
+- Logging in only works on the ProVerlay computer, because Spotify sends the browser back
+  to `127.0.0.1`. From an iPad or another computer you can see the status but not log in.
+- In a Spotify Jam, link the account of the host who plays the music. Whether the
+  account of someone listening along also reports the Jam's track has not been tested.
+
+#### Without an account: the Spotify app on this computer
+
+No Spotify account, API key or internet connection is needed for the text. ProVerlay
+asks the Spotify app itself:
+
+- **macOS:** the first time, macOS asks whether ProVerlay may control Spotify. Choose
+  **OK**. If you chose "Don't Allow", turn it back on in *System Settings → Privacy &
+  Security → Automation → ProVerlay → Spotify*. When you run ProVerlay from a terminal
+  (`npm start`), the terminal app is the one that asks.
+- **Windows:** ProVerlay reads the title of the Spotify window. There is no cover art,
+  and a paused player looks the same as one that is not playing.
+- The Spotify web player and other music apps are not read.
+
+In the widget's live controls:
+
+- **Spotify / Manual text** chooses the source. With *Manual text* the widget shows what
+  you type in **Title** and **Artist**.
+- With *Spotify*, the typed text is the fallback: it shows when Spotify is not playing,
+  for example the name of the show. Leave it empty to show nothing.
+- **Hide when paused** (on by default) takes the track off screen while Spotify is
+  paused. Turn it off to keep the last track on screen.
+- **Label** is the small line above the title ("Now playing"); empty removes it.
+- **Cover art** and **Width** change the look. Drag the widget in `/layout` to move it.
+
+The look follows the project's brand colours and font. For a full restyle use custom
+CSS on `.np-plate`, `.np-art`, `.np-label`, `.np-title` and `.np-artist`.
 
 ### Data from a spreadsheet
 

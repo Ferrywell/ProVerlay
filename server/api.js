@@ -42,6 +42,13 @@ import { CUSTOM_CSS_MAX_BYTES, customCssVersion } from './customCss.js'
 import { analyzeImageBuffer, buildGraphicDataFromCompose } from './composeAnalyze.js'
 import { createGraphicFromType } from './graphicDefaults.js'
 import { getLiveSnapshot, importDriversOnce } from './f1Timing.js'
+import { getNowPlayingSnapshot } from './nowPlaying.js'
+import {
+  completeSpotifyLogin,
+  disconnectSpotify,
+  getSpotifyAccountStatus,
+  setSpotifyClientId
+} from './spotifyAccount.js'
 import { buildDebugSnapshot } from './debugSnapshot.js'
 import {
   addLowerThirdEntry,
@@ -165,6 +172,17 @@ function requireLocal(req, what) {
   if (!isLocalRequest(req)) {
     throw new HttpError(403, `${what} can only be changed on the ProVerlay computer itself, not from another device`)
   }
+}
+
+/** Plain page the browser shows after the Spotify login. */
+function spotifyCallbackPage({ ok, message }) {
+  const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+  const title = ok ? 'Spotify is linked' : 'Spotify is not linked'
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title} · ProVerlay</title>
+<style>body{font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:32rem;margin:15vh auto;padding:0 1.5rem;color:#1d1d1f}h1{font-size:1.4rem}p{color:#555}</style>
+</head><body><h1>${title}</h1><p>${esc(message)}</p><p>You can close this tab and go back to ProVerlay.</p></body></html>`
 }
 
 function requireGraphic(id) {
@@ -583,6 +601,50 @@ export function createApiRouter({ getPort = () => Number(process.env.PORT || 201
   /** Variables from a source: `{ sourceId, keyColumn, valueColumn }`, or `{ sourceId: null }`. */
   router.put('/variable-source', async (req, res) => {
     res.json(await setVariableSource(jsonBody(req)))
+  })
+
+  /* --------------------------------------------------------- now playing */
+
+  /** Latest Spotify reading: first paint of a render page, status in the operate card. */
+  router.get('/now-playing', (_req, res) => {
+    res.json(getNowPlayingSnapshot())
+  })
+
+  /* ------------------------------------------------- Spotify account (Web API) */
+
+  /** Link status; tokens never leave the server. loginUrl only for this computer. */
+  router.get('/spotify', async (req, res) => {
+    res.json(await getSpotifyAccountStatus({ port: getPort(), local: isLocalRequest(req) }))
+  })
+
+  /** { clientId }: the app's Client ID from the Spotify developer dashboard ('' removes it). */
+  router.put('/spotify/client-id', async (req, res) => {
+    requireLocal(req, 'The Spotify Client ID')
+    const body = jsonBody(req)
+    if (typeof body.clientId !== 'string') throw badRequest('clientId: expected a string')
+    await setSpotifyClientId(body.clientId)
+    res.json(await getSpotifyAccountStatus({ port: getPort(), local: true }))
+  })
+
+  router.post('/spotify/logout', async (req, res) => {
+    requireLocal(req, 'The Spotify login')
+    await disconnectSpotify()
+    res.json(await getSpotifyAccountStatus({ port: getPort(), local: true }))
+  })
+
+  /** Spotify sends the browser back here after the login (redirect URI). */
+  router.get('/spotify/callback', async (req, res) => {
+    const q = req.query
+    const result = await completeSpotifyLogin({
+      code: typeof q.code === 'string' ? q.code : '',
+      state: typeof q.state === 'string' ? q.state : '',
+      error: typeof q.error === 'string' ? q.error : ''
+    })
+    res
+      .status(result.ok ? 200 : 400)
+      .set('Cache-Control', 'no-store')
+      .type('html')
+      .send(spotifyCallbackPage(result))
   })
 
   /* ------------------------------------------------------------------ F1 */

@@ -144,6 +144,26 @@ export function defaultStreamCountdownData() {
   }
 }
 
+/**
+ * Now playing: the track from the Spotify app on the ProVerlay computer
+ * (server/nowPlaying.js), or text typed by the operator.
+ */
+export function defaultNowPlayingData() {
+  return {
+    source: 'spotify', // 'spotify' | 'manual'
+    // Manual text; with source 'spotify' it shows while Spotify has nothing to show.
+    title: '',
+    artist: '',
+    label: 'Now playing',
+    showArtwork: true,
+    // true: only on screen while a track plays; false: keep the last track while paused.
+    hideWhenIdle: true,
+    pollMs: 2000,
+    widthPx: 620,
+    placementFree: { x: 80, y: 80 }
+  }
+}
+
 /*
  * Default positions are chosen so widgets that are typically live at the same
  * time do not overlap (render.js supports center, top-left/-center/-right,
@@ -156,6 +176,7 @@ export function defaultStreamCountdownData() {
  *   quizShow                          top-left    (panel itself sits left, see data.panel)
  *   f1Timing                          custom      (left side, data.placementFree; experimental)
  *   image                             center      (free placement, original size)
+ *   nowPlaying                        custom      (bottom right, clear of the lower third)
  * Only newly created widgets use these; existing projects keep their positions.
  */
 const GRAPHIC_TEMPLATES = {
@@ -248,6 +269,15 @@ const GRAPHIC_TEMPLATES = {
     position: 'top-center',
     operator: true,
     data: defaultHockeyScorebugData()
+  }),
+  nowPlaying: (name) => ({
+    type: 'nowPlaying',
+    name,
+    visible: false,
+    soloVisible: false,
+    position: 'custom',
+    operator: true,
+    data: defaultNowPlayingData()
   })
 }
 

@@ -16,6 +16,7 @@ import { getState } from './state.js'
 import { getDataDir } from './paths.js'
 import { experimentalFeatures } from './experimental.js'
 import { f1DebugStatus } from './f1Timing.js'
+import { nowPlayingDebugStatus } from './nowPlaying.js'
 import { listDataSources, sourceWhere } from './dataSources.js'
 import { debugEntries } from './debugLog.js'
 import { usedVariableNames } from '../public/shared/variables.js'
@@ -35,7 +36,7 @@ function appVersion() {
 }
 
 /** Where one graphic's content comes from, in words plus details. */
-export function graphicOrigin(graphic, { sources = [], f1 = [] } = {}) {
+export function graphicOrigin(graphic, { sources = [], f1 = [], nowPlaying = null } = {}) {
   const variables = usedVariableNames({ graphics: [graphic] })
   const binding = graphic.data?.dataBinding
   if (graphic.type === 'f1Timing') {
@@ -47,6 +48,16 @@ export function graphicOrigin(graphic, { sources = [], f1 = [] } = {}) {
       return { kind: 'multiviewer', label: `MultiViewer live timing (${state})`, detail: mv?.url || '', variables }
     }
     return { kind: 'manual', label: `Manual driver list (${tower?.manualRows ?? 0} rows)`, detail: '', variables }
+  }
+  if (graphic.type === 'nowPlaying') {
+    if (graphic.data?.source === 'manual') return { kind: 'manual', label: 'Typed in (manual text)', detail: '', variables }
+    const s = nowPlaying?.snapshot
+    const state = !nowPlaying?.supported
+      ? 'not supported on this system'
+      : s?.status === 'error'
+        ? `error: ${s.error}`
+        : s?.status || 'idle'
+    return { kind: 'spotify', label: `Spotify on this computer (${state})`, detail: s?.title ? [s.title, s.artist].filter(Boolean).join(' — ') : '', variables }
   }
   if (binding?.sourceId) {
     const source = sources.find((s) => s.id === binding.sourceId)
@@ -70,12 +81,13 @@ export function buildDebugSnapshot({ port, clients = [], includeLog = true }) {
   const state = getState()
   const data = listDataSources()
   const f1 = f1DebugStatus()
+  const nowPlaying = nowPlayingDebugStatus()
   const graphics = (state.graphics || []).map((g) => ({
     id: g.id,
     name: g.name || g.id,
     type: g.type,
     visible: Boolean(g.visible),
-    origin: graphicOrigin(g, { sources: data.sources, f1 })
+    origin: graphicOrigin(g, { sources: data.sources, f1, nowPlaying })
   }))
   const snapshot = {
     generatedAt: new Date().toISOString(),
@@ -108,7 +120,8 @@ export function buildDebugSnapshot({ port, clients = [], includeLog = true }) {
         held: s.status.held || []
       }
     })),
-    f1
+    f1,
+    nowPlaying
   }
   if (includeLog) snapshot.log = debugEntries()
   return snapshot

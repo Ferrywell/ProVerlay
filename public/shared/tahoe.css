@@ -496,7 +496,8 @@ a {
   color: var(--pv-tag-purple-text);
 }
 
-.pill--type-streamCountdown {
+.pill--type-streamCountdown,
+.pill--type-nowPlaying {
   background: var(--pv-tag-amber-bg);
   color: var(--pv-tag-amber-text);
 }

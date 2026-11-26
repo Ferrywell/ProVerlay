@@ -36,7 +36,8 @@ const TYPE_LABELS = {
   image: 'Image',
   clock: 'Clock',
   f1Timing: 'F1 timing',
-  hockeyScorebug: 'Hockey scorebug'
+  hockeyScorebug: 'Hockey scorebug',
+  nowPlaying: 'Now playing'
 }
 
 let state = { graphics: [], settings: {} }

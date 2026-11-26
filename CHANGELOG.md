@@ -11,6 +11,34 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+### Added
+
+- **Now playing widget** (*Add widget → Now playing (Spotify)*): shows the title, artist
+  and cover of the track that the Spotify app is playing on the ProVerlay computer, and
+  follows along when the track changes. No Spotify account, API key or internet
+  connection is needed for the text: on macOS ProVerlay asks the Spotify app
+  (AppleScript; macOS asks once for permission), on Windows it reads the Spotify window
+  title (no cover art there). The live controls switch between Spotify and manual text,
+  set a fallback text for when Spotify is silent, hide the widget while paused, and
+  change the label, cover art and width. The look follows the brand colours and font
+  and can be restyled with custom CSS (`.np-plate`, `.np-title`, …). The Debug console
+  shows what the reader sees. New: `GET /api/now-playing` and the `nowPlayingUpdate`
+  socket event. See [docs/USER-GUIDE.md](docs/USER-GUIDE.md#now-playing-the-track-from-spotify).
+
+- **Now playing: link a Spotify account.** Log in once with your own Spotify app
+  (Client ID from the Spotify developer dashboard, PKCE, no client secret) and the
+  widget reads what the account plays through the Spotify Web API, on any device and
+  with cover art on Windows too. The Spotify app on the ProVerlay computer stays the
+  fallback when no account is linked or the Web API cannot answer. The login is kept per
+  computer, never in a project export. New: `GET /api/spotify`,
+  `PUT /api/spotify/client-id`, `POST /api/spotify/logout`, `GET /api/spotify/callback`.
+
+### Changed
+
+- macOS app: the bundle now declares that it sends Apple events
+  (`NSAppleEventsUsageDescription` and the `automation.apple-events` entitlement), needed
+  for the now-playing widget.
+
 ## [0.11.0] - 2026-11-18
 
 Update ProVerlay from inside the app, and a Debug console that shows what the server and

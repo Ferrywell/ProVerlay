@@ -56,6 +56,7 @@ const TYPE_LABELS = {
   f1Timing: 'F1 timing',
   hockeyScorebug: 'Hockey scorebug',
   image: 'Image',
+  nowPlaying: 'Now playing',
 }
 
 const COPY_ALL_RENDER_LABEL = 'Combined render URL'
@@ -1835,7 +1836,8 @@ widgetAdd?.addEventListener('click', async () => {
     message: 'Message',
     f1Timing: 'F1 timing',
     hockeyScorebug: 'Hockey scorebug',
-    image: 'Images'
+    image: 'Images',
+    nowPlaying: 'Now playing'
   }
   const defaultName = defaultNames[type] || 'New widget'
   const name = await promptName({
