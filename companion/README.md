@@ -88,7 +88,7 @@ Source layout:
 | ------------------ | --------------------------------------------------------------------------- |
 | `index.js`         | Instance: connection, status, state handling, rebuild logic, clock ticks    |
 | `src/api.js`       | REST client (checks every response, timeouts, server error messages)        |
-| `src/model.js`     | Pure helpers: clock formatting, choices, signature, period / entry stepping |
+| `src/model.js`     | Pure helpers: clock formatting, choices, signature, steps, actions per type |
 | `src/actions.js`   | Action definitions                                                          |
 | `src/feedbacks.js` | Feedback definitions                                                        |
 | `src/variables.js` | Variable definitions and values                                             |

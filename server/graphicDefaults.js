@@ -235,10 +235,12 @@ const GRAPHIC_TEMPLATES = {
 }
 
 /*
- * Types with a description (public/shared/widget-types.js: message, lowerThird)
+ * Types with described fields (public/shared/widget-types.js: message, lowerThird)
  * need no template here: position, operator and the default data come from it.
  */
 for (const [type, description] of Object.entries(WIDGET_DESCRIPTIONS)) {
+  // Described steps/actions only: the type has its template above.
+  if (!description.fields) continue
   if (Object.hasOwn(GRAPHIC_TEMPLATES, type)) throw new Error(`Widget type "${type}" has both a template and a description`)
   GRAPHIC_TEMPLATES[type] = (name) => ({
     type,

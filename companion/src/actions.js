@@ -9,6 +9,7 @@ import {
   imageItems,
   isClockRunning,
   isHockeyQuarter,
+  parseActionPayload,
   parseClockTime,
   parseTargetTime,
   questionChoices,
@@ -16,9 +17,12 @@ import {
   speakerChoices,
   splitRef,
   stepEntryId,
+  stepGraphicChoices,
   stepHockeyPeriod,
   tickerMessageChoices,
   tickerMessages,
+  widgetActionChoices,
+  widgetTypeInfo,
 } from './model.js'
 
 /**
@@ -107,8 +111,56 @@ export function getActionDefinitions(self) {
   const speakers = speakerChoices(state)
   const questions = questionChoices(state)
   const tickerItems = tickerMessageChoices(state)
+  const stepGraphics = stepGraphicChoices(state)
+  const widgetActions = widgetActionChoices(state)
+
+  /** "Next" and "Previous": the same button for a roster, an image list and a quiz. */
+  const stepAction = (name, delta, description) => ({
+    name,
+    description,
+    options: [
+      graphicOption(stepGraphics, 'Widget'),
+      { type: 'checkbox', id: 'wrap', label: 'Wrap around at the end of the list', default: true },
+    ],
+    callback: guarded(self, name, async (o) => {
+      const g = requireGraphic(self, o.graphic, null, 'widget')
+      if (!widgetTypeInfo(self.state, g.type).steps) throw new Error(`"${g.name || g.id}" has no steps`)
+      await self.api.step(g.id, delta, o.wrap !== false)
+    }),
+  })
 
   return {
+    /* ------------------------------------------------ steps and actions */
+    widget_next: stepAction(
+      'Widget: next',
+      1,
+      'Next person, image or quiz step (answer, then the next question). Puts the widget on air.',
+    ),
+    widget_previous: stepAction('Widget: previous', -1, 'Previous person, image or quiz step. Puts the widget on air.'),
+
+    widget_action: {
+      name: 'Widget: run action',
+      description: 'Runs an action that the widget type offers. The list follows what ProVerlay reports.',
+      options: [
+        { type: 'dropdown', id: 'action', label: 'Action', default: first(widgetActions), choices: widgetActions },
+        {
+          type: 'textinput',
+          id: 'payload',
+          label: 'Payload (only for actions that list one)',
+          tooltip: 'A value such as 3, or a JSON object such as {"number": 3}. Leave empty otherwise.',
+          default: '',
+          useVariables: true,
+        },
+      ],
+      callback: guarded(self, 'Widget action', async (o) => {
+        const ref = requireRef(o.action, 'widget action')
+        const g = requireGraphic(self, ref.graphicId, null, 'widget')
+        const action = widgetTypeInfo(self.state, g.type).actions.find((a) => a.id === ref.itemId)
+        if (!action) throw new Error(`"${g.name || g.id}" has no action "${ref.itemId}"`)
+        await self.api.runAction(g.id, action.id, parseActionPayload(o.payload, action.fields))
+      }),
+    },
+
     /* ------------------------------------------------------- visibility */
     graphic_visibility: {
       name: 'Graphic: show / hide / toggle (combined output)',

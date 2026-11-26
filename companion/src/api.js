@@ -120,4 +120,14 @@ export class ProVerlayApi {
   stepImage(id, direction, wrap = true) {
     return this.request('POST', `/api/graphics/${enc(id)}/images/step`, { direction, wrap })
   }
+
+  /** Any widget with steps: delta 1 = next, -1 = previous (computed on the server). */
+  step(id, delta, wrap = true) {
+    return this.request('POST', `/api/graphics/${enc(id)}/step`, { delta, wrap })
+  }
+
+  /** An action the widget's type declares (`state.widgetTypes`), with its payload. */
+  runAction(id, actionId, payload = {}) {
+    return this.request('POST', `/api/graphics/${enc(id)}/actions/${enc(actionId)}`, payload)
+  }
 }

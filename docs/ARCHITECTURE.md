@@ -69,6 +69,8 @@ ignored):
 - `experimental`: enabled experimental flags from `PROVERLAY_EXPERIMENTAL`
   (e.g. `["f1"]`); pages and the Companion module hide experimental widget types
   that are not listed (`server/experimental.js`, `public/shared/experimental.js`)
+- `widgetTypes`: which widget types have steps and which actions they offer,
+  for remote controls (see [Steps and actions](#steps-and-actions))
 - `serverNow`: server clock in ms, used by clients to sync running clocks
 
 Data source keys stored in `project.json` (see [DATA-SOURCES.md](DATA-SOURCES.md)):
@@ -246,7 +248,9 @@ other. Errors are JSON: `{ "error": "message" }`.
 | DELETE | `/api/graphics/:id` | | Remove a graphic |
 | POST | `/api/graphics/:id/toggle` | `{ visible? }` | Set `visible`, or flip it when omitted (flip computed server-side) |
 | POST | `/api/graphics/:id/toggle-solo` | `{ soloVisible? }` | Same for `soloVisible` (`/render?graphic=<id>`) |
-| POST | `/api/graphics/:id/hide` | | Hide (for `lowerThirdShow` also clears the live entry) |
+| POST | `/api/graphics/:id/hide` | | Hide (a `lowerThirdShow` keeps its active person, so "next" continues from there) |
+| POST | `/api/graphics/:id/step` | `{ delta: 1 \| -1, wrap? }` | Next / previous item of any widget with steps (see [Steps and actions](#steps-and-actions)) |
+| POST | `/api/graphics/:id/actions/:actionId` | the action's payload | Run an action the widget's type declares (see [Steps and actions](#steps-and-actions)) |
 | POST | `/api/graphics/:id/score` | `{ side, delta? }` or `{ side, value }` | Atomic score change (see below) |
 | POST | `/api/graphics/:id/clock` | `{ action, ms? }` | Atomic clock action (see below) |
 | GET | `/api/graphics/:id/entries` | | `lowerThirdShow` roster |
@@ -354,6 +358,93 @@ It is included in `.proverlay` exports and imports.
 Asset types (upload, import, serving): `png`, `jpg`, `jpeg`, `webp`, `gif`,
 `ttf`, `otf`, `woff`, `woff2`. SVG and HTML are refused because they can
 carry script. Uploads are capped at 25 MB.
+
+### Steps and actions
+
+One way to operate any widget from a remote control (Stream Deck, script), so a
+button does not have to know the widget's type. Both routes run inside the write
+queue and return the updated graphic.
+
+**Declared per type** in `public/shared/widget-types.js`, next to the fields:
+
+```js
+quizShow: describeWidget({
+  label: 'Quiz',
+  steps: true,
+  actions: [
+    { id: 'reveal', label: 'Reveal answer' },
+    { id: 'show-question', label: 'Show question by number',
+      fields: [{ key: 'number', kind: 'number', label: 'Question number', default: 1, min: 1, integer: true }] }
+  ]
+})
+```
+
+`steps` and `actions` do not need `fields`: `lowerThirdShow`, `image` and
+`quizShow` declare them and keep their own defaults, validation and card. What a
+step or an action does is in `server/widgetActions.js`, which maps each type to
+the function its own route already uses; the server refuses to start when a
+declaration has no code or the other way round.
+
+**Discovery.** Every state (`GET /api/state`, `stateChanged`) carries
+
+```json
+"widgetTypes": {
+  "lowerThirdShow": { "steps": true, "actions": [] },
+  "image": { "steps": true, "actions": [] },
+  "quizShow": { "steps": true, "actions": [
+    { "id": "reveal", "label": "Reveal answer", "fields": [] },
+    { "id": "hide-answer", "label": "Hide answer", "fields": [] },
+    { "id": "show-question", "label": "Show question by number", "fields": [{ "key": "number", "kind": "number", "…": "…" }] }
+  ] }
+}
+```
+
+A type that is not listed has no steps and no actions. It is in the state, not
+behind a route of its own, because every client already receives the state: the
+Companion module builds its dropdowns from it without an extra request, and a
+type that gains an action shows up there without a module update.
+
+**`POST /api/graphics/:id/step`** — `{ "delta": 1 }` (next, the default) or
+`{ "delta": -1 }` (previous), optional `"wrap": false`.
+
+| Type | A step |
+|------|--------|
+| `lowerThirdShow` | next / previous person in the roster |
+| `image` | next / previous image (the code behind `/images/step`) |
+| `quizShow` | question → its answer → next question → … ; previous walks the same sequence back (answer revealed → hide it; answer hidden → previous question with its answer shown) |
+
+Rules for every type:
+
+- A step puts the widget on air (combined output).
+- A widget that never showed anything starts at the first item (previous: the last).
+- After a hide, the item that was on air is remembered: next continues with the
+  item after it.
+- At the end of the list a step wraps around to the other end. With
+  `"wrap": false` nothing changes there (a widget that is off air stays off air).
+
+For the quiz, going on air never shows an answer: off air, next puts the current
+question back when its answer was not revealed yet, otherwise the next question;
+previous puts the question before it on air; both with the answer hidden.
+
+Errors: 404 unknown graphic; 400 a type without steps, or a `delta` other than
+1 / -1; 409 nothing to step through (empty roster, image list or quiz).
+
+**`POST /api/graphics/:id/actions/:actionId`** — the body is the payload the
+action's `fields` describe (checked like widget data; a field that is not sent
+gets its default, other keys are ignored).
+
+| Type | Action | Payload | Does |
+|------|--------|---------|------|
+| `quizShow` | `reveal` | | Reveals the answer of the question on air (409 when none is on air) |
+| `quizShow` | `hide-answer` | | Hides the answer |
+| `quizShow` | `show-question` | `{ number }` (1 = first) | Puts that question on air, answer hidden |
+
+Errors: 404 unknown graphic or an action the type does not declare (the message
+lists the ones it has); 400 a payload that does not fit.
+
+Score and clock keep their own atomic routes (below), and every type's own
+routes (`/entries/:entryId/show`, `/images/step`, a `PATCH` for the quiz) work
+as before.
 
 ### Atomic score and clock operations
 
@@ -498,7 +589,8 @@ Shape (v1.0):
 See `docs/COMPANION.md`. The module connects to `http://<host>:2014`:
 - Socket.io `stateChanged` → refresh action choices, feedbacks and presets
 - Actions call the REST API (toggle, toggle-solo, graphic/state PATCH,
-  lower-third show/hide)
+  lower-third show/hide, the generic `/step` and `/actions/:actionId`)
+- "Next", "Previous" and "Run action" list what `state.widgetTypes` reports
 - Requests from Companion carry no `Origin` header and pass the LAN guard
 
 ## Tests

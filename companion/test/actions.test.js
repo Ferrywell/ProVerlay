@@ -259,3 +259,81 @@ test('actions read the latest state at press time, not definition time', async (
   await defs.lower_third_step.callback({ options: { graphic: IDS.roster, direction: 'next', wrap: true } }, {})
   assert.deepEqual(self.api.calls, [['showEntry', IDS.roster, 'sp-2']])
 })
+
+test('Next and Previous: one request shape for roster, image list and quiz', async () => {
+  const self = fakeSelf()
+  const defs = getActionDefinitions(self)
+  for (const id of ['widget_next', 'widget_previous']) {
+    const choices = defs[id].options.find((o) => o.id === 'graphic').choices.map((c) => c.id)
+    assert.deepEqual(choices, [IDS.roster, IDS.quiz, IDS.image], `${id} lists only widgets with steps`)
+  }
+  for (const graphic of [IDS.roster, IDS.quiz, IDS.image]) {
+    assert.deepEqual(await run(self, 'widget_next', { graphic, wrap: true }), [['step', graphic, 1, true]])
+    assert.deepEqual(await run(self, 'widget_previous', { graphic, wrap: false }), [['step', graphic, -1, false]])
+  }
+  // A widget without steps (an old button, or a changed project): no request, a log line instead.
+  assert.deepEqual(await run(self, 'widget_next', { graphic: IDS.match, wrap: true }), [])
+  assert.match(self.logs.at(-1)[1], /Widget: next failed: "Match" has no steps/)
+  assert.deepEqual(await run(self, 'widget_previous', { graphic: 'gone', wrap: true }), [])
+  assert.match(self.logs.at(-1)[1], /not in the active project/)
+})
+
+test('Run widget action: the list comes from ProVerlay, the payload goes along', async () => {
+  const self = fakeSelf()
+  const option = getActionDefinitions(self).widget_action.options.find((o) => o.id === 'action')
+  assert.deepEqual(option.choices, [
+    { id: `${IDS.quiz}|reveal`, label: 'Quiz: Reveal answer' },
+    { id: `${IDS.quiz}|hide-answer`, label: 'Quiz: Hide answer' },
+    { id: `${IDS.quiz}|show-question`, label: 'Quiz: Show question by number (payload: number)' },
+  ])
+  assert.deepEqual(await run(self, 'widget_action', { action: `${IDS.quiz}|reveal`, payload: '' }), [
+    ['runAction', IDS.quiz, 'reveal', {}],
+  ])
+  assert.deepEqual(await run(self, 'widget_action', { action: `${IDS.quiz}|show-question`, payload: '2' }), [
+    ['runAction', IDS.quiz, 'show-question', { number: 2 }],
+  ])
+  assert.deepEqual(
+    await run(self, 'widget_action', { action: `${IDS.quiz}|show-question`, payload: '{"number": 1}' }),
+    [['runAction', IDS.quiz, 'show-question', { number: 1 }]],
+  )
+  assert.deepEqual(await run(self, 'widget_action', { action: `${IDS.quiz}|show-question` }), [
+    ['runAction', IDS.quiz, 'show-question', {}],
+  ])
+  // Refused locally: an action the type does not offer, a payload where none is taken, nothing selected.
+  assert.deepEqual(await run(self, 'widget_action', { action: `${IDS.quiz}|explode`, payload: '' }), [])
+  assert.match(self.logs.at(-1)[1], /Widget action failed: "Quiz" has no action "explode"/)
+  assert.deepEqual(await run(self, 'widget_action', { action: `${IDS.quiz}|reveal`, payload: 'now' }), [])
+  assert.match(self.logs.at(-1)[1], /takes no payload/)
+  assert.deepEqual(await run(self, 'widget_action', { action: '', payload: '' }), [])
+  assert.match(self.logs.at(-1)[1], /no widget action selected/)
+})
+
+test('a type that gains an action in ProVerlay shows up without a module change', async () => {
+  const state = sampleState()
+  state.widgetTypes.customTicker = { steps: true, actions: [{ id: 'clear', label: 'Clear all messages' }] }
+  const self = fakeSelf(state)
+  const defs = getActionDefinitions(self)
+  assert.ok(defs.widget_next.options[0].choices.some((c) => c.id === IDS.ticker))
+  assert.ok(defs.widget_action.options[0].choices.some((c) => c.label === 'Ticker: Clear all messages'))
+  assert.deepEqual(await run(self, 'widget_next', { graphic: IDS.ticker, wrap: true }), [['step', IDS.ticker, 1, true]])
+  assert.deepEqual(await run(self, 'widget_action', { action: `${IDS.ticker}|clear`, payload: '' }), [
+    ['runAction', IDS.ticker, 'clear', {}],
+  ])
+})
+
+test('an older ProVerlay (no widgetTypes in the state): empty lists, the other actions keep working', async () => {
+  const state = sampleState()
+  delete state.widgetTypes
+  const self = fakeSelf(state)
+  const defs = getActionDefinitions(self)
+  assert.deepEqual(defs.widget_next.options[0].choices, [
+    { id: '', label: 'No widgets with steps in the active project' },
+  ])
+  assert.deepEqual(defs.widget_action.options[0].choices, [
+    { id: '', label: 'No widget actions in the active project' },
+  ])
+  assert.deepEqual(await run(self, 'widget_next', { graphic: IDS.roster, wrap: true }), [])
+  assert.deepEqual(await run(self, 'image_step', { graphic: IDS.image, direction: 'next', wrap: true }), [
+    ['stepImage', IDS.image, 'next', true],
+  ])
+})

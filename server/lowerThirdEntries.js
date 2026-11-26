@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { getGraphic, updateGraphic } from './state.js'
 import { badRequest } from './validation.js'
+import { stepListId } from '../public/shared/list-step.js'
 
 function entryId() {
   return `sp-${crypto.randomUUID().slice(0, 8)}`
@@ -89,10 +90,29 @@ export async function deleteLowerThirdEntry(graphicId, entryIdParam) {
   return deleted ? { ok: true } : null
 }
 
+/** The roster with one person on air (combined output). */
+function withEntryOnAir(graphic, entryIdParam) {
+  return { ...graphic, visible: true, data: { ...graphic.data, activeEntryId: entryIdParam } }
+}
+
 export async function showLowerThirdEntry(graphicId, entryIdParam) {
   return updateLowerThird(graphicId, (graphic, entries) => {
     if (!entries.some((e) => e.id === entryIdParam)) return null
-    return { ...graphic, visible: true, data: { ...graphic.data, activeEntryId: entryIdParam } }
+    return withEntryOnAir(graphic, entryIdParam)
+  })
+}
+
+/**
+ * Next/previous person, put on air (same rules as the image widget's step).
+ * Hiding keeps the active person, so "next" after a hide continues down the list.
+ * Returns null when the widget is missing or the roster is empty.
+ */
+export async function stepLowerThirdEntry(graphicId, direction = 'next', { wrap = true } = {}) {
+  return updateLowerThird(graphicId, (graphic, entries) => {
+    const people = entries.filter((e) => e && typeof e.id === 'string' && e.id)
+    const nextId = stepListId(people, graphic.data?.activeEntryId || null, direction, { wrap })
+    if (!nextId) return people.length ? graphic : null
+    return withEntryOnAir(graphic, nextId)
   })
 }
 

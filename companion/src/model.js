@@ -108,8 +108,9 @@ export function buildVarKeys(state) {
  * visibility changes do not alter the signature.
  */
 export function graphicsSignature(state) {
-  return JSON.stringify(
-    graphicsOf(state).map((g) => {
+  return JSON.stringify([
+    widgetTypesSignature(state),
+    ...graphicsOf(state).map((g) => {
       const item = [g.id, g.type, g.name || '']
       const data = g.data || {}
       if (g.type === 'lowerThirdShow') {
@@ -123,7 +124,7 @@ export function graphicsSignature(state) {
       }
       return item
     }),
-  )
+  ])
 }
 
 /* ---------------------------------------------------------------- clocks */
@@ -340,6 +341,79 @@ export function imageLabel(img) {
 
 export function quizQuestions(graphic) {
   return (Array.isArray(graphic?.data?.questions) ? graphic.data.questions : []).filter((q) => q && q.id)
+}
+
+/* ------------------------------------------------- steps and actions */
+
+/**
+ * What ProVerlay says a widget type can do (`state.widgetTypes`, sent with
+ * every state): `{ steps, actions: [{ id, label, fields }] }`. The module has
+ * no list of its own, so a type that gains steps or an action in ProVerlay
+ * shows up here without a module update. Older servers send nothing: no
+ * steps, no actions.
+ */
+export function widgetTypeInfo(state, type) {
+  const types = state?.widgetTypes
+  const info = types && typeof types === 'object' && Object.hasOwn(types, type) ? types[type] : null
+  const actions = (Array.isArray(info?.actions) ? info.actions : [])
+    .filter((a) => a && typeof a.id === 'string' && a.id)
+    .map((a) => ({
+      id: a.id,
+      label: String(a.label || a.id),
+      fields: (Array.isArray(a.fields) ? a.fields : []).filter((f) => f && typeof f.key === 'string' && f.key),
+    }))
+  return { steps: info?.steps === true, actions }
+}
+
+function widgetTypesSignature(state) {
+  const types = state?.widgetTypes && typeof state.widgetTypes === 'object' ? Object.keys(state.widgetTypes) : []
+  return types.sort().map((type) => {
+    const info = widgetTypeInfo(state, type)
+    return [type, info.steps, info.actions.map((a) => [a.id, a.label, a.fields.map((f) => f.key)])]
+  })
+}
+
+/** Graphics that have a next / previous item. */
+export function stepGraphicChoices(state) {
+  const list = graphicsOf(state).filter((g) => widgetTypeInfo(state, g.type).steps)
+  const choices = list.map((g) => ({ id: g.id, label: `${graphicLabel(g)} (${typeLabel(g.type)})` }))
+  return choices.length ? choices : [{ id: '', label: 'No widgets with steps in the active project' }]
+}
+
+/** One choice per graphic and declared action, as "<graphicId>|<actionId>". */
+export function widgetActionChoices(state) {
+  const choices = []
+  for (const g of graphicsOf(state)) {
+    for (const action of widgetTypeInfo(state, g.type).actions) {
+      const payload = action.fields.length ? ` (payload: ${action.fields.map((f) => f.key).join(', ')})` : ''
+      choices.push({ id: joinRef(g.id, action.id), label: `${graphicLabel(g)}: ${action.label}${payload}` })
+    }
+  }
+  return choices.length ? choices : [{ id: '', label: 'No widget actions in the active project' }]
+}
+
+/**
+ * The payload text of "Run widget action" → an object for the server.
+ * Empty → {}. A JSON object is sent as is. For an action with one payload
+ * field a bare value is enough: `3` → `{ number: 3 }`.
+ */
+export function parseActionPayload(text, fields = []) {
+  const raw = String(text ?? '').trim()
+  if (!raw) return {}
+  let value
+  let parsed = true
+  try {
+    value = JSON.parse(raw)
+  } catch {
+    parsed = false
+  }
+  if (parsed && value && typeof value === 'object' && !Array.isArray(value)) return value
+  if (fields.length === 1) return { [fields[0].key]: parsed ? value : raw }
+  throw new Error(
+    fields.length
+      ? `the payload must be a JSON object such as {"${fields[0].key}": …}`
+      : 'this action takes no payload (leave the field empty)',
+  )
 }
 
 /* -------------------------------------------------------------- choices */

@@ -11,6 +11,23 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+### Added
+
+- **One "Next" button for every list widget.** `POST /api/graphics/:id/step` with
+  `{ "delta": 1 }` or `{ "delta": -1 }` goes to the next or previous person of a
+  lower-thirds roster, image of an image widget, or step of a quiz (question, its
+  answer, next question). It puts the widget on air, continues after a hide from the
+  item that was on air, and wraps around at the end of the list (`"wrap": false`
+  stops there). `POST /api/graphics/:id/actions/:actionId` runs an action a widget
+  type offers; the quiz offers `reveal`, `hide-answer` and `show-question`
+  (`{ "number": 2 }`). Every state lists per widget type whether it has steps and
+  which actions it offers (`widgetTypes`). The existing routes are unchanged. See
+  [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#steps-and-actions).
+- **Companion module**: actions *Widget: next*, *Widget: previous* (one button that
+  works on a roster, an image list and a quiz) and *Widget: run action*. Their lists
+  come from ProVerlay, so a widget type that gains steps or an action appears
+  without a module update. All existing actions stay.
+
 ### Changed
 
 - **One description per widget type** (internal): a widget type can now be described
