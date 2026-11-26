@@ -197,8 +197,8 @@ let selectedGraphicId = null
 function setProjectStatus(message, type = '') {
   if (!projectStatus) return
   projectStatus.textContent = message
-  projectStatus.classList.remove('is-error', 'is-success')
-  if (type) projectStatus.classList.add(type === 'error' ? 'is-error' : 'is-success')
+  projectStatus.classList.remove('is-error', 'is-success', 'is-warning')
+  if (type) projectStatus.classList.add(type === 'error' ? 'is-error' : type === 'warning' ? 'is-warning' : 'is-success')
 }
 
 function setProjectBusy(busy) {
@@ -374,7 +374,9 @@ projectImport?.addEventListener('change', async () => {
     }
     const imported = await res.json()
     await loadProjects({ select: imported.id })
-    setProjectStatus('Import complete — click Activate to start working in it', 'success')
+    // Widget types this ProVerlay does not know: the server says which and what to do.
+    if (imported.notice?.message) setProjectStatus(imported.notice.message, 'warning')
+    else setProjectStatus('Import complete — click Activate to start working in it', 'success')
   } catch (err) {
     setProjectStatus(err.message || 'Import failed', 'error')
   } finally {

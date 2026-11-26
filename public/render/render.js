@@ -1308,7 +1308,9 @@ function graphicHtml(graphic) {
     case 'clock':
       return `<span class="time">--:--</span>`
     default:
-      return `<span>${escape(textOf(graphic.name))}</span>`
+      // A widget type from another ProVerlay build. Never put its name on air as
+      // a placeholder: skip it and report it (guardGraphic → Debug console).
+      throw new Error(`Unknown widget type "${graphic.type}": this version of ProVerlay cannot show it`)
   }
 }
 

@@ -255,8 +255,8 @@ is logged with its result and the client that sent it (Referer page, or Companio
 | DELETE | `/api/projects/:id` | Move the folder to `<dataDir>/trash/<id>-<timestamp>` and remove it from the registry. **409** for the active project or the last remaining project |
 | GET | `/api/projects/:id/custom-css` | `{ css, version, maxBytes }` |
 | PUT | `/api/projects/:id/custom-css` | `{ css }` → save (empty string removes it). `@import` statements are removed. Returns `{ version, bytes, removedImports, maxBytes }`. **413** above 200 KB |
-| GET | `/api/projects/active/export` | Download the active project as `.proverlay` (zip, includes `custom.css`) |
-| POST | `/api/projects/import` | multipart `file` (`.proverlay`) → new, inactive project (201) |
+| GET | `/api/projects/active/export` | Download the active project as `.proverlay` (zip, includes `custom.css`). `manifest.json` in it: `{ id, name, exportedAt, app: { name: "ProVerlay", version }, widgetTypes[] }` |
+| POST | `/api/projects/import` | multipart `file` (`.proverlay`) → new, inactive project (201). With widget types this build does not know the answer also has `notice: { unknownWidgetTypes: [{ type, count, names[] }], exportedWith, runningVersion, message }`; the import is not refused and the widgets are kept (`server/projectRequirements.js`). The render skips such widgets and reports them to the Debug console |
 | GET | `/api/projects/:id/assets` | List assets |
 | POST | `/api/projects/:id/assets` | multipart `file` → upload an asset |
 | POST | `/api/projects/:id/analyze-image` | multipart PNG/WebP → region analysis (compose) |
