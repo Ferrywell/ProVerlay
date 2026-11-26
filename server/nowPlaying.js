@@ -30,10 +30,10 @@ const MAC_SCRIPT = `
 if application "Spotify" is running then
   tell application "Spotify"
     set sep to (ASCII character 31)
-    set st to (player state as text)
-    if st is "stopped" then return "stopped"
+    set pstate to (player state as text)
+    if pstate is "stopped" then return "stopped"
     set t to current track
-    return st & sep & (name of t) & sep & (artist of t) & sep & (album of t) & sep & (artwork url of t) & sep & (duration of t) & sep & (player position as text)
+    return pstate & sep & (name of t) & sep & (artist of t) & sep & (album of t) & sep & (artwork url of t) & sep & (duration of t) & sep & (player position as text)
   end tell
 else
   return "not-running"
