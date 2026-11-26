@@ -707,3 +707,20 @@
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+
+/* Now playing card: Spotify account link */
+.op-spotify-account {
+  display: grid;
+  gap: var(--pv-space-sm);
+}
+.op-spotify-account .op-status {
+  margin: 0;
+}
+.op-spotify-login {
+  justify-self: start;
+  text-decoration: none;
+}
+.op-spotify-uri {
+  overflow-wrap: anywhere;
+  user-select: all;
+}

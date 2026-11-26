@@ -176,10 +176,49 @@ on the left and now playing bottom right. You can change any of these in **Edit 
 
 ### Now playing: the track from Spotify
 
-Add a **Now playing (Spotify)** widget and start the Spotify app on the computer that
-runs ProVerlay. The widget shows the title, artist and (on macOS) the cover of the track
-that is playing, and follows along when the track changes. Listening along in a Spotify
-Jam counts: the app plays the same track.
+Add a **Now playing (Spotify)** widget. It shows the title, artist and cover of the
+track that is playing, and follows along when the track changes. ProVerlay reads Spotify
+in one of two ways:
+
+1. **A linked Spotify account** (recommended). ProVerlay asks Spotify what your account
+   is playing, on any device: the music can play on another laptop or a phone. Cover art
+   works on macOS and Windows. You log in once; see below.
+2. **The Spotify app on the ProVerlay computer.** Used when no account is linked, and as
+   the fallback when the account cannot be read (no internet, Spotify busy, login
+   ended). No account needed.
+
+#### Link a Spotify account (once)
+
+Spotify only lets each person run one small app of their own, so you create it yourself.
+This takes about five minutes.
+
+1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard), log
+   in and choose **Create app**. Any name and description will do. Tick **Web API**.
+2. Under **Redirect URIs** add exactly the address the widget's live controls show under
+   *More*, for example `http://127.0.0.1:2014/api/spotify/callback`. It must be
+   `127.0.0.1`: Spotify does not accept `localhost`. If you change ProVerlay's port, add
+   the new address too.
+3. Save, open the app's **Settings** and copy the **Client ID**. ProVerlay does not need
+   the client secret.
+4. In ProVerlay, on the ProVerlay computer itself, open the now-playing widget's live
+   controls, then *More*. Paste the Client ID and click **Log in with Spotify**. Your
+   browser opens Spotify; allow access and come back to ProVerlay.
+
+Good to know:
+
+- Spotify requires **Premium** for the account that owns the app. If that subscription
+  ends, the link stops working until it is renewed.
+- One app can be used by **up to five Spotify accounts**. To read an account other than
+  the owner's, add it under *User Management* in the app's settings in the dashboard.
+- The login is kept on this computer (in ProVerlay's data folder), not in the project,
+  so it does not travel along with an exported `.proverlay` file. **Log out of Spotify**
+  in the same place removes it.
+- Logging in only works on the ProVerlay computer, because Spotify sends the browser back
+  to `127.0.0.1`. From an iPad or another computer you can see the status but not log in.
+- In a Spotify Jam, link the account of the host who plays the music. Whether the
+  account of someone listening along also reports the Jam's track has not been tested.
+
+#### Without an account: the Spotify app on this computer
 
 No Spotify account, API key or internet connection is needed for the text. ProVerlay
 asks the Spotify app itself:

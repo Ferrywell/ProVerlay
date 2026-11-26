@@ -25,6 +25,14 @@ material. The entries below are reconstructed from that history; the tags
   shows what the reader sees. New: `GET /api/now-playing` and the `nowPlayingUpdate`
   socket event. See [docs/USER-GUIDE.md](docs/USER-GUIDE.md#now-playing-the-track-from-spotify).
 
+- **Now playing: link a Spotify account.** Log in once with your own Spotify app
+  (Client ID from the Spotify developer dashboard, PKCE, no client secret) and the
+  widget reads what the account plays through the Spotify Web API, on any device and
+  with cover art on Windows too. The Spotify app on the ProVerlay computer stays the
+  fallback when no account is linked or the Web API cannot answer. The login is kept per
+  computer, never in a project export. New: `GET /api/spotify`,
+  `PUT /api/spotify/client-id`, `POST /api/spotify/logout`, `GET /api/spotify/callback`.
+
 ### Changed
 
 - macOS app: the bundle now declares that it sends Apple events

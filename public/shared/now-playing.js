@@ -64,17 +64,21 @@ export function nowPlayingLine(view) {
 /** What the Spotify reader is doing, in words (operate card, Debug console). */
 export function nowPlayingStatusText(live) {
   if (!live) return 'Waiting for Spotify…'
+  const viaAccount = live.via === 'account'
+  // Linked, but this reading came from the app: the account could not be read.
+  const viaFallback = live.via === 'app' && live.account?.linked
+  const who = viaAccount ? `Spotify account${live.account?.name ? ` ${live.account.name}` : ''}` : 'Spotify'
   switch (live.status) {
     case 'playing':
-      return 'Spotify is playing'
+      return viaFallback ? 'Spotify app on this computer is playing (account not reachable)' : `${who} is playing`
     case 'paused':
-      return 'Spotify is paused'
+      return viaFallback ? 'Spotify app on this computer is paused (account not reachable)' : `${who} is paused`
     case 'stopped':
-      return 'Spotify has no track loaded'
+      return viaAccount ? `Nothing is playing on ${who}` : 'Spotify has no track loaded'
     case 'not-running':
       return 'Spotify is not running on the ProVerlay computer'
     case 'unsupported':
-      return 'Reading Spotify works on macOS and Windows only'
+      return 'Link a Spotify account: reading the Spotify app works on macOS and Windows only'
     case 'error':
       return live.error || 'Could not read Spotify'
     default:

@@ -197,7 +197,11 @@ other. Errors are JSON: `{ "error": "message" }`.
 | POST | `/api/graphics/:id/images/step` | `{ direction: next \| previous, wrap? }` | Next/previous image on air |
 | GET | `/api/brands` | | Brand presets (bundled `templates/brands` + `<dataDir>/brands`) |
 | POST | `/api/brands/:id/apply` | | Apply a preset to `brand`/`brandId` |
-| GET | `/api/now-playing` | | Latest Spotify reading: `{ status, playing, title, artist, album, artworkUrl, durationMs, error, updatedAt, polling, supported }` |
+| GET | `/api/now-playing` | | Latest Spotify reading: `{ status, via, playing, title, artist, album, artworkUrl, durationMs, error, updatedAt, polling, supported, account: { linked, name } }` |
+| GET | `/api/spotify` | | Spotify account link: `{ clientId, linked, name, error, redirectUri, local, loginUrl }`. `loginUrl` only for requests from the ProVerlay computer. Never contains tokens |
+| PUT | `/api/spotify/client-id` | `{ clientId }` | Save the Client ID (32 hex characters; `""` removes it). A new Client ID drops the linked account. ProVerlay computer only (403 otherwise) |
+| POST | `/api/spotify/logout` | | Forget the linked account; the Client ID stays. ProVerlay computer only |
+| GET | `/api/spotify/callback` | `?code&state` | Spotify's redirect after the login; answers with a small HTML page |
 | GET | `/api/f1/:id/live` | | Current F1 tower rows (`f1Timing`, experimental) |
 | POST | `/api/f1/:id/import-drivers` | | Copy the MultiViewer grid into `data.drivers` |
 | POST | `/api/system/open-multiviewer` | | Try to open the MultiViewer app locally |
@@ -420,8 +424,34 @@ Shape (v1.0):
 
 ## Now playing
 
-`server/nowPlaying.js` reads the track from the Spotify desktop app on the ProVerlay
-computer. Nothing leaves the computer and no credentials are stored.
+`server/nowPlaying.js` reads the track Spotify is playing. When a Spotify account is
+linked it asks the Spotify Web API (`server/spotifyAccount.js`, below); otherwise, and
+as the fallback when the Web API cannot answer, it reads the Spotify desktop app on the
+ProVerlay computer. Readings carry `via: "account"` or `via: "app"`.
+
+### Spotify account (Web API)
+
+- Authorization Code flow with PKCE: no client secret. The user creates their own app
+  in the Spotify developer dashboard (Spotify allows one development app per person,
+  owned by a Premium account, with at most five users) and pastes its Client ID.
+- Redirect URI: `http://127.0.0.1:<port>/api/spotify/callback` (Spotify rejects
+  `localhost`). The login link is only handed to requests from the ProVerlay computer.
+  It carries a random `state`; one login is pending at a time, valid for 10 minutes and
+  usable once.
+- Scopes: `user-read-currently-playing user-read-playback-state`. Reading:
+  `GET /v1/me/player/currently-playing?additional_types=episode`, at most every 2 s.
+- Storage: `<dataDir>/spotify.json` (`clientId`, `refreshToken`, user id and display
+  name; mode 0600 where supported). Per computer, never in a project or export. The
+  access token stays in memory. A rotated refresh token is saved; `invalid_grant` on
+  refresh unlinks the account.
+- Errors: 401 refreshes once and retries; 403 points at User Management / Premium; 429
+  waits for `Retry-After` (capped at 10 min). While the Web API fails the app on this
+  computer is read instead, if it is playing.
+- Adverts and private sessions (no `item`) count as paused; HTTP 204 as `stopped`.
+
+### The Spotify app on this computer
+
+Nothing leaves the computer and no credentials are stored.
 
 | Platform | How | What it gives |
 |----------|-----|---------------|

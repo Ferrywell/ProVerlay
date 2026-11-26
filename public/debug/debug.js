@@ -199,9 +199,11 @@ function renderSnapshot(s) {
       : np.polling
         ? `reading every ${Math.round(np.pollMs / 1000)} s`
         : 'not reading (no widget uses Spotify)'
+    const account = np.account?.linked ? `account ${np.account.name || 'linked'}` : 'no account linked'
+    const via = `${account}${snap.via === 'app' ? ', read from the app on this computer' : snap.via === 'account' ? ', read via the Web API' : ''}`
     const error = snap.error ? `<span class="dbg-sub is-error">${escapeHtml(snap.error)}</span>` : ''
     items.push(`<li><strong>Now playing</strong> · Spotify ${escapeHtml(snap.status || 'idle')}, ${escapeHtml(track)}
-      <span class="dbg-sub">${reading} · ${np.widgets.length} widget${np.widgets.length === 1 ? '' : 's'}</span>${error}</li>`)
+      <span class="dbg-sub">${reading} · ${escapeHtml(via)} · ${np.widgets.length} widget${np.widgets.length === 1 ? '' : 's'}</span>${error}</li>`)
   }
   for (const t of s.f1) {
     if (t.source !== 'multiviewer') {

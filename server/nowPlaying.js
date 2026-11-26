@@ -1,8 +1,12 @@
 /**
- * Now playing: the track the Spotify desktop app on this computer is playing.
+ * Now playing: the track Spotify is playing, from one of two readers.
  *
- * No Spotify account, API key or internet connection is involved: ProVerlay asks
- * the app itself.
+ * 1. Spotify account (Web API, server/spotifyAccount.js). Used when an account is
+ *    linked: works on any computer and wherever the account plays (another
+ *    laptop, a phone), with cover art on every platform.
+ * 2. The Spotify app on this computer: the fallback when no account is linked, or
+ *    when the Web API cannot answer (no internet, rate limit, revoked login).
+ *    No account or API key; ProVerlay asks the app itself.
  *   macOS    AppleScript (`osascript`): title, artist, album, cover art, play state.
  *            The first time, macOS asks whether ProVerlay may control Spotify.
  *   Windows  the Spotify window title ("Artist - Title"). No album or cover art,
@@ -16,6 +20,16 @@
 import { execFile } from 'node:child_process'
 import { getState, onStateChange } from './state.js'
 import { debugLog } from './debugLog.js'
+import { cleanArtworkUrl } from './artworkUrl.js'
+import {
+  isSpotifyLinked,
+  loadSpotifyAccount,
+  onSpotifyAccountChange,
+  readSpotifyAccount,
+  spotifyAccountSummary
+} from './spotifyAccount.js'
+
+export { cleanArtworkUrl }
 
 export const NOW_PLAYING_POLL_MIN_MS = 1000
 export const NOW_PLAYING_POLL_MAX_MS = 60000
@@ -50,19 +64,6 @@ const clean = (value) =>
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
     .trim()
     .slice(0, MAX_TEXT)
-
-/** Cover art only from Spotify's own image host, over https. */
-export function cleanArtworkUrl(value) {
-  const text = String(value ?? '').trim()
-  if (!text) return ''
-  try {
-    const url = new URL(text)
-    if (url.protocol !== 'https:' || url.hostname !== 'i.scdn.co') return ''
-    return url.href
-  } catch {
-    return ''
-  }
-}
 
 const number = (value) => {
   const n = Number(String(value ?? '').replace(',', '.'))
@@ -149,6 +150,26 @@ export async function readSpotify(platform = process.platform) {
   }
 }
 
+/**
+ * Account first, the app on this computer as fallback. Readings carry `via`:
+ * 'account' or 'app'. Never throws.
+ */
+export async function readNowPlaying({ readApp = readSpotify, appSupported = nowPlayingSupported() } = {}) {
+  await loadSpotifyAccount()
+  if (!isSpotifyLinked()) return { ...(await readApp()), via: 'app' }
+  const fromAccount = await readSpotifyAccount()
+  if (fromAccount && !fromAccount.apiFailed) return { ...fromAccount, via: 'account' }
+  if (appSupported) {
+    const local = await readApp()
+    if (local.status === 'playing' || local.status === 'paused') return { ...local, via: 'app' }
+  }
+  const { apiFailed, ...reading } = fromAccount || { status: 'error', error: 'Could not read Spotify' }
+  return { ...reading, via: 'account' }
+}
+
+/** Fastest poll while reading the Web API (Spotify rate-limits per app). */
+const ACCOUNT_POLL_MIN_MS = 2000
+
 /* ------------------------------------------------------------------ poller */
 
 let ioRef = null
@@ -156,10 +177,15 @@ let unsubscribe = null
 let timer = null
 let timerMs = 0
 let inFlight = false
-let reader = readSpotify
+let reader = () => readNowPlaying()
+const defaultReader = reader
+let unsubscribeAccount = null
+
+const canRead = () => nowPlayingSupported() || isSpotifyLinked()
 
 const emptySnapshot = () => ({
-  status: nowPlayingSupported() ? 'idle' : 'unsupported',
+  status: canRead() ? 'idle' : 'unsupported',
+  via: '',
   playing: false,
   title: '',
   artist: '',
@@ -174,12 +200,12 @@ let snapshot = emptySnapshot()
 
 /** Replace the function that reads Spotify (tests). Pass nothing to restore the real one. */
 export function setNowPlayingReader(fn) {
-  reader = typeof fn === 'function' ? fn : readSpotify
+  reader = typeof fn === 'function' ? fn : defaultReader
 }
 
 /** Latest reading, for GET /api/now-playing and the first paint of a render page. */
 export function getNowPlayingSnapshot() {
-  return { ...snapshot, polling: Boolean(timer), supported: nowPlayingSupported() }
+  return { ...snapshot, polling: Boolean(timer), supported: canRead(), account: spotifyAccountSummary() }
 }
 
 /**
@@ -188,7 +214,13 @@ export function getNowPlayingSnapshot() {
  */
 export function mergeReading(previous, reading, at = new Date().toISOString()) {
   const status = reading?.status || 'error'
-  const next = { ...previous, status, playing: status === 'playing', error: clean(reading?.error || '') }
+  const next = {
+    ...previous,
+    status,
+    via: reading?.via || '',
+    playing: status === 'playing',
+    error: clean(reading?.error || '')
+  }
   if (reading?.title) {
     next.title = reading.title
     next.artist = reading.artist || ''
@@ -198,6 +230,7 @@ export function mergeReading(previous, reading, at = new Date().toISOString()) {
   }
   const changed =
     next.status !== previous.status ||
+    next.via !== previous.via ||
     next.title !== previous.title ||
     next.artist !== previous.artist ||
     next.album !== previous.album ||
@@ -208,7 +241,8 @@ export function mergeReading(previous, reading, at = new Date().toISOString()) {
 }
 
 function describeSnapshot(s) {
-  if (s.status === 'playing') return `Spotify is playing "${s.title}"${s.artist ? ` by ${s.artist}` : ''}`
+  const via = s.via === 'account' ? ' (account)' : s.via === 'app' ? ' (app on this computer)' : ''
+  if (s.status === 'playing') return `Spotify is playing "${s.title}"${s.artist ? ` by ${s.artist}` : ''}${via}`
   if (s.status === 'paused') return 'Spotify is paused'
   if (s.status === 'stopped') return 'Spotify has no track loaded'
   if (s.status === 'not-running') return 'Spotify is not running on this computer'
@@ -261,11 +295,12 @@ function stopPoller() {
 }
 
 function reconcile(state) {
-  const wanted = nowPlayingSupported() || reader !== readSpotify ? wantedPollMs(state) : 0
+  let wanted = canRead() || reader !== defaultReader ? wantedPollMs(state) : 0
   if (!wanted) return stopPoller()
+  if (isSpotifyLinked()) wanted = Math.max(wanted, ACCOUNT_POLL_MIN_MS)
   if (timer && timerMs === wanted) return
   if (timer) clearInterval(timer)
-  else debugLog('data', `Now playing: reading Spotify on this computer every ${wanted} ms`)
+  else debugLog('data', `Now playing: reading Spotify ${isSpotifyLinked() ? 'via the linked account' : 'on this computer'} every ${wanted} ms`)
   timerMs = wanted
   timer = setInterval(() => void pollNowPlayingOnce(), wanted)
   timer.unref?.()
@@ -276,7 +311,8 @@ function reconcile(state) {
 export function nowPlayingDebugStatus() {
   const widgets = (getState().graphics || []).filter((g) => g.type === 'nowPlaying')
   return {
-    supported: nowPlayingSupported(),
+    supported: canRead(),
+    account: spotifyAccountSummary(),
     polling: Boolean(timer),
     pollMs: timerMs,
     widgets: widgets.map((g) => ({
@@ -293,13 +329,25 @@ export function initNowPlaying(io) {
   ioRef = io
   unsubscribe?.()
   unsubscribe = onStateChange(reconcile)
+  unsubscribeAccount?.()
+  // Logged in or out: read again at once with the other reader.
+  unsubscribeAccount = onSpotifyAccountChange(() => {
+    reconcile(getState())
+    if (timer) void pollNowPlayingOnce()
+    else ioRef?.emit('nowPlayingUpdate', getNowPlayingSnapshot())
+  })
   reconcile(getState())
+  loadSpotifyAccount()
+    .then(() => reconcile(getState()))
+    .catch((err) => console.error('[spotify] Could not load the account:', err.message))
 }
 
 /** Stop the poller and detach from state changes (server shutdown). */
 export function shutdownNowPlaying() {
   unsubscribe?.()
   unsubscribe = null
+  unsubscribeAccount?.()
+  unsubscribeAccount = null
   stopPoller()
   ioRef = null
   snapshot = emptySnapshot()
