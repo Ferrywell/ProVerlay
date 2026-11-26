@@ -6,13 +6,17 @@ import {
   formatHockeyClock,
   formatMatchClock,
   graphicsSignature,
+  parseActionPayload,
   parseClockTime,
   parseTargetTime,
   sanitizeKey,
   splitRef,
   stepEntryId,
+  stepGraphicChoices,
   stepHockeyPeriod,
   tickerCurrentText,
+  widgetActionChoices,
+  widgetTypeInfo,
 } from '../src/model.js'
 import { sampleState } from './fixtures.js'
 
@@ -143,6 +147,65 @@ test('graphicsSignature ignores scores/clocks/visibility but sees names and sub-
   const removed = sampleState()
   removed.graphics.pop()
   assert.notEqual(graphicsSignature(removed), sig)
+})
+
+test('graphicsSignature follows the steps and actions ProVerlay reports', () => {
+  const sig = graphicsSignature(sampleState())
+  const older = sampleState()
+  delete older.widgetTypes
+  assert.notEqual(graphicsSignature(older), sig)
+  const more = sampleState()
+  more.widgetTypes.quizShow.actions.push({ id: 'shuffle', label: 'Shuffle', fields: [] })
+  assert.notEqual(graphicsSignature(more), sig)
+  const reordered = sampleState()
+  reordered.widgetTypes = Object.fromEntries(Object.entries(reordered.widgetTypes).reverse())
+  assert.equal(graphicsSignature(reordered), sig)
+})
+
+test('widgetTypeInfo and the step / action choices tolerate anything in state.widgetTypes', () => {
+  const state = sampleState()
+  assert.deepEqual(widgetTypeInfo(state, 'image'), { steps: true, actions: [] })
+  assert.deepEqual(widgetTypeInfo(state, 'message'), { steps: false, actions: [] })
+  assert.deepEqual(widgetTypeInfo(state, 'constructor'), { steps: false, actions: [] })
+  assert.deepEqual(widgetTypeInfo({}, 'image'), { steps: false, actions: [] })
+  assert.deepEqual(
+    widgetTypeInfo(state, 'quizShow').actions.map((a) => [a.id, a.fields.length]),
+    [
+      ['reveal', 0],
+      ['hide-answer', 0],
+      ['show-question', 1],
+    ],
+  )
+  for (const widgetTypes of [null, 'x', [], { image: null }, { image: { steps: 'yes', actions: 'none' } }]) {
+    const odd = { ...sampleState(), widgetTypes }
+    assert.deepEqual(widgetTypeInfo(odd, 'image'), { steps: false, actions: [] })
+    assert.equal(stepGraphicChoices(odd)[0].id, '')
+    assert.equal(widgetActionChoices(odd)[0].id, '')
+  }
+  const sloppy = {
+    ...sampleState(),
+    widgetTypes: { image: { steps: true, actions: [null, { label: 'no id' }, { id: 'go' }] } },
+  }
+  assert.deepEqual(widgetTypeInfo(sloppy, 'image').actions, [{ id: 'go', label: 'go', fields: [] }])
+  assert.deepEqual(stepGraphicChoices(state), [
+    { id: 'lower-third-show-eeee5555', label: 'Speakers (Lower thirds roster)' },
+    { id: 'quiz-show-ffff6666', label: 'Quiz (Quiz)' },
+    { id: 'image-iiii9999', label: 'Sponsors (Image)' },
+  ])
+})
+
+test('parseActionPayload: empty, JSON object, or a bare value for a one-field action', () => {
+  const number = [{ key: 'number', kind: 'number' }]
+  assert.deepEqual(parseActionPayload('', number), {})
+  assert.deepEqual(parseActionPayload(undefined, []), {})
+  assert.deepEqual(parseActionPayload('  {"number": 3}  ', number), { number: 3 })
+  assert.deepEqual(parseActionPayload('3', number), { number: 3 })
+  assert.deepEqual(parseActionPayload('true', [{ key: 'on' }]), { on: true })
+  assert.deepEqual(parseActionPayload('Half time', [{ key: 'text' }]), { text: 'Half time' })
+  assert.deepEqual(parseActionPayload('{"a": 1, "b": 2}', [{ key: 'a' }, { key: 'b' }]), { a: 1, b: 2 })
+  assert.throws(() => parseActionPayload('3', []), /takes no payload/)
+  assert.throws(() => parseActionPayload('3', [{ key: 'a' }, { key: 'b' }]), /JSON object such as \{"a"/)
+  assert.throws(() => parseActionPayload('[1, 2]', []), /takes no payload/)
 })
 
 test('ticker current text and ref splitting', () => {

@@ -4,6 +4,23 @@ export function sampleState() {
     projectId: 'demo-cup',
     serverNow: Date.now(),
     client: { name: 'Demo Cup', notes: '' },
+    // Steps and actions per widget type, as ProVerlay sends them with every state.
+    widgetTypes: {
+      lowerThirdShow: { steps: true, actions: [] },
+      image: { steps: true, actions: [] },
+      quizShow: {
+        steps: true,
+        actions: [
+          { id: 'reveal', label: 'Reveal answer', fields: [] },
+          { id: 'hide-answer', label: 'Hide answer', fields: [] },
+          {
+            id: 'show-question',
+            label: 'Show question by number',
+            fields: [{ key: 'number', kind: 'number', label: 'Question number', default: 1, min: 1, integer: true }],
+          },
+        ],
+      },
+    },
     graphics: [
       {
         id: 'match-scoreboard-aaaa1111',
@@ -147,6 +164,8 @@ export function stubApi() {
     'showEntry',
     'showImage',
     'stepImage',
+    'step',
+    'runAction',
   ]) {
     api[method] = async (...args) => {
       calls.push([method, ...args])

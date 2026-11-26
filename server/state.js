@@ -24,6 +24,7 @@ import {
 import { penaltiesFeatureEnabled } from '../public/shared/match-utils.js'
 import { migrateLegacyImages } from './imageMigration.js'
 import { experimentalFeatures } from './experimental.js'
+import { widgetCapabilities } from '../public/shared/widget-types.js'
 import { enqueueWrite, writeJsonAtomic } from './writeQueue.js'
 import {
   HttpError,
@@ -38,6 +39,9 @@ import {
 import { applyClockOp, applyScoreOp } from './clockOps.js'
 
 export { deepMerge }
+
+/** The same for every state: it only depends on the code that is running. */
+const WIDGET_CAPABILITIES = Object.freeze(widgetCapabilities())
 
 /** User brand presets (data dir) override the presets bundled in templates/brands. */
 const brandsDir = () => path.join(getDataDir(), 'brands')
@@ -186,6 +190,8 @@ export function getState() {
     customCssVersion: activeCustomCssVersion,
     // Enabled experimental flags (PROVERLAY_EXPERIMENTAL), so every client hides the same things
     experimental: experimentalFeatures(),
+    // Steps and actions per widget type, for remote controls (Companion); see widget-types.js
+    widgetTypes: WIDGET_CAPABILITIES,
     serverNow: Date.now()
   }
 }
@@ -454,12 +460,12 @@ function notify() {
 }
 
 function stripMeta(stateObj) {
-  const { projectId, projectName, customCssVersion, experimental, serverNow, ...rest } = stateObj
+  const { projectId, projectName, customCssVersion, experimental, widgetTypes, serverNow, ...rest } = stateObj
   return rest
 }
 
 /** Remove runtime-only fields that must never be persisted to project.json. */
-const EPHEMERAL_KEYS = ['serverNow', 'projectName', 'customCssVersion', 'experimental']
+const EPHEMERAL_KEYS = ['serverNow', 'projectName', 'customCssVersion', 'experimental', 'widgetTypes']
 
 export function stripEphemeralFields(state) {
   if (!state || !EPHEMERAL_KEYS.some((key) => Object.hasOwn(state, key))) return state

@@ -76,7 +76,11 @@ export function fieldsCard(description) {
   }
 }
 
-/** One generated card per described widget type: `{ message: card, lowerThird: card, … }`. */
+/** One generated card per widget type with described fields: `{ message: card, lowerThird: card, … }`. */
 export function describedCards() {
-  return Object.fromEntries(Object.entries(WIDGET_DESCRIPTIONS).map(([type, d]) => [type, fieldsCard(d)]))
+  return Object.fromEntries(
+    Object.entries(WIDGET_DESCRIPTIONS)
+      .filter(([, d]) => d.fields)
+      .map(([type, d]) => [type, fieldsCard(d)])
+  )
 }

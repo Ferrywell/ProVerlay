@@ -50,6 +50,7 @@ import {
   showLowerThirdEntry,
   hideLowerThirdShow
 } from './lowerThirdEntries.js'
+import { runGraphicAction, stepGraphic } from './widgetActions.js'
 import {
   addImages,
   deleteImage,
@@ -419,6 +420,21 @@ export function createApiRouter({ getPort = () => Number(process.env.PORT || 201
     const graphic = await applyClock(req.params.id, jsonBody(req))
     if (!graphic) return res.status(404).json({ error: 'Graphic not found' })
     res.json(graphic)
+  })
+
+  /* ----------------------------------------------------- steps + actions */
+
+  /**
+   * Next / previous item of any widget with steps (roster, image list, quiz):
+   * `{ delta: 1 | -1, wrap?: true }`. Types and rules: server/widgetActions.js.
+   */
+  router.post('/graphics/:id/step', async (req, res) => {
+    res.json(await stepGraphic(req.params.id, jsonBody(req)))
+  })
+
+  /** An action the widget's type declares (`state.widgetTypes`); the body is its payload. */
+  router.post('/graphics/:id/actions/:actionId', async (req, res) => {
+    res.json(await runGraphicAction(req.params.id, req.params.actionId, jsonBody(req)))
   })
 
   /* ---------------------------------------------------- lower third show */

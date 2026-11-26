@@ -16,6 +16,8 @@
  * Missing fields mean the defaults below, so a migrated widget renders as before.
  */
 
+import { stepListId } from './list-step.js'
+
 /** File types the Image widget accepts (animated GIF/APNG included). */
 export const IMAGE_FILE_RE = /\.(png|apng|jpe?g|webp|gif|svg)$/i
 
@@ -91,19 +93,8 @@ export function imageRotationMs(data) {
   return Math.max(IMAGE_ROTATION_MIN_MS, Number.isFinite(ms) && ms > 0 ? ms : IMAGE_ROTATION_DEFAULT_MS)
 }
 
-/** Image id after/before the active one. Without an active image, next → first, previous → last. */
-export function stepImageId(images, activeId, direction = 'next', { wrap = true } = {}) {
-  if (!images.length) return null
-  const index = images.findIndex((img) => img.id === activeId)
-  const forward = direction !== 'previous'
-  if (index === -1) return forward ? images[0].id : images[images.length - 1].id
-  let next = index + (forward ? 1 : -1)
-  if (next < 0 || next >= images.length) {
-    if (!wrap) return null
-    next = (next + images.length) % images.length
-  }
-  return images[next].id
-}
+/** Image id after/before the active one (see list-step.js for the rules at the ends). */
+export const stepImageId = stepListId
 
 /** Display name for a file: "Sponsor board.png" → "Sponsor board". */
 export function imageNameFromFile(filename) {

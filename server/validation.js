@@ -232,7 +232,7 @@ const STATE_KEY_TYPES = {
   variables: 'object'
 }
 /** Runtime-only fields that clients may echo back; they are never stored. */
-const META_KEYS = new Set(['projectId', 'projectName', 'customCssVersion', 'experimental', 'serverNow'])
+const META_KEYS = new Set(['projectId', 'projectName', 'customCssVersion', 'experimental', 'widgetTypes', 'serverNow'])
 /**
  * Managed through /api/data-sources only (a linked file path or an allowed
  * host must not be settable by any client on the network). Ignored in a

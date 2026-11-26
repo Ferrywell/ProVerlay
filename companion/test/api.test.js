@@ -40,6 +40,24 @@ test('requests use the right method, path and JSON body', async () => {
   assert.equal(fetch.requests[0].headers.Origin, undefined, 'no custom Origin header')
 })
 
+test('generic step and widget action requests', async () => {
+  const fetch = fakeFetch(() => json(200, { id: 'g1' }))
+  const api = new ProVerlayApi({ baseUrl: 'http://127.0.0.1:2014', fetch })
+  await api.step('g1', 1)
+  await api.step('g1', -1, false)
+  await api.runAction('g1', 'reveal')
+  await api.runAction('g 1', 'show-question', { number: 3 })
+  assert.deepEqual(
+    fetch.requests.map((r) => [r.method, r.url, r.body]),
+    [
+      ['POST', 'http://127.0.0.1:2014/api/graphics/g1/step', { delta: 1, wrap: true }],
+      ['POST', 'http://127.0.0.1:2014/api/graphics/g1/step', { delta: -1, wrap: false }],
+      ['POST', 'http://127.0.0.1:2014/api/graphics/g1/actions/reveal', {}],
+      ['POST', 'http://127.0.0.1:2014/api/graphics/g%201/actions/show-question', { number: 3 }],
+    ],
+  )
+})
+
 test('non-2xx responses throw with the server error message', async () => {
   const api = new ProVerlayApi({
     baseUrl: 'http://x',

@@ -17,7 +17,7 @@ Companion 4.x.
 
 ```
 Companion module ──Socket.io──► stateChanged (full state: dropdowns, feedbacks, variables, presets)
-                 ──REST──────► /api/graphics/:id/score, /clock, /toggle, /toggle-solo, /hide, PATCH …
+                 ──REST──────► /api/graphics/:id/score, /clock, /toggle, /toggle-solo, /hide, /step, PATCH …
 ```
 
 - The module connects to `http://<host>:<port>` with Socket.io (no custom headers: ProVerlay accepts requests
@@ -43,6 +43,8 @@ state write queue:
 | Toggle (combined/solo)  | `POST /api/graphics/:id/toggle` / `toggle-solo` without a body (server flips)     |
 | Hide                    | `POST /api/graphics/:id/hide`                                                     |
 | Speaker                 | `POST /api/graphics/:id/entries/:entryId/show`                                    |
+| Widget: next / previous | `POST /api/graphics/:id/step {delta: 1 \| -1, wrap}`                              |
+| Widget: run action      | `POST /api/graphics/:id/actions/:actionId {…payload}`                             |
 
 Two presses before the socket echo arrives therefore count twice, and **Start** never resets a running clock.
 
@@ -57,8 +59,25 @@ Other actions send small partial PATCHes (the server deep-merges objects):
 - quiz: `PATCH {visible: true, data: {activeQuestionId, revealed: false}}` / `PATCH {data: {revealed}}`.
 - message: `PATCH {data: {text}, visible?}`.
 
-Next / previous speaker, the "toggle" answer of a quiz, ticker "toggle" and hockey next / previous period are
-computed from the last received state.
+Next / previous speaker (`lower_third_step`), the "toggle" answer of a quiz, ticker "toggle" and hockey next /
+previous period are computed from the last received state. *Widget: next / previous* is computed on the server,
+so two presses before the socket echo arrives are two steps.
+
+### Steps and actions come from ProVerlay
+
+The module has no list of which widget types can step or which actions they offer. ProVerlay sends that with every
+state (`state.widgetTypes`, see [ARCHITECTURE.md](ARCHITECTURE.md#steps-and-actions)):
+
+- *Widget: next* and *Widget: previous* list the graphics whose type has `steps`. One button works on a
+  lower-thirds roster (next person), an image widget (next image) and a quiz (question → answer → next question).
+  It puts the widget on air, continues after a hide from the item that was on air, and wraps around at the end of
+  the list unless *Wrap around* is off.
+- *Widget: run action* lists one entry per graphic and declared action (`Quiz: Reveal answer`). An action with a
+  payload shows the field names in its label (`Quiz: Show question by number (payload: number)`); type the value
+  (`3`) or a JSON object (`{"number": 3}`) in *Payload*. Variables are allowed there.
+
+A widget type that gains steps or an action in a newer ProVerlay appears in these lists without a module update.
+With a ProVerlay older than this feature the lists are empty and every other action works as before.
 
 ## Configuration
 
@@ -76,6 +95,9 @@ backoff); the upgrade script removes them from existing connections.
 | ------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------- |
 | Graphic: show / hide / toggle, combined (`graphic_visibility`) | graphic, mode                                              | all                                |
 | Graphic: show / hide / toggle, solo (`graphic_solo`)          | graphic, mode                                              | all                                |
+| Widget: next (`widget_next`)                                  | graphic, wrap                                              | types with steps (roster, image, quiz) |
+| Widget: previous (`widget_previous`)                          | graphic, wrap                                              | types with steps (roster, image, quiz) |
+| Widget: run action (`widget_action`)                          | action (graphic + declared action), payload                | types with actions (quiz)          |
 | Score: +1 / −1 / set (`score`)                                | graphic, side, mode (add/subtract/set), amount             | matchScoreboard, hockeyScorebug    |
 | Clock (`clock`)                                               | graphic, action, seconds (adjust), time mm:ss (set)        | matchScoreboard, hockeyScorebug    |
 | Match: set period (`match_period`)                            | graphic, period                                            | matchScoreboard                    |
@@ -166,7 +188,8 @@ Presets use the connection label in variable references, so they keep working wh
 ### When definitions are rebuilt
 
 Actions, feedbacks, variable definitions and presets are rebuilt only when the *graphics signature* changes: graphic
-ids, names and types, plus the items that appear in dropdowns (roster speakers, quiz questions, ticker messages, images).
+ids, names and types, plus the items that appear in dropdowns (roster speakers, quiz questions, ticker messages, images)
+and the steps and actions ProVerlay reports per widget type.
 Score, clock, visibility and active-entry changes only update variable values (diffed) and re-check feedbacks.
 Switching projects in ProVerlay changes the signature, so the module follows automatically.
 
@@ -193,6 +216,12 @@ curl -X POST http://127.0.0.1:2014/api/graphics/<id>/score -H 'Content-Type: app
 # Start / pause the clock
 curl -X POST http://127.0.0.1:2014/api/graphics/<id>/clock -H 'Content-Type: application/json' \
   -d '{"action": "toggle"}'
+
+# Next person, image or quiz step (the same request for every widget with steps)
+curl -X POST http://127.0.0.1:2014/api/graphics/<id>/step -H 'Content-Type: application/json' -d '{"delta": 1}'
+
+# Reveal the quiz answer
+curl -X POST http://127.0.0.1:2014/api/graphics/<id>/actions/reveal -H 'Content-Type: application/json' -d '{}'
 ```
 
 ```javascript

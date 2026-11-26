@@ -297,6 +297,63 @@ test('quiz: show, reveal, toggle, hide', async () => {
   assert.equal(g.visible, false)
 })
 
+test('Next / Previous and widget actions: one button for roster and quiz', async () => {
+  // The lists come from the server's state (state.widgetTypes), not from the module.
+  const stepChoices = ctx.calls.lastActions.widget_next.options[0].choices.map((c) => c.id)
+  assert.ok(stepChoices.includes(ids.roster) && stepChoices.includes(ids.quiz))
+  assert.ok(!stepChoices.includes(ids.match) && !stepChoices.includes(ids.message))
+  const actionChoices = ctx.calls.lastActions.widget_action.options[0].choices.map((c) => c.id)
+  assert.ok(actionChoices.includes(`${ids.quiz}|reveal`), actionChoices.join(', '))
+
+  // Roster: the earlier test left the first speaker active and the roster hidden.
+  const entries = (await graphic(ids.roster)).data.entries
+  await press('widget_next', { graphic: ids.roster, wrap: true })
+  let g = await graphic(ids.roster)
+  assert.deepEqual([g.visible, g.data.activeEntryId], [true, entries[1].id])
+  await press('widget_next', { graphic: ids.roster, wrap: true })
+  await press('widget_next', { graphic: ids.roster, wrap: true })
+  assert.equal((await graphic(ids.roster)).data.activeEntryId, entries[0].id, 'wraps to the first speaker')
+  await press('widget_previous', { graphic: ids.roster, wrap: false })
+  assert.equal((await graphic(ids.roster)).data.activeEntryId, entries[0].id, 'no wrap: stays')
+  await press('widget_previous', { graphic: ids.roster, wrap: true })
+  assert.equal((await graphic(ids.roster)).data.activeEntryId, entries[2].id)
+  // Two presses before the socket echo arrives are two steps.
+  await Promise.all([
+    press('widget_next', { graphic: ids.roster, wrap: true }),
+    press('widget_next', { graphic: ids.roster, wrap: true }),
+  ])
+  assert.equal((await graphic(ids.roster)).data.activeEntryId, entries[1].id)
+
+  // Quiz: question → answer → (one question in this quiz) the question again.
+  const [q] = (await graphic(ids.quiz)).data.questions
+  const quizAt = async () => {
+    const quiz = await graphic(ids.quiz)
+    return [quiz.visible, quiz.data.activeQuestionId, quiz.data.revealed]
+  }
+  await press('widget_next', { graphic: ids.quiz, wrap: true })
+  assert.deepEqual(await quizAt(), [true, q.id, false])
+  await press('widget_next', { graphic: ids.quiz, wrap: true })
+  assert.deepEqual(await quizAt(), [true, q.id, true])
+  await press('widget_previous', { graphic: ids.quiz, wrap: true })
+  assert.deepEqual(await quizAt(), [true, q.id, false])
+  await press('widget_action', { action: `${ids.quiz}|reveal`, payload: '' })
+  assert.deepEqual(await quizAt(), [true, q.id, true])
+  await press('widget_action', { action: `${ids.quiz}|show-question`, payload: '1' })
+  assert.deepEqual(await quizAt(), [true, q.id, false])
+
+  // A refused action is logged with the server's message.
+  logs.length = 0
+  await press('widget_action', { action: `${ids.quiz}|show-question`, payload: '9' })
+  assert.ok(
+    logs.some(
+      ([level, message]) => level === 'error' && /HTTP 400 – payload\.number: the quiz has 1 question/.test(message),
+    ),
+    JSON.stringify(logs),
+  )
+  await press('quiz_hide', { graphic: ids.quiz })
+  await press('lower_third_hide', { graphic: ids.roster })
+})
+
 test('message: set text and show', async () => {
   await press('message_set', { graphic: ids.message, text: 'Half time', show: true })
   const g = await graphic(ids.message)
