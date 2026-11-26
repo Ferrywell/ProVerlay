@@ -190,6 +190,19 @@ function renderSnapshot(s) {
     items.push(`<li><strong>${escapeHtml(d.name)}</strong> · ${escapeHtml(st.state)}, ${st.rowCount} rows, updated ${agoText(st.lastUpdated)}
       <span class="dbg-sub">${escapeHtml(d.where)} · ${poll}${d.holdWhileOnAir ? ' · holds changes while on air' : ''}${st.held.length ? ` · ${st.held.length} held` : ''}</span>${error}</li>`)
   }
+  const np = s.nowPlaying
+  if (np?.widgets?.length) {
+    const snap = np.snapshot || {}
+    const track = snap.title ? [snap.title, snap.artist].filter(Boolean).join(' — ') : 'no track'
+    const reading = !np.supported
+      ? 'not supported on this system'
+      : np.polling
+        ? `reading every ${Math.round(np.pollMs / 1000)} s`
+        : 'not reading (no widget uses Spotify)'
+    const error = snap.error ? `<span class="dbg-sub is-error">${escapeHtml(snap.error)}</span>` : ''
+    items.push(`<li><strong>Now playing</strong> · Spotify ${escapeHtml(snap.status || 'idle')}, ${escapeHtml(track)}
+      <span class="dbg-sub">${reading} · ${np.widgets.length} widget${np.widgets.length === 1 ? '' : 's'}</span>${error}</li>`)
+  }
   for (const t of s.f1) {
     if (t.source !== 'multiviewer') {
       items.push(`<li><strong>${escapeHtml(t.name)}</strong> · F1 manual list, ${t.manualRows} rows</li>`)

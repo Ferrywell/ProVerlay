@@ -169,6 +169,7 @@ function validateGraphicData(type, data, path = 'data') {
   if (type === 'lowerThirdShow') expectType(data.entries, 'array', `${path}.entries`)
   if (type === 'quizShow') expectType(data.questions, 'array', `${path}.questions`)
   if (type === 'image') validateImageData(data, path)
+  if (type === 'nowPlaying') validateNowPlayingData(data, path)
   if (type === 'f1Timing') {
     expectType(data.drivers, 'array', `${path}.drivers`)
     expectType(data.multiviewer, 'object', `${path}.multiviewer`)
@@ -179,6 +180,34 @@ function validateGraphicData(type, data, path = 'data') {
           `${path}.multiviewer.host: must be localhost or a private-network address`
         )
       }
+    }
+  }
+}
+
+const NOW_PLAYING_SOURCES = new Set(['spotify', 'manual'])
+const NOW_PLAYING_TEXT_MAX = 300
+
+/** Checks on a (partial) now-playing widget data payload. */
+function validateNowPlayingData(data, path) {
+  if (data.source !== undefined && !NOW_PLAYING_SOURCES.has(data.source)) {
+    throw badRequest(`${path}.source: expected "spotify" or "manual"`)
+  }
+  for (const key of ['title', 'artist', 'label']) {
+    const v = data[key]
+    if (v === undefined) continue
+    if (typeof v !== 'string') throw badRequest(`${path}.${key}: expected string, got ${kindOf(v)}`)
+    if (v.length > NOW_PLAYING_TEXT_MAX) throw badRequest(`${path}.${key}: at most ${NOW_PLAYING_TEXT_MAX} characters`)
+  }
+  expectType(data.showArtwork, 'boolean', `${path}.showArtwork`)
+  expectType(data.hideWhenIdle, 'boolean', `${path}.hideWhenIdle`)
+  for (const [key, min, max] of [
+    ['pollMs', 1000, 60000],
+    ['widthPx', 240, 1600]
+  ]) {
+    const v = data[key]
+    if (v === undefined) continue
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max) {
+      throw badRequest(`${path}.${key}: expected a number from ${min} to ${max}`)
     }
   }
 }

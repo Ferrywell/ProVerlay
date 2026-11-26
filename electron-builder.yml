@@ -20,6 +20,10 @@ mac:
   category: public.app-category.video
   icon: build/icon.icns
   identity: null
+  # The now-playing widget asks the Spotify app for its current track (AppleScript).
+  # macOS shows this text the first time, when it asks the user for permission.
+  extendInfo:
+    NSAppleEventsUsageDescription: ProVerlay reads the current track from Spotify for the Now playing widget.
   # Arch is chosen on the command line: `npm run dist:mac` (arm64) and
   # `npm run dist:mac:x64` (Intel). Signing and zipping happen afterwards in
   # scripts/package-mac-app.mjs (ad-hoc by default; see docs/RELEASING.md).

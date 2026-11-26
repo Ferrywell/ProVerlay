@@ -1397,3 +1397,113 @@ html[data-preview-window] .score-canvas--no-bg {
   font-size: 30px;
   font-weight: 650;
 }
+
+/* ── Now playing ─────────────────────────────────────────────────────────
+   Sizes use --np-u (1% of the board width, set inline) so the plate scales
+   with the canvas. Restyle from a project's custom CSS with these classes:
+   .np-plate, .np-art, .np-art__img, .np-label, .np-title, .np-artist.
+   .np-board--spotify / --manual tell where the text comes from, --art that a
+   cover is shown. */
+
+.graphic--nowPlaying {
+  background: transparent;
+  padding: 0;
+}
+
+.np-board--empty {
+  display: none;
+}
+
+.np-plate {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--np-u) * 4);
+  box-sizing: border-box;
+  width: 100%;
+  padding: calc(var(--np-u) * 2.4) calc(var(--np-u) * 7) calc(var(--np-u) * 2.4) calc(var(--np-u) * 2.4);
+  background: var(--background);
+  color: var(--text);
+  border-radius: calc(var(--np-u) * 50);
+  backdrop-filter: blur(16px);
+  font-family: var(--brand-font);
+}
+
+.np-art {
+  position: relative;
+  flex: none;
+  width: calc(var(--np-u) * 19);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--primary);
+}
+
+/* No cover: a plain record */
+.np-art::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--text);
+  opacity: 0.9;
+}
+
+.np-art:has(.np-art__img)::after {
+  display: none;
+}
+
+.np-art__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.np-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--np-u) * 0.4);
+  min-width: 0;
+}
+
+.np-label {
+  font-size: calc(var(--np-u) * 3.4);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--primary);
+}
+
+.np-title,
+.np-artist {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.np-title {
+  font-size: calc(var(--np-u) * 5.8);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.np-artist {
+  font-size: calc(var(--np-u) * 4.2);
+  line-height: 1.25;
+  opacity: 0.82;
+}
+
+/* New track while on air */
+.np-board--swap .np-text,
+.np-board--swap .np-art__img {
+  animation: np-swap 0.35s ease both;
+}
+
+@keyframes np-swap {
+  from { opacity: 0; transform: translateY(calc(var(--np-u) * 0.8)); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -31,6 +31,7 @@ import {
 import { reconnectAfterServerDisconnect } from '/public/shared/reconnect.js'
 import { activeImage, imageItems, imageSize, imageVariant } from '/public/shared/image-list.js'
 import { graphicUsesLiveVariables, resolveGraphicVariables, variableContext } from '/public/shared/variables.js'
+import { nowPlayingView, nowPlayingWidth } from '/public/shared/now-playing.js'
 
 const stage = document.getElementById('stage')
 const layers = new Map()
@@ -506,6 +507,73 @@ function hexLuminance(value) {
   })
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
+
+// ---------------------------------------------------------------------------
+// Now playing: the track from Spotify on the ProVerlay computer (pushed as
+// `nowPlayingUpdate`) or the widget's manual text. One reading for all widgets.
+// ---------------------------------------------------------------------------
+
+let nowPlayingLive = null
+
+function nowPlayingArtworkUrl(value) {
+  // Cover art comes from Spotify's image host only (the server checks this too).
+  return /^https:\/\/i\.scdn\.co\/[\w\-./]+$/.test(String(value || '')) ? value : ''
+}
+
+function buildNowPlaying(rawData, graphicId) {
+  const data = asObject(rawData)
+  const view = nowPlayingView(data, nowPlayingLive)
+  if (!view.show) return '<div class="np-board np-board--empty"></div>'
+  const width = nowPlayingWidth(data)
+  // --np-u = 1% of the board width, so the plate scales with the canvas without
+  // container queries (older vMix browsers).
+  const size = `width:calc(var(--canvas-h, 1080px) * ${width / 1080});--np-u:calc(var(--canvas-h, 1080px) * ${width / 108000});`
+  const art = nowPlayingArtworkUrl(view.artworkUrl)
+  const artHtml = art ? `<img class="np-art__img" src="${escape(art)}" alt="" referrerpolicy="no-referrer" />` : ''
+  return `
+    <div class="np-board np-board--${view.from}${art ? ' np-board--art' : ''}" data-np-id="${escape(graphicId)}" style="${size}">
+      <div class="np-plate">
+        <div class="np-art">${artHtml}</div>
+        <div class="np-text">
+          ${view.label ? `<span class="np-label">${escape(view.label)}</span>` : ''}
+          <span class="np-title">${escape(view.title)}</span>
+          ${view.artist ? `<span class="np-artist">${escape(view.artist)}</span>` : ''}
+        </div>
+      </div>
+    </div>
+  `
+}
+
+/** Same content: leave the layer alone. New track: swap the text with a short fade. */
+function updateNowPlayingLayer(layer, inner, graphic) {
+  const html = graphicHtml(graphic)
+  applyLayerPosition(layer, graphic)
+  rememberTransition(layer, graphic)
+  if (inner.dataset.npHtml === html) return
+  const hadTrack = Boolean(inner.querySelector('.np-board:not(.np-board--empty)'))
+  inner.innerHTML = html
+  inner.dataset.npHtml = html
+  if (hadTrack) inner.querySelector('.np-board:not(.np-board--empty)')?.classList.add('np-board--swap')
+}
+
+function applyNowPlaying(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return
+  nowPlayingLive = snapshot
+  for (const graphic of cachedGraphics) {
+    if (graphic?.type !== 'nowPlaying') continue
+    const layer = layers.get(graphic.id)
+    if (layer) guardGraphic(graphic, 'now playing update', () => updateLayerContent(layer, graphic))
+  }
+}
+
+// A cover that does not load (offline) leaves the plain disc instead of a broken image.
+document.addEventListener(
+  'error',
+  (event) => {
+    if (event.target?.classList?.contains('np-art__img')) event.target.remove()
+  },
+  true
+)
 
 function buildStreamCountdown(rawData, graphicId) {
   const data = asObject(rawData)
@@ -1301,6 +1369,8 @@ function graphicHtml(graphic) {
       return buildCustomTicker(d, graphic.id)
     case 'streamCountdown':
       return buildStreamCountdown(d, graphic.id)
+    case 'nowPlaying':
+      return buildNowPlaying(d, graphic.id)
     case 'f1Timing':
       return buildF1Timing(d, graphic.id)
     case 'hockeyScorebug':
@@ -1447,6 +1517,10 @@ function updateLayerContent(layer, graphic) {
     updateImageLayer(inner, graphic, tr)
     return
   }
+  if (graphic.type === 'nowPlaying' && inner.querySelector('.np-board')) {
+    updateNowPlayingLayer(layer, inner, graphic)
+    return
+  }
   // Build first: if the builder throws, the last good frame (and its timers)
   // stays on air instead of a half-torn-down layer.
   const html = graphicHtml(graphic)
@@ -1501,7 +1575,9 @@ function renderGraphic(graphic) {
   layer.dataset.id = graphic.id
   const inner = document.createElement('div')
   inner.className = `graphic graphic--${graphic.type}`
-  inner.innerHTML = graphicHtml(graphic)
+  const html = graphicHtml(graphic)
+  inner.innerHTML = html
+  if (graphic.type === 'nowPlaying') inner.dataset.npHtml = html
   layer.appendChild(inner)
   const tr = rememberTransition(layer, graphic)
   const skipEnter = skipEnterAnimation.has(graphic.id)
@@ -1968,6 +2044,11 @@ socket.on('f1TimingUpdate', (payload) => {
   const layer = layers.get(payload.graphicId)
   if (graphic && layer) guardGraphic(graphic, 'F1 live update', () => updateF1Tower(layer, graphic))
 })
+socket.on('nowPlayingUpdate', applyNowPlaying)
+fetch('/api/now-playing')
+  .then((r) => (r.ok ? r.json() : null))
+  .then(applyNowPlaying)
+  .catch(() => {})
 fetch('/api/state')
   .then((r) => r.json())
   .then(applyState)

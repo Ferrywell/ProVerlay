@@ -700,3 +700,10 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--pv-space-sm);
 }
+
+/* Now playing card: the text that is (or would be) on screen */
+.op-now-playing__track {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

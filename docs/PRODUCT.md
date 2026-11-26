@@ -60,6 +60,7 @@ on a phone or tablet redirects to `/operator`.
 | `lowerThirdShow` | Lower thirds | yes | Roster of people; put one on air with a click |
 | `quizShow` | Quiz | yes | Multiple-choice question with reveal |
 | `streamCountdown` | Stream countdown | no | Countdown to the stream start |
+| `nowPlaying` | Now playing | yes | Track from the Spotify app on the ProVerlay computer, or typed text |
 | `lowerThird` | Lower third (single) | no | One name/title lower third |
 | `message` | Message | no | Text message / break slide |
 | `image` | Image | yes | Pre-designed graphics (PNG lower thirds, logos, sponsor boards, full-screen slides): a list with one image on air, Next/Previous, optional auto-hide and carousel |

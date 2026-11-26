@@ -29,6 +29,7 @@ import { matchCard } from '/public/shared/operate-match.js'
 import { hockeyCard } from '/public/shared/operate-hockey.js'
 import { f1Card } from '/public/shared/operate-f1.js'
 import { imageCard } from '/public/shared/operate-image.js'
+import { nowPlayingCard } from '/public/shared/operate-now-playing.js'
 import {
   countdownCard,
   lowerThirdCard,
@@ -48,7 +49,8 @@ const CARDS = {
   streamCountdown: countdownCard,
   message: messageCard,
   lowerThird: lowerThirdCard,
-  image: imageCard
+  image: imageCard,
+  nowPlaying: nowPlayingCard
 }
 
 const FALLBACK_CARD = {

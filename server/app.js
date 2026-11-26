@@ -14,6 +14,7 @@ import multer from 'multer'
 import { createApiRouter } from './api.js'
 import { loadState, getState, onStateChange, resetState } from './state.js'
 import { initF1Timing, shutdownF1Timing } from './f1Timing.js'
+import { initNowPlaying, shutdownNowPlaying } from './nowPlaying.js'
 import { initImageTimers, shutdownImageTimers } from './imageWidget.js'
 import { initDataSources, shutdownDataSources } from './dataSources.js'
 import { detectDevice, preferredDashboard } from './device.js'
@@ -310,6 +311,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
         .catch((err) => console.error('[socket] projectsChanged failed:', err.message))
     })
     initF1Timing(io)
+    initNowPlaying(io)
     initImageTimers()
     await initDataSources(io)
     started = true
@@ -340,6 +342,7 @@ export function createApp({ dataDir, port = Number(process.env.PORT || 2014), ho
     if (!started) return
     started = false
     shutdownF1Timing()
+    shutdownNowPlaying()
     shutdownImageTimers()
     shutdownDataSources()
     unsubscribe?.()

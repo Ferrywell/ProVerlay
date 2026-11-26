@@ -42,6 +42,7 @@ import { CUSTOM_CSS_MAX_BYTES, customCssVersion } from './customCss.js'
 import { analyzeImageBuffer, buildGraphicDataFromCompose } from './composeAnalyze.js'
 import { createGraphicFromType } from './graphicDefaults.js'
 import { getLiveSnapshot, importDriversOnce } from './f1Timing.js'
+import { getNowPlayingSnapshot } from './nowPlaying.js'
 import { buildDebugSnapshot } from './debugSnapshot.js'
 import {
   addLowerThirdEntry,
@@ -583,6 +584,13 @@ export function createApiRouter({ getPort = () => Number(process.env.PORT || 201
   /** Variables from a source: `{ sourceId, keyColumn, valueColumn }`, or `{ sourceId: null }`. */
   router.put('/variable-source', async (req, res) => {
     res.json(await setVariableSource(jsonBody(req)))
+  })
+
+  /* --------------------------------------------------------- now playing */
+
+  /** Latest Spotify reading: first paint of a render page, status in the operate card. */
+  router.get('/now-playing', (_req, res) => {
+    res.json(getNowPlayingSnapshot())
   })
 
   /* ------------------------------------------------------------------ F1 */
