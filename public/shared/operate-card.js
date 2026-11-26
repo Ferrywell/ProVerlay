@@ -11,7 +11,12 @@
  * Per-type modules (operate-match/-hockey/-f1/-image/-widgets.js) provide:
  *   label, status(g), primary(g), more?(g), shape?(g), update(card, g),
  *   ticking?(g) + tick(card, g), polling?(g) + poll(card, g),
- *   action?(g, action, ctx), field?(g, field, value, ctx), liveFields?, onInput?
+ *   action?(g, action, ctx), field?(g, field, value, ctx), liveFields?, onInput?,
+ *   fields?  described fields (widget-fields.js) whose controls this file saves,
+ *            toggles and refreshes itself; see operate-fields.js
+ *
+ * Types that only have described fields (widget-types.js: message, lowerThird)
+ * have no module: their card is generated from the description.
  */
 import { toggleGraphic } from '/public/shared/client.js'
 import { showToast, withPending } from '/public/shared/toast.js'
@@ -29,16 +34,13 @@ import { matchCard } from '/public/shared/operate-match.js'
 import { hockeyCard } from '/public/shared/operate-hockey.js'
 import { f1Card } from '/public/shared/operate-f1.js'
 import { imageCard } from '/public/shared/operate-image.js'
-import {
-  countdownCard,
-  lowerThirdCard,
-  messageCard,
-  quizCard,
-  rosterCard,
-  tickerCard
-} from '/public/shared/operate-widgets.js'
+import { countdownCard, quizCard, rosterCard, tickerCard } from '/public/shared/operate-widgets.js'
+import { describedCards, saveFieldInput, syncFields, toggleField } from '/public/shared/operate-fields.js'
+import { FIELD_TOGGLE_ACTION, fieldByKey } from '/public/shared/widget-fields.js'
 
 const CARDS = {
+  // Generated cards first: a hand-written card for the same type takes over.
+  ...describedCards(),
   matchScoreboard: matchCard,
   hockeyScorebug: hockeyCard,
   customTicker: tickerCard,
@@ -46,8 +48,6 @@ const CARDS = {
   quizShow: quizCard,
   f1Timing: f1Card,
   streamCountdown: countdownCard,
-  message: messageCard,
-  lowerThird: lowerThirdCard,
   image: imageCard
 }
 
@@ -149,6 +149,7 @@ export function refreshOperateCard(card, graphic) {
     card.dataset.shape = shape
   }
   mod.update(card, graphic)
+  if (mod.fields) syncFields(card, mod.fields, graphic.data)
   ensureTimers()
 }
 
@@ -190,12 +191,15 @@ export function wireOperateRoot(root, getGraphic, { onWentLive, confirmDecrement
 
   const saveField = async (el, value) => {
     const found = cardContext(root, el)
-    if (!found?.mod.field) return
+    if (!found) return
+    const described = fieldByKey(found.mod.fields, el.dataset.field)
+    if (!described && !found.mod.field) return
     const key = `${found.card.dataset.graphicId}:${el.dataset.field}:${el.dataset.index ?? ''}`
     clearTimeout(debounce.get(key))
     if (lastSent.get(key) === value) return
     lastSent.set(key, value)
-    await found.mod.field(found.graphic, el.dataset.field, value, found.ctx)
+    if (described) await saveFieldInput(found.graphic, described, value)
+    else await found.mod.field(found.graphic, el.dataset.field, value, found.ctx)
     // A later server value may differ (normalised) — allow sending the same text again.
     setTimeout(() => lastSent.delete(key), 1000)
   }
@@ -213,7 +217,9 @@ export function wireOperateRoot(root, getGraphic, { onWentLive, confirmDecrement
       if (updated.visible) onWentLive?.({ ...graphic, ...updated })
       return
     }
-    await mod.action?.(graphic, btn.dataset.action, ctx)
+    const toggled = btn.dataset.action === FIELD_TOGGLE_ACTION && fieldByKey(mod.fields, btn.dataset.field)
+    if (toggled) await toggleField(graphic, toggled)
+    else await mod.action?.(graphic, btn.dataset.action, ctx)
     if (card.isConnected) ensureTimers()
   })
 
@@ -232,7 +238,8 @@ export function wireOperateRoot(root, getGraphic, { onWentLive, confirmDecrement
     const field = el.dataset.field
     if (!field) return
     const found = cardContext(root, el)
-    if (!found?.mod.liveFields?.includes(field)) return
+    if (!found) return
+    if (!found.mod.liveFields?.includes(field) && !fieldByKey(found.mod.fields, field)?.live) return
     found.mod.onInput?.(found.card, field, el.value)
     const key = `${found.card.dataset.graphicId}:${field}:${el.dataset.index ?? ''}`
     clearTimeout(debounce.get(key))
