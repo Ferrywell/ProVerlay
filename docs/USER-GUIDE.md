@@ -294,6 +294,11 @@ project settings, its custom CSS and all its assets).
 - **Import:** **Project & network → Import** and pick a `.proverlay` (or `.zip`) file.
   The import is added as a **new** project and is **not** activated automatically —
   select it and click **Activate this project** when you are ready to switch.
+- **A project from another version:** an export records the ProVerlay version it was
+  made with and the widget types it uses. If the project contains a widget type your
+  ProVerlay does not know, the import still works and tells you which widgets will stay
+  off screen and which version the project came from. Those widgets are kept in the
+  project and work again once you open it in a ProVerlay that has them.
 
 ## 10. Troubleshooting
 

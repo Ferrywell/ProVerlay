@@ -9,30 +9,17 @@
  *   from (typed in, a data source, MultiViewer, variables)
  * - dataSources, f1: the status the connectors keep in memory
  */
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import { getState } from './state.js'
 import { getDataDir } from './paths.js'
 import { experimentalFeatures } from './experimental.js'
 import { f1DebugStatus } from './f1Timing.js'
 import { listDataSources, sourceWhere } from './dataSources.js'
 import { debugEntries } from './debugLog.js'
+import { appVersion } from './appVersion.js'
 import { usedVariableNames } from '../public/shared/variables.js'
 
-const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const startedAt = new Date()
 
-let version = null
-function appVersion() {
-  if (version) return version
-  try {
-    version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version || 'unknown'
-  } catch {
-    version = 'unknown'
-  }
-  return version
-}
 
 /** Where one graphic's content comes from, in words plus details. */
 export function graphicOrigin(graphic, { sources = [], f1 = [] } = {}) {

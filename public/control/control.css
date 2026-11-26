@@ -426,6 +426,10 @@ code {
   color: var(--pv-positive-text);
 }
 
+.project-status.is-warning {
+  color: var(--pv-warning);
+}
+
 #project-switcher:disabled,
 .project-actions .button:disabled {
   opacity: 0.55;

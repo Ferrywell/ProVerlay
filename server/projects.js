@@ -8,6 +8,9 @@ import { BLANK_PROJECT, SEED_REGISTRY } from './projectSeed.js'
 import { getDataDir } from './paths.js'
 import { enqueueWrite, writeJsonAtomic, writeFileAtomic, renameWithRetry } from './writeQueue.js'
 import { DATA_DIR_NAME, DATA_FILE_RE, sanitizeImportedDataSources } from './dataFiles.js'
+import { appVersion } from './appVersion.js'
+import { exportRequirements, importNotice } from './projectRequirements.js'
+import { debugLog } from './debugLog.js'
 import {
   CUSTOM_CSS_FILENAME,
   CUSTOM_CSS_MAX_BYTES,
@@ -612,8 +615,19 @@ export async function exportProjectToZip(projectId, res) {
   })
   archive.pipe(res)
 
+  // What the project needs from the ProVerlay that imports it (server/projectRequirements.js).
+  let state = null
+  try {
+    state = JSON.parse(await fs.readFile(projectFile(projectId), 'utf8'))
+  } catch {
+    // An unreadable project.json still exports as it is; the manifest then lists no widget types.
+  }
   archive.append(
-    JSON.stringify({ id: meta.id, name: meta.name, exportedAt: new Date().toISOString() }, null, 2),
+    JSON.stringify(
+      { id: meta.id, name: meta.name, exportedAt: new Date().toISOString(), ...exportRequirements(state, appVersion()) },
+      null,
+      2
+    ),
     { name: 'manifest.json' }
   )
   archive.file(projectFile(projectId), { name: 'project.json' })
@@ -710,10 +724,11 @@ export async function importProjectFromZip(tempPath, originalName = 'import.prov
       let suggestedName = String(originalName || 'import')
         .replace(/\.proverlay$/i, '')
         .replace(/\.zip$/i, '')
+      let manifest = null
       if (manifestEntry) {
         try {
           const buf = await readEntryLimited(manifestEntry, 1024 * 1024, 'manifest.json')
-          const manifest = JSON.parse(buf.toString('utf8'))
+          manifest = JSON.parse(buf.toString('utf8'))
           if (typeof manifest?.name === 'string' && manifest.name.trim()) {
             suggestedName = manifest.name.trim().slice(0, 120)
           }
@@ -768,6 +783,12 @@ export async function importProjectFromZip(tempPath, originalName = 'import.prov
       registry.projects.push(entry)
       await writeRegistry(registry)
       emitProjectsChanged()
+      // Widget types this build does not know: say so now, not during the show.
+      const notice = importNotice({ state: projectData, manifest, runningVersion: appVersion() })
+      if (notice) {
+        debugLog('data', `Import "${name}": ${notice.message}`, { level: 'warn' })
+        return { ...entry, notice }
+      }
       return entry
     } catch (err) {
       if (err instanceof HttpError) throw err

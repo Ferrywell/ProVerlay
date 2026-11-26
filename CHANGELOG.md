@@ -11,6 +11,19 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+### Added
+
+- **Import tells you when a project needs another ProVerlay.** An export now records the
+  version it was made with and the widget types it uses (`manifest.json`). When you import
+  a project with a widget type this ProVerlay does not know, the import still succeeds and
+  says which widgets will stay off screen and which version the project came from. The
+  import answer carries this as `notice`.
+
+### Fixed
+
+- Render: a widget of a type this ProVerlay does not know no longer puts its name on air
+  as plain text. It is skipped and reported in the Debug console.
+
 ## [0.11.0] - 2026-11-18
 
 Update ProVerlay from inside the app, and a Debug console that shows what the server and
