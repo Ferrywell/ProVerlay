@@ -8,6 +8,8 @@
 import nodePath from 'path'
 import { isTrustedHostname } from './netSecurity.js'
 import { IMAGE_FILE_RE, MAX_IMAGES } from '../public/shared/image-list.js'
+import { validateFieldData } from '../public/shared/widget-fields.js'
+import { widgetFields } from '../public/shared/widget-types.js'
 
 export class HttpError extends Error {
   constructor(status, message) {
@@ -155,6 +157,9 @@ function validateImageData(data, where = 'data') {
 /** Type-specific checks on a (partial) graphic.data payload. */
 function validateGraphicData(type, data, path = 'data') {
   if (!isPlainObject(data)) return
+  // Types with a description (public/shared/widget-types.js): kind and limits of each field.
+  const fieldError = validateFieldData(widgetFields(type), data, path)
+  if (fieldError) throw badRequest(fieldError)
   if (SCORE_TYPES.has(type)) {
     for (const key of ['homeScore', 'awayScore']) {
       const v = data[key]

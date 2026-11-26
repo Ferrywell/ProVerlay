@@ -11,6 +11,22 @@ material. The entries below are reconstructed from that history; the tags
 
 ## [Unreleased]
 
+### Changed
+
+- **One description per widget type** (internal): a widget type can now be described
+  once as a list of fields (kind, label, default, limits) in
+  `public/shared/widget-types.js`; its default data, the validation of its `data` and
+  its operate card are derived from that. *Message* and *Lower third (single)* use
+  it and look and work as before. See
+  [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#describing-a-widget-type).
+
+### Fixed
+
+- `PATCH /api/graphics/:id`: a list or an object sent as the text of a *Message* or
+  as the name, title or company of a *Lower third (single)* is rejected with 400. It
+  used to be stored, after which that field could no longer be changed. Text, numbers,
+  `true`/`false` and `null` are accepted as before.
+
 ## [0.11.0] - 2026-11-18
 
 Update ProVerlay from inside the app, and a Debug console that shows what the server and

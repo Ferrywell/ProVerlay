@@ -108,6 +108,74 @@ and can be renamed freely.
 | `f1Timing` | drivers/session, MultiViewer or manual (experimental, see below) |
 | `hockeyScorebug` | home/away codes & scores & colors, quarter countdown clock + SVG ring |
 
+### Describing a widget type
+
+A widget type can be described once, as a list of fields, instead of being
+written out in several files. The description lives in
+`public/shared/widget-types.js` (loaded by the server and by the pages):
+
+```js
+message: describe({
+  label: 'Message',            // name on the operate card
+  position: 'custom',          // where a new widget is placed
+  operator: false,             // listed on /operator when created
+  fields: [
+    { key: 'text', kind: 'text', label: 'Message text', default: 'Message', live: true, lenient: true }
+  ],
+  summary: ['text'],           // fields that make up the card's status line
+  extraData: { placementFree: { x: 50, y: 82 } }   // default data that is not a field
+})
+```
+
+| kind | control | value | limits |
+|------|---------|-------|--------|
+| `text` | one-line input | string | `maxLength` |
+| `multiline` | textarea | string | `maxLength` |
+| `number` | number input | number | `min`, `max`, `step`, `integer` |
+| `boolean` | on/off button | boolean | |
+| `choice` | select | one of `options` (`[{ value, label }]` or plain values) | |
+| `color` | colour picker | CSS colour text, or `''` for "not set" | |
+
+Every field needs a `default`. Optional: `description` (tooltip), `live` (save
+while typing instead of when the field is left) and, for text kinds, `lenient`
+(see below).
+
+`public/shared/widget-fields.js` (pure functions, no imports) derives from a
+list of fields:
+
+- **the default data** of a new widget (`fieldDefaults`; `server/graphicDefaults.js`
+  builds the template from the description);
+- **the validation** of a (partial) `data` object (`validateFieldData`, called from
+  `server/validation.js` for `PATCH /api/graphics/:id` and `PATCH /api/state`): the
+  value must be of the field's kind and within its limits, the message names the
+  field (`data.title: at most 80 characters`). Only keys that are sent are
+  checked; keys the list does not describe are left alone;
+- **the form controls** (`fieldsHtml`) and the conversion of what a control holds
+  into a value (`coerceFieldInput`).
+
+`public/shared/operate-fields.js` turns a description into a complete operate
+card; `operate-card.js` registers one for every described type. A described type
+therefore needs no entry in `graphicDefaults.js`, `validation.js`,
+`operate-widgets.js` or `operate-card.js`. What it still needs by hand: its HTML
+and CSS on the render, its labels in the dashboard menus, and (for
+`{{variables}}`) a line in `public/shared/variables.js`.
+
+`message` and `lowerThird` are described this way. Their text fields are
+`lenient`: the API never checked them, so numbers, booleans and `null` are still
+accepted and stored as sent (the render shows them as text), and there is no
+maximum length. One thing changed: a list or an object in such a field is now
+rejected with 400. It used to be stored, after which the field could no longer
+be changed (a text can not be merged over a list or object).
+
+**Cards with their own controls** (score, clock, ticker, quiz, images) keep
+their module. Such a card can still hand its plain fields to the description:
+it sets `fields` on its module and places `fieldsHtml(fields, g.data)` (a card
+cell) or `fieldControlsHtml(fields, g.data)` (bare controls for its own grid) in
+its `primary()`/`more()` HTML. `operate-card.js` saves, toggles and refreshes
+the controls of those fields; the card's own `field()`, `action()` and
+`update()` only deal with its custom controls. Fields are top-level keys of
+`data`: nested values (`layout.background`) and lists still need their own code.
+
 ### Transitions
 
 Every graphic has an optional top-level `transition` object that controls show/hide behavior in the render:
@@ -338,7 +406,9 @@ message naming the field:
   current value is fine); `visible`/`soloVisible`/`operator` booleans,
   `name`/`position` strings, `transition`/`data` objects. Score fields must be
   non-negative integers; `f1Timing` `multiviewer.host` must be local (see
-  below).
+  below). For described widget types (`message`, `lowerThird`) each field in
+  `data` is checked against its description, see
+  [Describing a widget type](#describing-a-widget-type).
 - Merging never turns an object into an array, an array into an object, or an
   object/array into a scalar or `null`; arrays replace arrays.
 - Unknown widget types (including prototype names such as `constructor`) are

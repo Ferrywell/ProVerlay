@@ -1,6 +1,7 @@
 /**
  * Operate cards for the list-style and simple widgets: ticker, lower-thirds
- * roster, quiz, stream countdown, message and single lower third.
+ * roster, quiz and stream countdown. (Message and single lower third have no
+ * card code: operate-fields.js builds their cards from widget-types.js.)
  */
 import { patchGraphic, toggleGraphic } from '/public/shared/client.js'
 import { showToast } from '/public/shared/toast.js'
@@ -12,7 +13,6 @@ import {
   patchData,
   postEndpoint,
   replaceHtmlKeepFocus,
-  setIfIdle,
   setText
 } from '/public/shared/operate-ui.js'
 
@@ -257,39 +257,3 @@ export const countdownCard = {
     return patchData(g.id, { targetDateTime: countdownTargetFromDuration(minutes, seconds) })
   }
 }
-
-/* ------------------------------------------------- message + lower third */
-
-function textFieldsCard(label, fields, status) {
-  return {
-    label,
-    status,
-    primary: (g) => `<div class="pv-group__cell op-grid op-grid--${fields.length > 1 ? 'auto' : '1'}">
-      ${fields
-        .map(
-          ([key, text]) => `<label class="field op-field">
-            <span>${text}</span>
-            <input type="text" data-field="${key}" value="${escapeHtml(g.data?.[key] || '')}" />
-          </label>`
-        )
-        .join('')}
-    </div>`,
-    update(card, g) {
-      for (const [key] of fields) setIfIdle(card, `[data-field="${key}"]`, g.data?.[key] || '')
-    },
-    liveFields: fields.map(([key]) => key),
-    field: (g, field, value) => patchData(g.id, { [field]: String(value ?? '') })
-  }
-}
-
-export const messageCard = textFieldsCard('Message', [['text', 'Message text']], (g) => g.data?.text || 'Message')
-
-export const lowerThirdCard = textFieldsCard(
-  'Lower third',
-  [
-    ['name', 'Name'],
-    ['title', 'Title'],
-    ['company', 'Company']
-  ],
-  (g) => [g.data?.name, g.data?.title].filter(Boolean).join(' · ') || 'Lower third'
-)

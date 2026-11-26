@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { defaultMatchData } from './matchClock.js'
 import { defaultF1Drivers } from './f1Timing.js'
 import { experimentalFlagForType, isExperimentalEnabled } from './experimental.js'
+import { WIDGET_DESCRIPTIONS, widgetDefaultData } from '../public/shared/widget-types.js'
 
 export function defaultHockeyScorebugData() {
   return {
@@ -151,8 +152,8 @@ export function defaultStreamCountdownData() {
  *   matchScoreboard / hockeyScorebug  top-center  (alternatives for one show)
  *   streamCountdown                   center      (pre-show)
  *   customTicker                      bottom-full
- *   message                           custom, bottom center just above the ticker
- *   lowerThird / lowerThirdShow       bottom-left
+ *   message                           custom, bottom center just above the ticker (widget-types.js)
+ *   lowerThird / lowerThirdShow       bottom-left (lowerThird: widget-types.js)
  *   quizShow                          top-left    (panel itself sits left, see data.panel)
  *   f1Timing                          custom      (left side, data.placementFree; experimental)
  *   image                             center      (free placement, original size)
@@ -186,15 +187,6 @@ const GRAPHIC_TEMPLATES = {
     operator: false,
     data: defaultStreamCountdownData()
   }),
-  lowerThird: (name) => ({
-    type: 'lowerThird',
-    name,
-    visible: false,
-    soloVisible: false,
-    position: 'bottom-left',
-    operator: false,
-    data: { name: 'Name', title: 'Title', company: '' }
-  }),
   lowerThirdShow: (name) => ({
     type: 'lowerThirdShow',
     name,
@@ -203,15 +195,6 @@ const GRAPHIC_TEMPLATES = {
     position: 'bottom-left',
     operator: true,
     data: defaultLowerThirdShowData()
-  }),
-  message: (name) => ({
-    type: 'message',
-    name,
-    visible: false,
-    soloVisible: false,
-    position: 'custom',
-    operator: false,
-    data: { text: 'Message', placementFree: { x: 50, y: 82 } }
   }),
   quizShow: (name) => ({
     type: 'quizShow',
@@ -248,6 +231,23 @@ const GRAPHIC_TEMPLATES = {
     position: 'top-center',
     operator: true,
     data: defaultHockeyScorebugData()
+  })
+}
+
+/*
+ * Types with a description (public/shared/widget-types.js: message, lowerThird)
+ * need no template here: position, operator and the default data come from it.
+ */
+for (const [type, description] of Object.entries(WIDGET_DESCRIPTIONS)) {
+  if (Object.hasOwn(GRAPHIC_TEMPLATES, type)) throw new Error(`Widget type "${type}" has both a template and a description`)
+  GRAPHIC_TEMPLATES[type] = (name) => ({
+    type,
+    name,
+    visible: false,
+    soloVisible: false,
+    position: description.position,
+    operator: description.operator,
+    data: widgetDefaultData(type)
   })
 }
 
